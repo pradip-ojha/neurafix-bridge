@@ -43,7 +43,8 @@
       "Bash(pkill -f \"npm run dev\")",
       "Bash(uvicorn app.main:app --reload --port 8000)",
       "Bash(echo \"main_backend PID: $!\")",
-      "Bash(echo \"ai_service PID: $!\")"
+      "Bash(echo \"ai_service PID: $!\")",
+      "Bash(echo \"Started PID: $!\")"
     ]
   }
 }

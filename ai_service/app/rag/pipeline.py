@@ -34,7 +34,7 @@ from app.rag.chunker import chunk_pdf_async
 from app.rag.docx_chunker import chunk_docx_async, filter_and_upload_docx_images
 from app.rag.embedder import embed_and_upsert
 from app.rag.image_extractor import extract_images_async
-from app.rag.schemas import BookUploadRequest, PageImage, RawChunk
+from app.rag.schemas import BookUploadRequest, PageImage, RawChunk, RefinedChunk
 from app.rag.semantic_refiner import refine_chunks
 from app.redis_client import set_json
 
@@ -90,6 +90,38 @@ def _attach_formulas_to_chunks(
         formula = formulas.get(lookup, "")
         if formula:
             chunk.text = chunk.text + f"\n\nMentioned formula: {formula}"
+
+
+def _ensure_all_images_assigned(
+    refined_chunks: list[RefinedChunk],
+    image_map: dict[int, list[PageImage]],
+) -> None:
+    """
+    Guarantee every R2-uploaded image is referenced by at least one chunk.
+
+    GPT-4o assigns images during batch refinement, but when chunks are merged
+    across pages the resulting chunk carries only the first page's number, so
+    images from the second page are missed by the page-based fallback lookup.
+    This pass catches those orphans after all batches are complete.
+    """
+    if not refined_chunks or not image_map:
+        return
+
+    referenced: set[str] = {url for chunk in refined_chunks for url in chunk.image_urls}
+
+    for page_number, page_imgs in image_map.items():
+        for img in page_imgs:
+            if img.url in referenced:
+                continue
+            best = min(refined_chunks, key=lambda c: abs(c.page_number - page_number))
+            best.image_urls.append(img.url)
+            if img.description:
+                best.image_descriptions.append(img.description)
+            referenced.add(img.url)
+            logger.warning(
+                "[pipeline] Orphan image page=%d → assigned to chunk page=%d topic=%r",
+                page_number, best.page_number, best.topic,
+            )
 
 
 async def run_pipeline(
@@ -244,6 +276,9 @@ async def run_pipeline(
                 "[%s] Refinement: %d raw → %d refined",
                 job_id, len(raw_chunks), len(refined_chunks),
             )
+
+            # Safety net: every R2 image must appear in at least one chunk
+            _ensure_all_images_assigned(refined_chunks, image_map)
 
             if not refined_chunks:
                 await _mark_failed(
