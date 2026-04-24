@@ -44,7 +44,19 @@
       "Bash(uvicorn app.main:app --reload --port 8000)",
       "Bash(echo \"main_backend PID: $!\")",
       "Bash(echo \"ai_service PID: $!\")",
-      "Bash(echo \"Started PID: $!\")"
+      "Bash(echo \"Started PID: $!\")",
+      "Bash(findstr \":8000\")",
+      "Bash(taskkill /PID 18932 /F)",
+      "PowerShell(Stop-Process *)",
+      "PowerShell(Get-NetTCPConnection *)",
+      "PowerShell(netstat *)",
+      "PowerShell(taskkill *)",
+      "PowerShell(Get-Process | Where-Object { $_.Name -match \"python|uvicorn\" } | Select-Object Id, Name)",
+      "PowerShell(wmic process where \"name='python.exe'\" get ProcessId,CommandLine 2>&1 | Select-Object -First 20)",
+      "Bash(kill -9 1899 1898 1896 14808)",
+      "Bash(kill -9 1899 1898)",
+      "PowerShell(Get-Process | Where-Object { $_.ProcessName -match \"python\" } | Select-Object Id, ProcessName, StartTime)",
+      "Bash(kill -9 2134 2132 2130 17260)"
     ]
   }
 }

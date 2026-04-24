@@ -716,134 +716,6 @@ Phase 1 (Scaffolding) ← START HERE
 
 ---
 
-## Phase 1 — Service Scaffolding
-
-**Goal:** All 4 services boot, connect to all external services, return health checks.
-
-**Services:** all 4
-
-### Files to create
-
-```
-main_backend/
-  requirements.txt
-  alembic.ini
-  alembic/env.py
-  alembic/versions/        (empty dir)
-  app/__init__.py
-  app/main.py              FastAPI app, CORS (ALLOWED_ORIGINS from .env), mount routers
-  app/config.py            pydantic-settings BaseSettings, env_file="../../.env" (2 levels up from app/)
-  app/database.py          SQLAlchemy async engine + AsyncSession factory using DATABASE_URL
-  app/api/__init__.py
-  app/api/health.py        GET /health
-
-ai_service/
-  requirements.txt
-  alembic.ini
-  alembic/env.py
-  alembic/versions/
-  app/__init__.py
-  app/main.py
-  app/config.py            reads DATABASE_URL, PINECONE_API_KEY, OPENAI_API_KEY, all UPSTASH_*, all R2_*
-  app/database.py
-  app/r2_client.py         boto3.client("s3", endpoint_url=R2_ENDPOINT, aws_access_key_id, aws_secret_access_key)
-                           expose: upload_bytes(key, data, content_type) → url, get_presigned_url(key)
-  app/pinecone_client.py   Pinecone(api_key=PINECONE_API_KEY), index name="hamroguru"
-                           expose: get_index() → Index
-  app/redis_client.py      Upstash REST API via httpx (NOT socket Redis)
-                           expose async: get(key), set(key, value, ex?), delete(key)
-  app/api/__init__.py
-  app/api/health.py        GET /health — checks db, pinecone, r2, redis
-
-worker/
-  requirements.txt
-  worker/__init__.py
-  worker/celery_app.py     Celery app, broker via Upstash Redis URL
-  worker/config.py         reads .env
-
-frontend/
-  package.json             react, react-dom, react-router-dom, axios, typescript, vite,
-                           @vitejs/plugin-react, tailwindcss, lucide-react
-  vite.config.ts
-  tsconfig.json
-  index.html
-  src/main.tsx
-  src/App.tsx              basic router skeleton
-  src/components/HealthCheck.tsx  hits GET :8000/health and displays result
-```
-
-### Config note
-All Python services use `pydantic-settings`. The `.env` file is at the repo root. Each service's `config.py` must point `env_file` to the root `.env` using a path relative to where the process runs (e.g. `"../.env"` when running from the service directory).
-
-### Requirements (minimum packages)
-
-**main_backend/requirements.txt:**
-```
-fastapi
-uvicorn[standard]
-sqlalchemy[asyncio]
-asyncpg
-alembic
-pydantic-settings
-python-dotenv
-python-jose[cryptography]
-passlib[bcrypt]
-python-multipart
-httpx
-```
-
-**ai_service/requirements.txt:**
-```
-fastapi
-uvicorn[standard]
-sqlalchemy[asyncio]
-asyncpg
-alembic
-pydantic-settings
-python-dotenv
-openai
-openai-agents
-pinecone
-boto3
-httpx
-langgraph
-langchain
-langchain-openai
-pymupdf
-Pillow
-```
-
-**worker/requirements.txt:**
-```
-celery
-redis
-pydantic-settings
-python-dotenv
-httpx
-sqlalchemy[asyncio]
-asyncpg
-openai
-```
-
-### Endpoints
-
-```
-GET /health  (main_backend :8000)
-    → { "service": "main_backend", "status": "ok", "db": "connected" }
-
-GET /health  (ai_service :8001)
-    → { "service": "ai_service", "status": "ok", "db": "connected",
-        "pinecone": "connected", "r2": "connected", "redis": "connected" }
-```
-
-### Verification checklist
-
-1. `GET :8000/health` → db connected
-2. `GET :8001/health` → all 4 services connected
-3. Celery starts, broker connection established (no errors)
-4. `localhost:5173` loads, HealthCheck component shows main_backend is reachable
-
----
 
 ## Phase 2 — RAG Pipeline
 
@@ -1143,6 +1015,203 @@ GET  /api/internal/profile/{user_id}
 7. `alembic upgrade head` runs clean, all tables in Neon
 
 ---
+## Phase 4 — Core Tutor Agent + RAG Retrieval + Basic Personalization
+
+**Goal:** Tutor agent per subject using OpenAI Agents SDK. RAG retrieval from Pinecone. Streaming SSE chat. Personalization data models created (empty at first, filled by worker in Phase 7).
+
+**Services:** `ai_service`
+
+### Files to create
+
+```
+ai_service/app/
+  models/personalization.py   PersonalizationSummary, PlannerTimeline tables
+  models/chat_session.py      ChatSession, ChatMessage tables
+
+  schemas/chat.py             ChatRequest, MessageOut, SessionOut
+  schemas/personalization.py  SummaryOut, PlannerTimelineOut
+
+  rag/retriever.py            embed query → query Pinecone with subject/stream filter → return top-k
+                              output: list of {text, chapter, topic, chunk_type, image_urls, score}
+
+  agents/__init__.py
+  agents/base_agent.py        shared OpenAI client (AsyncOpenAI), model constants
+  agents/shared/__init__.py
+  agents/shared/rag_tool.py   generic RAG retrieval tool definition for use by all agents
+
+  agents/tutor/__init__.py
+  agents/tutor/agent.py       TutorAgent class
+                              - takes user_id, subject, stream as constructor args
+                              - loads full context via context_builder before each turn
+                              - uses OpenAI Agents SDK Runner.run_streamed()
+                              - tool: search_knowledge_base(query: str) → calls retriever
+  agents/tutor/prompts.py     per-subject system prompt template (Physics, Chemistry, Math, etc.)
+  agents/tutor/tools.py       tool definitions for tutor agent
+
+  personalization/__init__.py
+  personalization/context_builder.py   CRITICAL FILE
+                              assembles full context for any agent:
+                              1. fetch student profile from main_backend internal endpoint
+                              2. fetch all personalization summaries (all timelines) from DB
+                              3. fetch planner timeline from DB
+                              4. fetch last 10 messages from Redis (key: session:{session_id}:messages)
+                              5. return structured string for injection into system prompt
+                              must handle nulls gracefully (new student has no summaries yet)
+  personalization/summary_manager.py   CRUD: get_summary, save_summary, list_summaries
+
+  sessions/__init__.py
+  sessions/manager.py         create_session, append_message, get_recent_messages(n=10)
+                              messages cached in Redis: session:{session_id}:messages (list, TTL 24h)
+                              messages also persisted to ChatMessage table in DB
+
+  api/tutor.py                chat SSE endpoint, sessions, messages, summaries endpoints
+```
+
+### PersonalizationSummary table
+
+```
+id                  UUID PK
+user_id             UUID not null  (no FK — cross-service, store as plain UUID)
+agent_type          Enum: tutor|capsule|practice|planner
+subject             String nullable  (null for planner agent)
+timeline            Enum: daily|weekly|fifteen_day|monthly|all_time
+content             Text  (free-form LLM-generated — THE CORE VALUE)
+generated_at        DateTime
+covers_period_start DateTime
+covers_period_end   DateTime
+```
+
+### PlannerTimeline table
+
+```
+id                UUID PK
+user_id           UUID unique not null
+content           Text  (free-form LLM-generated preparation plan)
+last_updated      DateTime
+next_review_date  DateTime nullable
+version           Integer default 1
+```
+
+### ChatSession table
+
+```
+id           UUID PK
+user_id      UUID not null
+agent_type   Enum: tutor|capsule|practice|planner
+subject      String nullable
+session_date Date default today
+title        String  (auto-generated from first message, first 60 chars)
+created_at   DateTime
+```
+
+### ChatMessage table
+
+```
+id          UUID PK
+session_id  UUID FK → chat_sessions.id
+role        Enum: user|assistant
+content     Text
+metadata    JSONB nullable  {source_chunks: [{chapter, topic}], image_urls: [...]}
+created_at  DateTime
+```
+
+### Context builder system prompt structure
+
+```
+You are a personal tutor for [SUBJECT] at HamroGuru. You help Nepali students
+prepare for class 11 entrance exams after their SEE.
+
+## Student Profile
+Name: [full_name]
+Stream: [stream]
+School: [school_name]
+SEE GPA: [see_gpa or "not provided"]
+Class 10 Scores: [class_10_scores or "not provided"]
+[... other profile fields ...]
+
+## Your Knowledge of This Student
+
+### All-Time Summary
+[all_time summary content or "No summary yet — this is a new student."]
+
+### Monthly Summary
+[monthly summary or "Not yet generated."]
+
+### Weekly Summary
+[weekly summary or "Not yet generated."]
+
+### Today's Summary
+[daily summary or "Not yet generated."]
+
+## Planner's Assessment
+[planner all_time summary or "Planner has not yet assessed this student."]
+
+## Preparation Plan
+[planner timeline content or "No plan created yet. Encourage student to chat with Planner."]
+
+## Today's Capsule
+[today's capsule summary if exists, else omit section]
+
+## Today's Practice
+[today's practice summary if exists, else omit section]
+
+## Instructions
+- Always personalize responses based on the student context above.
+- ALWAYS call search_knowledge_base before answering factual/concept questions.
+- Cite the source (chapter, topic) when referencing book content.
+- If a retrieved chunk has image_urls, mention "Refer to the diagram on page X."
+- Respond in English. If student writes in Nepali, acknowledge and respond in English.
+- Warm, encouraging, patient teaching style. Never make the student feel bad.
+- Follow any planner instructions for this subject if present in the plan.
+```
+
+### Endpoints
+
+```
+POST /api/tutor/chat
+     Header: Authorization: Bearer <token>
+     Body: { subject, message, session_id? }
+     → SSE stream: text/event-stream
+       events: data: {"chunk": "..."}\n\n  (token-by-token)
+               data: {"done": true, "session_id": "...", "message_id": "..."}\n\n
+     Creates new session if session_id not provided.
+     Persists user message and complete assistant response to DB.
+
+GET  /api/tutor/sessions
+     Header: Authorization: Bearer <token>
+     Query: subject?
+     → [{ id, subject, session_date, title, agent_type }]
+
+GET  /api/tutor/sessions/{session_id}/messages
+     Header: Authorization: Bearer <token>
+     → [{ id, role, content, metadata, created_at }]
+
+GET  /api/tutor/personalization/summaries
+     Header: Authorization: Bearer <token>
+     Query: agent_type?, subject?, timeline?
+     → [PersonalizationSummary]
+
+GET  /api/tutor/personalization/timeline
+     Header: Authorization: Bearer <token>
+     → PlannerTimelineOut | null
+```
+
+### Alembic migration
+
+`002_create_personalization_and_chat_tables.py` — run `alembic upgrade head` in ai_service.
+
+### Verification checklist
+
+1. Register science student (Phase 3). Upload a physics PDF (Phase 2).
+2. `POST /api/tutor/chat` with `{subject:"physics", message:"Explain Newton's first law"}`
+3. Response streams as SSE — chunks appear token by token
+4. Add logging in `retriever.py` to confirm Pinecone was queried and chunks returned
+5. `GET /api/tutor/sessions` → session exists with auto-generated title
+6. `GET /api/tutor/sessions/{id}/messages` → both user and assistant messages stored
+7. Send follow-up in same session — agent remembers previous exchange (context continuity)
+8. New student with no summaries → tutor still responds correctly (graceful null handling)
+
+---
 
 
 ## Build Status
@@ -1153,7 +1222,7 @@ Update this table after completing each phase. Mark `[x] Complete` with the date
 |-------|------|--------|-----------|-------|
 | 1 | Service Scaffolding | [x] Complete | 2026-04-16 | All 4 services boot. main_backend :8000 db=connected. ai_service :8001 db+pinecone+r2+redis=connected. Frontend builds clean. |
 | 2 | RAG Pipeline | [x] Complete | 2026-04-24 | 4-stage pipeline (chunk→image→refine→embed) working. All 4 endpoints verified. Vectors upserted to Pinecone. Improvements on 2026-04-24: OCR error correction in refiner, AI-driven image→chunk assignment (IMG_N indices), DOCX OCR artifact filtering (dimension check + prompt), max 1000-token chunks with paragraph-boundary splitting, 15%-of-chunk-size overlap between chunks. ocr.py removed (image PDFs handled externally as DOCX). |
-| 3 | Auth + User Models | [ ] Pending | — | — |
+| 3 | Auth + User Models | [x] Complete | 2026-04-24 | JWT auth, 3 DB tables (users, student_profiles, affiliation_profiles), all 14 endpoints verified. bcrypt via direct library (passlib incompatible with bcrypt 5.x on Python 3.13). |
 | 4 | Core Tutor Agent + RAG | [ ] Pending | — | — |
 | 5 | Planner Agent + Summaries | [ ] Pending | — | — |
 | 6 | Capsule + Practice Agents | [ ] Pending | — | — |
