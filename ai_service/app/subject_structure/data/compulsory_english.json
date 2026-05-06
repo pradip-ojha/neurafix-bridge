@@ -1,0 +1,100 @@
+{
+  "subject": "compulsory_english",
+  "display_name": "Compulsory English",
+  "chapters": [
+    {
+      "id": "reading_comprehension",
+      "display_name": "Reading Comprehension",
+      "topics": [
+        {
+          "id": "unseen_passage",
+          "display_name": "Unseen Passage",
+          "subtopics": ["identifying main idea", "inferring meaning", "factual questions", "vocabulary in context"]
+        },
+        {
+          "id": "note_making",
+          "display_name": "Note Making and Summarising",
+          "subtopics": ["identifying key points", "summarising a passage"]
+        }
+      ]
+    },
+    {
+      "id": "grammar",
+      "display_name": "Grammar",
+      "topics": [
+        {
+          "id": "parts_of_speech",
+          "display_name": "Parts of Speech",
+          "subtopics": ["nouns", "pronouns", "adjectives", "adverbs", "verbs", "prepositions", "conjunctions", "interjections"]
+        },
+        {
+          "id": "tenses",
+          "display_name": "Tenses",
+          "subtopics": ["simple present", "present continuous", "present perfect", "simple past", "past continuous", "past perfect", "future tenses"]
+        },
+        {
+          "id": "voice",
+          "display_name": "Active and Passive Voice",
+          "subtopics": ["rules for changing voice", "passive across tenses"]
+        },
+        {
+          "id": "narration",
+          "display_name": "Direct and Indirect Narration",
+          "subtopics": ["rules for reporting speech", "statements", "questions", "commands"]
+        },
+        {
+          "id": "clauses",
+          "display_name": "Clauses and Sentences",
+          "subtopics": ["types of clauses", "simple compound complex sentences", "conditional sentences"]
+        },
+        {
+          "id": "correction",
+          "display_name": "Error Correction",
+          "subtopics": ["subject-verb agreement", "article usage", "preposition errors", "tense errors"]
+        }
+      ]
+    },
+    {
+      "id": "vocabulary",
+      "display_name": "Vocabulary",
+      "topics": [
+        {
+          "id": "synonyms_antonyms",
+          "display_name": "Synonyms and Antonyms",
+          "subtopics": ["common synonyms", "common antonyms"]
+        },
+        {
+          "id": "word_forms",
+          "display_name": "Word Forms",
+          "subtopics": ["prefixes and suffixes", "noun verb adjective adverb forms"]
+        },
+        {
+          "id": "idioms_phrases",
+          "display_name": "Idioms and Phrases",
+          "subtopics": ["common idioms", "phrasal verbs"]
+        }
+      ]
+    },
+    {
+      "id": "writing",
+      "display_name": "Writing Skills",
+      "topics": [
+        {
+          "id": "essays",
+          "display_name": "Essays",
+          "subtopics": ["narrative essay", "descriptive essay", "argumentative essay", "essay structure"]
+        },
+        {
+          "id": "letters",
+          "display_name": "Letter Writing",
+          "subtopics": ["formal letter", "informal letter", "application letter"]
+        },
+        {
+          "id": "reports_notices",
+          "display_name": "Reports and Notices",
+          "subtopics": ["news report", "notice writing", "paragraph writing"]
+        }
+      ]
+    }
+  ]
+}

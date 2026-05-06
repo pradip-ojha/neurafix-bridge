@@ -1,0 +1,175 @@
+{
+  "subject": "compulsory_science",
+  "display_name": "Compulsory Science",
+  "chapters": [
+    {
+      "id": "physics_motion",
+      "display_name": "Physics: Motion and Force",
+      "topics": [
+        {
+          "id": "kinematics",
+          "display_name": "Kinematics",
+          "subtopics": ["distance and displacement", "speed and velocity", "acceleration", "equations of motion", "graphs of motion"]
+        },
+        {
+          "id": "newtons_laws",
+          "display_name": "Newton's Laws of Motion",
+          "subtopics": ["first law inertia", "second law F=ma", "third law action-reaction", "friction"]
+        },
+        {
+          "id": "gravity",
+          "display_name": "Gravitation",
+          "subtopics": ["Newton's law of gravitation", "g value", "weight vs mass", "free fall"]
+        }
+      ]
+    },
+    {
+      "id": "physics_energy",
+      "display_name": "Physics: Work, Energy and Power",
+      "topics": [
+        {
+          "id": "work_energy",
+          "display_name": "Work and Energy",
+          "subtopics": ["work done", "kinetic energy", "potential energy", "conservation of energy"]
+        },
+        {
+          "id": "power_machines",
+          "display_name": "Power and Machines",
+          "subtopics": ["power", "simple machines", "mechanical advantage", "efficiency"]
+        }
+      ]
+    },
+    {
+      "id": "physics_light",
+      "display_name": "Physics: Light",
+      "topics": [
+        {
+          "id": "reflection",
+          "display_name": "Reflection",
+          "subtopics": ["laws of reflection", "plane mirror", "curved mirrors", "image formation"]
+        },
+        {
+          "id": "refraction",
+          "display_name": "Refraction",
+          "subtopics": ["laws of refraction", "Snell's law", "total internal reflection", "lenses", "dispersion"]
+        }
+      ]
+    },
+    {
+      "id": "physics_electricity",
+      "display_name": "Physics: Electricity and Magnetism",
+      "topics": [
+        {
+          "id": "current_electricity",
+          "display_name": "Current Electricity",
+          "subtopics": ["current voltage resistance", "Ohm's law", "series and parallel circuits", "electrical power and energy"]
+        },
+        {
+          "id": "magnetism",
+          "display_name": "Magnetism",
+          "subtopics": ["magnetic field", "electromagnet", "electromagnetic induction"]
+        }
+      ]
+    },
+    {
+      "id": "chemistry_matter",
+      "display_name": "Chemistry: Matter and Its Properties",
+      "topics": [
+        {
+          "id": "atomic_structure",
+          "display_name": "Atomic Structure",
+          "subtopics": ["atom structure", "protons neutrons electrons", "atomic number and mass number", "isotopes"]
+        },
+        {
+          "id": "periodic_table",
+          "display_name": "Periodic Table",
+          "subtopics": ["groups and periods", "trends in periodic table", "valency", "electronic configuration"]
+        }
+      ]
+    },
+    {
+      "id": "chemistry_reactions",
+      "display_name": "Chemistry: Chemical Reactions",
+      "topics": [
+        {
+          "id": "chemical_equations",
+          "display_name": "Chemical Equations",
+          "subtopics": ["writing and balancing equations", "types of reactions"]
+        },
+        {
+          "id": "acids_bases",
+          "display_name": "Acids, Bases and Salts",
+          "subtopics": ["properties of acids", "properties of bases", "pH scale", "neutralisation", "salts"]
+        },
+        {
+          "id": "metals_nonmetals",
+          "display_name": "Metals and Non-Metals",
+          "subtopics": ["properties of metals", "properties of non-metals", "reactivity series", "corrosion"]
+        },
+        {
+          "id": "carbon_compounds",
+          "display_name": "Carbon Compounds",
+          "subtopics": ["hydrocarbons", "organic compounds basics", "alcohols and carboxylic acids"]
+        }
+      ]
+    },
+    {
+      "id": "biology_life_processes",
+      "display_name": "Biology: Life Processes",
+      "topics": [
+        {
+          "id": "cell_biology",
+          "display_name": "Cell Biology",
+          "subtopics": ["cell structure", "plant vs animal cell", "cell division mitosis meiosis"]
+        },
+        {
+          "id": "nutrition_digestion",
+          "display_name": "Nutrition and Digestion",
+          "subtopics": ["types of nutrition", "human digestive system", "photosynthesis", "respiration"]
+        },
+        {
+          "id": "circulation_excretion",
+          "display_name": "Circulation and Excretion",
+          "subtopics": ["human circulatory system", "heart structure", "blood components", "excretion in humans", "kidney structure"]
+        },
+        {
+          "id": "nervous_system",
+          "display_name": "Nervous System and Coordination",
+          "subtopics": ["neuron structure", "central and peripheral nervous system", "reflex action", "endocrine system basics"]
+        }
+      ]
+    },
+    {
+      "id": "biology_heredity",
+      "display_name": "Biology: Heredity and Evolution",
+      "topics": [
+        {
+          "id": "genetics",
+          "display_name": "Genetics and Heredity",
+          "subtopics": ["Mendelian genetics", "dominant and recessive traits", "Punnett square", "sex determination"]
+        },
+        {
+          "id": "evolution",
+          "display_name": "Evolution",
+          "subtopics": ["Darwin's theory", "natural selection", "adaptation", "human evolution"]
+        }
+      ]
+    },
+    {
+      "id": "biology_environment",
+      "display_name": "Biology: Environment and Ecology",
+      "topics": [
+        {
+          "id": "ecosystem",
+          "display_name": "Ecosystem",
+          "subtopics": ["food chain and food web", "trophic levels", "energy flow", "biogeochemical cycles"]
+        },
+        {
+          "id": "environment_issues",
+          "display_name": "Environmental Issues",
+          "subtopics": ["pollution types", "global warming", "ozone layer", "conservation"]
+        }
+      ]
+    }
+  ]
+}

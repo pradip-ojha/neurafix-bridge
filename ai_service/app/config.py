@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     R2_SECRET_ACCESS_KEY: str
     R2_BUCKET_NAME: str
     MAIN_BACKEND_INTERNAL_SECRET: str
+    JWT_SECRET_KEY: str
     APP_ENV: str = "development"
     DEBUG: bool = True
 

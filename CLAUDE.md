@@ -2,14 +2,6 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
----
-
-## Project Status
-
-This project is in initial setup — no service code has been written yet. Scaffold each service according to the architecture below.
-
----
-
 ## Build Philosophy
 
 **Build from core outward, one phase at a time.** Phases and their order will be decided in planning sessions — do not assume or proceed ahead speculatively.
@@ -107,55 +99,134 @@ All credentials are in the root `.env` file. Keys used:
 The AI service has three layers:
 
 1. **Agent layer** — OpenAI Agents SDK for per-agent runtime; LangGraph for orchestration
-2. **RAG layer** — Pinecone for retrieval; Cloudflare R2 for image/diagram storage
-3. **Memory / state layer** — personalization summaries and planner timeline (see Personalization below)
+2. **RAG layer** — Pinecone for retrieval; Cloudflare R2 for note PDF storage
+3. **Memory / state layer** — personalization summaries and consultant's preparation timeline
 
 ### Agents
 
 | Agent | Role |
 |-------|------|
-| Tutor (per subject) | Teaches, answers questions, follows planner instructions |
-| Capsule agent (per subject) | Generates and handles daily learning capsule |
-| Practice agent (per subject) | Generates MCQ sets, evaluates, handles follow-ups |
-| Planner agent | Plans full preparation timeline, coordinates all other agents, career guidance |
+| Tutor (per subject) | Teaches, answers questions, follows consultant instructions |
+| Capsule agent (per subject) | Generates daily capsule after day ends; uses today's session data |
+| Practice agent (per subject) | Selects questions from pool, evaluates, handles follow-ups |
+| Consultant agent | Plans full preparation timeline, consults on study strategy, career guidance, motivates, web-searches for college recommendations, coordinates all agents |
+| Personalization agent | Generates and updates all summaries (daily, weekly, all-time) and session memory at end of day and on schedule |
 | Referral content agent | Generates social media posts with referral links |
 
-All subject agents (tutor, capsule, practice) share context with each other for the same subject. The planner agent has read access to all agents' chat and practice performance.
+All subject agents (tutor, capsule, practice) share personalization context for the same subject. The consultant agent has read access to all agents' chat and practice performance.
 
 ### Personalization (Core Priority)
 
-This is the most important part of the platform. Each agent must receive:
+This is the most important part of the platform. Every agent must receive the appropriate personalization context before responding.
 
-- Student's academic background (profile data, marksheets, past test scores)
-- **LLM-generated summaries** for each timeline (daily, weekly, 15-day, monthly, all-time) per subject
-- Each subject agent's own personalization summary for that student
-- Planner agent's personalization summary for that student
-- **Planner's preparation timeline** — created initially, updated by planner after each day; readable by all agents
+#### Context passed to tutor and practice agents (per subject)
 
-#### Summary Format
+- Student's overall summary (goals, personality, learning style, past academic background)
+- Subject-wise all-time summary (performance, strong/weak topics, best teaching methods for this student)
+- Subject-wise weekly summary (last 7 days summary)
+- Subject-wise daily summary of the previous day
+- Syllabus structure for the relevant chapter only (not whole subject)
 
-Summaries are **free-form LLM-generated text**, not fixed database fields. This lets the agent capture unlimited parameters without schema changes.
+#### Context passed to daily capsule agent (per subject)
 
-There will be a set of **mandatory parameters** that every summary must always cover. These will be decided during the planning session for the AI core stage — do not define them before that point. Beyond the mandatory ones, the agent must include any additional observations it finds relevant for that student at that point in time.
+Same as tutor/practice agents, except replace the previous day's daily summary with **today's** daily summary — because the capsule is generated after the study day ends and must reflect what happened that day.
+
+#### Context passed to consultant agent
+
+- Student's overall summary
+- All-time subject summaries for all subjects
+- Weekly summaries for all subjects
+- Current preparation timeline
+- Today's session summary from each subject (if any)
+
+#### Summary types
+
+All summaries are **free-form LLM-generated text**, not fixed database fields. This allows unlimited parameters without schema changes.
+
+**Overall student summary** (not subject-specific):
+- Student's goals, stream choice, and future ambitions
+- Personality and general learning style
+- Past academic performance across all subjects
+- General strengths and weaknesses
+
+**Subject-wise all-time summary** (updated weekly):
+- Past academic performance in that subject
+- Average score in that subject
+- Topics with good and bad performance
+- How the student is progressing in that subject
+- Topics with most difficulties
+- Which teaching methods work best for this student in this subject
+- Updated each week by reading the new week's daily summaries and the previous all-time summary together, so the LLM incorporates new data into the previous context
+
+**Subject-wise weekly summary** (regenerated daily):
+- Covers the same dimensions as the daily summary but rolled up from the last 7 daily summaries
+- Regenerated every day by reading the last 7 daily summaries — not accumulated, fully regenerated each time
+
+**Subject-wise daily summary** (generated at end of day by Personalization agent):
+- Topics covered that day (one line)
+- Average practice score for those topics
+- Which topics/question types were answered wrong
+- Any confusion from follow-up questions in daily capsule, practice, or notes — what confusion existed and whether it was resolved
+- From tutor chat: what confusion the student had and which type of answer helped them understand (uses session memory, not full chat log, as input)
+
+Inputs used to generate daily summary:
+- Session memory of that day's tutor chat
+- All practice session summaries from that day
+- Summary of consultant chat from that day (if any)
+- Summary of any mock tests taken that day
+
+**Session memory** (per tutor chat session, maintained by Personalization agent):
+- Starts being generated after the 5th message in a session
+- Updated after every 3 new messages after that
+- Chat context window = last 3 messages (1 message = 1 student question + 1 AI answer)
+- Purpose: keep tutor context rich without feeding the full chat log
+
+#### Consultant chat contribution to summaries
+
+After end of day, the Personalization agent reads the consultant chat summary and decides:
+- Is there anything to add to the overall student summary?
+- Is there anything to add to any subject's all-time summary or daily summary?
+- Does anything in the chat require a timeline change?
+
+If the student asks to change the plan directly during a consultant chat, the consultant agent updates the timeline **immediately** without waiting for end-of-day processing.
 
 ### RAG Pipeline
 
-Triggered from admin panel when a new book is uploaded:
-1. Chunk by structure (headings, sections, paragraphs, figures)
-2. LLM semantic refinement — each chunk = one complete learning concept
-3. Extract images/diagrams → upload to R2, attach URL to chunk metadata
-4. Embed and upsert to Pinecone
+The RAG pipeline processes **text-only RAG notes** — not original books. RAG notes are pre-generated by the admin/developer from the original books and uploaded chapter by chapter. They contain all important points, and subjective questions from the original book are converted to objective format. No images are stored — where an image is essential, a text description is written in its place.
 
-Pinecone metadata fields: `book_id`, `type` (default/additional), `publisher`, `class`, `subject`, `chapter`, `topic`, `page_number`, `chunk_type` (question/example/explanation), `image_urls`.
+**Why text-only RAG notes instead of original books:**
+- The RAG layer exists so the tutor knows what topics and concepts are in the course and what examples are used — it does not need the full book.
+- LLMs process and retrieve from clean text far more reliably than from image-heavy PDFs.
+- Text descriptions of images are sufficient and eliminate image processing costs.
+- Converting subjective questions to objective format reduces confusion since students are preparing for objective exams.
+
+**Upload flow (admin panel):**
+1. Admin uploads a RAG note file (text/markdown) and selects subject and chapter.
+2. Pipeline chunks the note by the subject's chapter/topic/subtopic structure already in the system.
+3. LLM semantic refinement — each chunk = one complete learning concept.
+4. Embed and upsert to Pinecone with metadata.
+
+**Pinecone metadata fields:** `note_id`, `subject`, `chapter`, `topic`, `subtopic`, `chunk_type` (explanation/example/objective_question), `difficulty`.
+
+No images are stored in R2 for RAG purposes. R2 is used only for student-facing note PDFs.
+
+### Subject Structure System
+
+The system has a pre-built chapter/topic/subtopic structure for each subject. This is used by:
+- **RAG retriever** — to determine which chapters/topics to fetch based on the student's question
+- **RAG pipeline** — to classify each chunk's chapter/topic/subtopic during ingestion
+- **Practice and mock test generation** — to select questions by chapter/topic in correct ratios
+
+**Placeholder:** The structure files are not yet uploaded. Admin will upload the formatted structure (containing all chapters, topics, and subtopics per subject) later. The system will be built to load and use these structures when uploaded.
 
 ---
 
 ## Worker (Celery) Jobs
 
 Scheduled jobs include:
-- Daily capsule generation (fixed time each day, per student per subject)
-- End-of-day summary update (update personalization summaries and dynamic notes after day ends)
-- Weekly/15-day/monthly summary regeneration
+- **End-of-day processing** — triggered after each day's study window ends: generate daily summaries, update session memories, generate daily capsules (per student per subject), update dynamic notes
+- **Weekly summary regeneration** — runs daily, regenerates each subject's weekly summary from the last 7 daily summaries
+- **All-time summary update** — runs weekly, updates all-time subject summaries by reading new daily summaries + previous all-time summary
 
 ---
 
@@ -164,7 +235,12 @@ Scheduled jobs include:
 - **No shared packages between services** — each service is fully self-contained.
 - **Manual payments** — students pay via QR, admin approves in panel. System tracks status only; no payment gateway.
 - **Personalization via LLM summaries, not fixed fields** — allows unlimited parameters per student without schema migrations.
-- **Planner timeline is the single source of truth** for preparation plan; all agents follow it.
+- **Consultant's preparation timeline is the single source of truth** for the preparation plan; all agents follow it. Consultant can update it immediately on student request, or at end of day via Personalization agent.
+- **Notes are level-based, not individually personalized** — 3 levels (Level 1: strong foundation, Level 2: average, Level 3: weak foundation). Whole note set for a level is rendered when a student's level is assigned. This avoids wasting tokens generating near-identical notes per student and allows rich PDF format with figures and diagrams.
+- **Questions are pre-generated and uploaded as JSON** — not generated on the fly by the AI. This ensures quality control and allows fast random selection from a large pool.
+- **RAG uses text-only notes, not original books** — higher retrieval quality, zero image processing cost, no ambiguity from subjective questions.
+- **Tutors exist only for the 4 main subjects** — Compulsory English, Compulsory Mathematics, Compulsory Science, Optional Mathematics. Extra subjects (GK, IQ, Computer Science) have practice/mock test questions only.
+- **Daily capsule is generated after the day ends** — so it reflects actual confusion and weak points from that day's activity, not a pre-generated prediction.
 
 ---
 
@@ -193,13 +269,13 @@ The heart of this platform is personalization.
 There are many learning platforms and AI chatbots that can answer any type of question, but they lack personalization, so they cannot guide the student as a personal tutor.
 
 They do not know:
-- the student’s academic ability,
+- the student's academic ability,
 - weaknesses,
 - strengths,
 - what the student learned today,
 - how performance was,
 - what type of questions were wrong,
-- what the student’s learning approaches are.
+- what the student's learning approaches are.
 
 But in reality, each student is unique, with different goals, methods, abilities, and circumstances. So for optimal outcomes of their efforts, tutoring must be personalized.
 
@@ -233,11 +309,16 @@ Admin panel is the interface for admin. It should contain all required control f
   - referral partners,
   - students per stream,
   - students per college,
-- viewing each student’s details and taking action,
+- viewing each student's details and taking action,
 - community posts,
 - push notifications to all students or selected categories,
 - management of affiliated partners,
-- adding resources to the vector database,
+- upload level-based notes (PDF) per subject, chapter, and level,
+- upload RAG notes (text) per subject and chapter (triggers RAG pipeline),
+- upload MCQ question sets (JSON) per subject and chapter,
+- add and manage extra subjects (GK, IQ, etc.) and upload their questions,
+- add and manage colleges (name, exam format, number of questions per subject, total time),
+- set per-question time by subject and difficulty (easy / medium / hard),
 - and other related control features.
 
 #### Student Interface
@@ -290,7 +371,7 @@ hamroguru/
 ├── frontend/
 ├── main_backend/
 ├── ai_service/
-├── worker/
+└── worker/
 ```
 
 ---
@@ -307,54 +388,129 @@ AI core will contain three layers:
 
 ## RAG Layer
 
-RAG layer is the RAG pipeline which will:
-- chunk and embed the book,
-- extract images and diagrams,
-- store them in Cloudflare R2,
-- add the image URL to metadata of the relevant chunk.
+The RAG layer processes text-only notes (not original books) uploaded by admin from the admin panel. These notes are pre-generated from the original books and uploaded chapter by chapter.
 
-For RAG semantic refinement, LLM will also be used for better quality of data stored in the vector store.
+**What is a RAG note:**
+- Contains all important concepts and points from the chapter.
+- Subjective questions from the original book are converted to objective format.
+- No images — where an image is needed, a text description is written instead.
+- This ensures high-quality retrieval, zero image processing cost, and no confusion from subjective question formats.
 
-The pipeline will be exposed to admin panel, from where admin can add new test books, and those books will go through the RAG pipeline and be stored in the vector database.
+**RAG pipeline steps:**
+1. Admin uploads a RAG note file for a specific subject and chapter.
+2. Pipeline chunks by the subject structure (chapters, topics, subtopics) already in the system.
+3. LLM semantic refinement — each chunk = one complete learning concept.
+4. Embed and upsert to Pinecone.
 
-Images and diagrams in books will be stored in object storage, and the metadata in the vector DB will contain the image URL.
+**Pinecone metadata fields:** `note_id`, `subject`, `chapter`, `topic`, `subtopic`, `chunk_type` (explanation/example/objective_question), `difficulty`.
 
-There will be:
-- default books provided by the CDC,
-- additional books added with their publisher name as type `additional book`.
-
-Example metadata fields:
-
-- book_id
-- default / additional
-- publisher name
-- class
-- subject
-- chapter
-- topic
-- page number
-- chunk type (for example: question, example, explanation)
-- related image URLs
+No images are stored in R2 for RAG purposes. R2 is used only for student-facing level-based note PDFs.
 
 ### Chunking Strategy
 
 #### Structure-based chunking (primary)
-- Split content using headings, sections, paragraphs, and figures.
-- Keep related content (explanation + diagram + caption) together.
+- Split content using the subject's pre-built chapter/topic/subtopic structure.
+- Keep related content (concept + example + practice question) together.
 
 #### Semantic refinement (LLM-assisted)
 - Group paragraphs into meaningful concept-level chunks.
 - Ensure each chunk represents a single learning concept.
-- Attach diagrams to the correct concept using context or LLM reasoning.
-
-#### Diagram handling
-- Store images in object storage.
-- Link them to chunks via metadata (`image_url`, description).
-- Use captions and nearby text to determine placement.
+- Pipeline determines the topic and subtopic of each chunk using the subject structure already in the system.
 
 ### Goal of Chunking
 - Each chunk should be a complete, self-contained concept.
 - This improves retrieval quality, tutor accuracy, and learning experience.
+
+---
+
+## Notes System (Level-Based)
+
+Notes are **not individually personalized**. They are pre-generated in advance and uploaded by admin. Notes exist at 3 levels based on student academic strength:
+
+| Level | Target Student |
+|-------|---------------|
+| Level 1 | Strong foundation — focus on hard topics and advanced concepts |
+| Level 2 | Average — solid on basics but difficulty with hard concepts |
+| Level 3 | Weak foundation — difficulty even with basic topics |
+
+Each student is assigned a level based on their past academic history, test/practice performance, and interaction patterns. When a level is assigned, the student gets access to all notes of that level for their stream's subjects.
+
+**Format:** One PDF per chapter. Admin uploads by selecting subject, chapter, and level. PDFs are stored in Cloudflare R2 and indexed by subject + chapter + level.
+
+**Student interface:** A sidebar lists all chapters. Student can click any chapter and the note PDF for their level is rendered on that page.
+
+Notes may contain figures and diagrams since they are pre-generated PDFs (not LLM output at request time).
+
+---
+
+## Questions and MCQ Pool
+
+All MCQ questions are **pre-generated and uploaded** by admin as JSON files — not generated on the fly. This allows quality control and fast retrieval.
+
+### Question Schema
+
+```json
+{
+  "question_id": "cs_ch1_q_001",
+  "question_text": "Which symbol represents a decision in a flowchart?",
+  "question_image": {
+    "url": null,
+    "caption": null
+  },
+  "options": [
+    { "id": "A", "text": "Oval" },
+    { "id": "B", "text": "Diamond" },
+    { "id": "C", "text": "Rectangle" },
+    { "id": "D", "text": "Parallelogram" }
+  ],
+  "correct_option_ids": ["B"],
+  "explanation": "Diamond represents a decision symbol in a flowchart.",
+  "difficulty": "easy",
+  "subject": "computer_science",
+  "chapter": "flowchart",
+  "topic": "flowchart_symbols",
+  "subtopic": "decision_symbol",
+  "tags": ["mcq", "flowchart", "symbol_identification"],
+  "skill": "concept_identification",
+  "learning_objective": "Understand flowchart symbols and their meanings",
+  "common_mistakes": {
+    "A": "Confuses start/end with decision",
+    "C": "Confuses process with decision"
+  },
+  "is_active": true,
+  "version": 1
+}
+```
+
+All questions are MCQ (1 mark, no negative marking). Image fields are null in Phase 1.
+
+### Question Generation Phases
+
+**Phase 1 (current):**
+- Admin generates questions as JSON (no images, image fields set to null).
+- Uploads via admin panel, chapter by chapter.
+- System stores in database and serves from there.
+
+**Phase 2 (future, not to be built now):**
+- A pipeline will auto-generate new questions with real image references (store image in R2, get URL, inject into JSON).
+- Will be built later after platform is in production.
+
+### Database Storage
+
+Hybrid design per question:
+- **Important filtering fields as columns:** `question_id`, `subject`, `chapter`, `topic`, `subtopic`, `difficulty`, `is_active`, `version`
+- **Full question data as JSONB column:** everything else
+
+1 question = 1 row.
+
+### Extra Subject Questions
+
+Extra subjects (GK, IQ, and any subject added by admin later) are stored in a **separate table** since they do not have the same chapter structure as the 4 main subjects. Admin can add extra subjects from the admin panel and upload JSON question files for them.
+
+### Timing
+
+- **Mock tests:** Admin sets total questions, questions per subject, and total time when adding a new college.
+- **Subject practice:** Per-question time is set by admin per subject and difficulty level (easy/medium/hard). Default: 72 seconds average per question.
 
 ---
 
@@ -399,18 +555,27 @@ Profile will contain every detail of the student, including:
 - class 8 to class 10 test scores,
 - marksheets of final exams,
 
-so that the tutor will have clear context of the student’s academic background.
+so that the tutor will have clear context of the student's academic background.
 
 However, during registration, none of these will be asked, since students may feel uncomfortable sharing such information without even experiencing the app.
 
 After registration, students will be prompted to complete their profile gradually over time until their profile is fully filled.
 
+### Student Level Assignment
+
+Each student is assigned a learning level (1, 2, or 3) based on:
+- Past academic history and marksheets (from profile)
+- Performance in mock tests and subject practice
+- Patterns in tutor queries and session activity
+
+Level is used to serve the appropriate note set. It can be updated over time as new data comes in. Level assignment is handled by the Personalization agent.
+
 ### Initial Mock Test Recommendation
 For the first mock test, the student will also be prompted to take a mock test first.
 
-Planner agent will also ask the student to do so if it does not get any mock test and profile data, but it will not be mandatory.
+The consultant agent will also ask the student to do so if it does not get any mock test and profile data, but it will not be mandatory.
 
-The agent will recommend it, but if the student says they will do it later, it will continue with currently available data, since later it keeps updating the timeline based on the student’s performance.
+The agent will recommend it, but if the student says they will do it later, it will continue with currently available data, since later it keeps updating the timeline based on the student's performance.
 
 ---
 
@@ -433,7 +598,7 @@ This referral system will be advanced. There will be an agent which will generat
 
 If the user wants to post on their social media to recommend the platform, it will:
 - take the page URL where the user is going to post,
-- use past post history and the user’s request,
+- use past post history and the user's request,
 - generate posts which the user can simply post to social media accounts,
 - include the referral link.
 
@@ -445,129 +610,110 @@ Students who sign up with referral will get extra discount.
 
 ### 1. Tutor for Each Subject
 
-This section contains:
+Tutors exist only for the **4 main subjects**: Compulsory English, Compulsory Mathematics, Compulsory Science, and Optional Mathematics. For science stream, all 4 subjects have tutors. For management stream, only Compulsory English and Compulsory Mathematics have tutors.
+
+Each subject's tutor section contains:
 
 #### a. Tutor
 - Tutor in chatbot form.
+- Uses personalization context (overall student summary + subject all-time summary + weekly summary + previous day's daily summary + relevant chapter syllabus).
+- Session memory keeps context manageable without feeding full chat logs.
 
-#### b. Note
-There will be two notes:
-1. Complete notes, same for everyone.
-2. Incomplete / dynamic notes, where newly covered content will be added daily.
+#### b. Notes (Level-Based)
+- Sidebar shows all chapters of the subject.
+- Student can click any chapter to view the note PDF for their assigned level.
+- Notes are pre-generated and uploaded by admin — not generated per student.
+- May contain figures and diagrams.
+- Downloadable as PDF.
 
 #### c. Daily Capsule
-Daily capsule will include:
-- interactive content,
-- multimedia such as images and diagrams,
-- ability for students to ask questions directly about the content on the same page.
+Daily capsule is individually personalized and generated **after the day ends** (by end-of-day worker job). It is a short cheat-sheet type summary for the student.
+
+Content is based on that day's data:
+- Key points student struggled with or needs to recall.
+- Concepts where confusion was observed.
+- Questions answered wrong in practice.
+- Personalized instructions for the student based on the day's performance.
 
 Students can:
-- see the history of capsules of each day,
-- access history in ChatGPT format,
-- choose capsule of any day from sidebar,
-- see not only the initial capsule but the whole chat with the student on that day.
+- See the history of capsules for each day.
+- Access history in ChatGPT format, choosing any day from sidebar.
+- See not only the initial capsule but the whole chat for that day.
 
-Other details:
-- every day at a fixed time the capsule will be generated,
-- in chat, student can ask any type of question,
-- student can ask to reformat the capsule,
-- by the end of the day, based on:
-  - chat in capsule,
-  - practice performance,
-  - chat with tutor,
-  - notes will be updated.
+In chat, student can ask any type of question about that day's content.
 
-Daily Capsule will also contain a second tab: **Resources**
+Daily Capsule also contains a second tab: **Resources**
 
 ##### Resources tab
-Agent will list the best resources for that topic from the internet.
+Agent lists the best resources for that topic from the internet — YouTube videos and other helpful resources — filtered and listed with each day's capsule.
 
-For example:
-- YouTube videos,
-- any other helpful internet resources useful to understand the topic.
+#### d. Practice (Subject Practice)
+Practice has a chapter-browser sidebar. Student can navigate to any chapter and create a practice session for that chapter.
 
-With each day’s capsule, helpful resources will be filtered and listed there.
+On opening the practice section, the student is directed to the chapter planned for that day (from the consultant's timeline), but can freely choose any chapter via the sidebar.
 
-#### d. Practice
-Practice will contain two tabs:
-1. practice topic of that day,
-2. practice whole subject.
+Practice setup per session:
+- Number of questions.
+- Timer option.
+- Optional message field (e.g., "focus on hard questions only").
+- Submit button.
 
-Practice details:
-- there will be a chat option,
-- student can ask what type of question they want to practice,
-- student can ask follow-up questions regarding questions and solutions of practice questions,
-- it will contain history so that student can see each day’s practice later.
-
-Practice setup:
-- number of questions,
-- timer or not,
-- optional message field if student wants to add something,
-- submit button.
-
-After submit:
-- set will be created in MCQ form,
-- student can choose answers in normal MCQ test interface,
-- student can submit manually,
-- if time is over, it will auto-submit.
+Questions are selected from the pre-uploaded question pool for that chapter, in appropriate ratios by topic/difficulty.
 
 After submission:
-- score will be shown,
-- correct options will be shown,
-- explanation will be shown.
+- Score shown.
+- Correct options shown.
+- Explanations shown.
 
 Follow-up mode:
-- there will be a “follow up” button at the bottom right corner,
-- if the student has any follow-up question regarding that set, they can click it,
-- then the buttons for number of questions and timers will hide,
-- only the message field will be visible,
-- student can write message and send.
+- "Follow up" button at bottom right.
+- Student can ask follow-up questions about the questions or explanations.
+- After follow-up, student can start a new practice session.
 
-After all queries are clear, student can create another test again through the initial method.
+**Practice history:**
+- History is stored per chapter.
+- Each practice session generates a session summary after the student closes it (because the student may still be in follow-up before closing).
+- Session summary contains: total questions solved, correct/incorrect count, topics with most wrong answers, topics with most right answers.
+- Multiple sessions in one chapter each have their own summary stored.
+- Summaries are used by the Personalization agent to generate daily summaries and by the Capsule agent for daily capsule generation.
 
 #### Downloadable PDFs
-Everything below will be provided in downloadable PDF format if the student wants to download:
-- notes,
-- daily capsule,
-- practice questions.
+The following are provided in downloadable PDF format:
+- Notes.
+- Daily capsule.
+- Practice question sets.
 
 #### Shared Context Among Subject Agents
-All three agents will have context of one another.
-
-For example:
-- tutor agent will get summary of what student was asking to capsule agent or practice agent about that topic,
-- and vice versa.
+All three agents (tutor, capsule, practice) receive the same personalization context for the same subject, so they are all aware of the student's state in that subject.
 
 ---
 
-### 2. Planner Expert (Consultant)
+### 2. Consultant (Planner + Advisor + Motivator)
 
-Planner expert will:
-- plan the whole preparation,
-- allow student to discuss anything regarding preparation,
-- give instructions to other tutors.
-
-Initially, it will:
-- prepare a whole timeline of preparation based on the time the student has.
+The consultant agent is the advanced personal advisor for the student. It is not just a planner — it is a comprehensive consultant, motivator, and career guide.
 
 It will:
-- update plan for each next day after student completes that day’s preparation,
-- take into account the student’s problems of that day,
-- give instructions to other agents,
-- follow the timeline,
-- ask other agents how to make preparation more effective,
-- read chats,
-- read practice performance.
+- Build and maintain the full preparation timeline based on the student's time and goals.
+- Update the plan after each day's session, taking into account practice performance, tutor chats, and student issues.
+- Give instructions to other agents (tutor, capsule, practice).
+- Read all agent chats and practice performance to maintain full context.
+- Provide personalized improvement tips and study strategy guidance.
+- Identify weak points across all subjects and proactively advise.
+- Motivate students — especially those scared of hard topics or who need reassurance about their stream choice.
+- Guide students to choose the right stream based on future goals, not just course difficulty. Make clear that no stream is inherently "hard" — the right match depends on the student's goals.
+- Help students choose the best college for them based on their goals and the college's strengths (e.g., suggest a sports-active college to a student with sports ambitions).
 
-If student asks to make any change:
-- that will also be taken into account.
+**Career and college guidance:**
+- Uses web search to collect up-to-date information about colleges, streams, and career paths.
+- Provides recommendations based on researched data, not just internal knowledge.
+- Always frames suggestions as recommendations with reasoning — never mandates. Guardrails are built in to prevent directive language.
 
-It will:
-- update instructions for agents immediately after chat,
-- not wait for routine update,
-- guide students about career.
+**Timeline management:**
+- Creates initial preparation timeline based on student profile and available time.
+- Updates the timeline at end of day via Personalization agent.
+- Can update the timeline **immediately** mid-chat if the student explicitly requests a change, without waiting for end-of-day processing.
 
-This separate planner agent is built so that student can talk about their issues at one place, and those issues will be taken into account by all agents.
+This separate consultant agent exists so the student has one place to talk about all their issues, and those issues are automatically propagated to all other agents.
 
 ---
 
@@ -575,11 +721,10 @@ This separate planner agent is built so that student can talk about their issues
 
 #### a. Leaderboard
 Leaderboard will show:
-- top performers in daily mock test,
-- each college leaderboard,
-- student can choose any college to take mock test,
-- test will be in the format of that college,
-- overall topper for general category.
+- Top performers in daily mock test.
+- Each college leaderboard.
+- Student can choose any college to take mock test; test will be in that college's format.
+- Overall topper for general category.
 
 #### b. Community
 - Both students and admin can post.
@@ -588,37 +733,35 @@ Leaderboard will show:
 - Announcement by admin.
 
 #### d. Notices
-- scholarship notices,
-- entrance exam related notices,
-- all other required notices for students.
+- Scholarship notices.
+- Entrance exam related notices.
+- All other required notices for students.
 
-All of community, announcement, and notice will be like Facebook posts, meaning:
-- text,
-- image,
-- link,
-can be posted.
+All of community, announcement, and notice will be like Facebook posts (text, image, link).
 
 ---
 
-### 4. Practice & Mock Test
+### 4. Practice & Mock Test (Global Section)
 
-This section will contain two tabs:
+This section is separate from the subject-specific practice inside the tutor section.
 
-#### Fixed
-- fixed number of questions,
-- student can choose for any specific college or a universal one.
+Two tabs:
+
+#### Fixed (Mock Test)
+- Fixed number of questions per college format.
+- Student can choose any specific college or a universal format.
+- Questions selected from the main question pool and extra subject question pool as required.
 
 #### Customizable
-- student can choose number of questions,
-- for example if student wants to practice 30 questions.
+- Student can choose number of questions and subjects.
 
 ---
 
 ### 5. Syllabus and Past Questions of Different Colleges
 
 This section will contain:
-- syllabus of different colleges,
-- past questions of different colleges.
+- Syllabus of different colleges.
+- Past questions of different colleges.
 
 ---
 
@@ -636,21 +779,25 @@ Settings will contain remaining control related features.
 
 ## Subject Structure by Stream
 
-In the tutor page, each subject will be shown like in Google Classroom, where each subject is represented by a box, and by clicking that box the student can open that subject.
+In the tutor page, each subject with a tutor is shown like Google Classroom (each subject as a clickable box).
 
-### Science
+### Science Stream — Subjects with Full Tutor
 - Compulsory English
-- Compulsory Science
 - Compulsory Mathematics
+- Compulsory Science
 - Optional Mathematics
 
-### Management & Humanities
+### Management & Humanities Stream — Subjects with Full Tutor
 - Compulsory English
 - Compulsory Mathematics
-- GK (social or current affairs)
+
+### Extra Subjects (Practice & Mock Test Only — No Tutor)
+These subjects have MCQ question pools for mock tests but no tutor, notes, or daily capsule:
+- Computer Science
+- GK (social / current affairs)
 - IQ
 
-Student interface will have the subjects of the respective stream.
+Admin can add more extra subjects from the admin panel and upload JSON question files for them. Extra subject questions are stored in a separate database table.
 
 ---
 
@@ -658,18 +805,32 @@ Student interface will have the subjects of the respective stream.
 
 This is the heart of the platform and the core developer focus.
 
-Tutors should have context of:
-- student’s academic background,
-- subject-wise summary (daily, weekly, 15-day, monthly, all-time).
+A dedicated **Personalization agent** handles all summary generation and updates. It runs at end of day (via Celery job) and on schedule.
 
-Summaries are LLM-generated free-form text — not fixed fields — so that any number of parameters (weak topics, improvement rate, performance patterns, learning style, etc.) can be captured without schema constraints.
+### What tutors receive (per subject)
+- Student's overall summary
+- Subject-wise all-time summary
+- Subject-wise weekly summary
+- Subject-wise daily summary of the previous day
+- Syllabus structure of the relevant chapter only
 
-There should be:
-- personalization summary of each agent for the student,
-- personalization summary of the planner agent for the student,
-- timeline of whole preparation by planner agent, accessible to all agents.
+### What the consultant receives
+- Student's overall summary
+- All-time subject summaries for all subjects
+- Weekly summaries for all subjects
+- Current preparation timeline
+- Today's session summaries from each subject
 
-This timeline can be updated by planner agent as needed, but it will be followed by all agents.
+### Summary schedule
+- **Daily summary:** generated at end of day by Personalization agent using that day's session data
+- **Weekly summary:** regenerated every day from the last 7 daily summaries (fully regenerated, not appended)
+- **All-time subject summary:** updated once per week by reading new daily summaries + previous all-time summary together
+
+### Session memory
+- Starts after 5 messages in a session
+- Updated every 3 messages after that
+- Chat context = last 3 messages
+- Keeps tutor input token count manageable
 
 ---
 
@@ -698,536 +859,289 @@ This section contains the full phased build plan. Each session should read the *
 
 Services communicate using `X-Internal-Secret` header. Value = `MAIN_BACKEND_INTERNAL_SECRET` from `.env`. All internal endpoints must verify this header.
 
-## Phase Dependency Order
-
-```
-Phase 1 (Scaffolding) ← START HERE
-  ├── Phase 2 (RAG Pipeline)           ai_service
-  └── Phase 3 (Auth + User Models)     main_backend
-        └── Phase 4 (Tutor Agent)      ai_service  [needs Phase 2 + 3]
-              └── Phase 5 (Planner)    ai_service  [needs Phase 4]
-                    └── Phase 6 (Capsule + Practice)  ai_service  [needs Phase 5]
-                          └── Phase 7 (Worker Jobs)   worker      [needs Phase 6]
-                                └── Phase 8 (Main Backend Features)  main_backend  [needs Phase 3 + 7]
-                                      └── Phase 9 (Admin Frontend)   frontend      [needs Phase 2 + 8]
-                                            └── Phase 10 (Student Frontend)  frontend  [needs all AI]
-                                                  └── Phase 11 (Affiliation)  frontend + ai_service
-```
-
 ---
 
-
-## Phase 2 — RAG Pipeline
-
-**Goal:** Admin uploads a PDF book → pipeline chunks it by structure, refines chunks with LLM (each chunk = one complete concept), extracts images to Cloudflare R2, embeds chunks, upserts to Pinecone with full metadata. This is the AI knowledge foundation.
+## Phase 2 — Subject Structure System + RAG Pipeline Redesign
 
 **Services:** `ai_service`
+**Goal:** Tear out old image-based RAG. Replace with text-only, chapter-aware pipeline. Establish subject structure taxonomy used by everything downstream.
 
-### Files to create
+### Remove
+- `ai_service/app/rag/image_extractor.py` — delete
+- `ai_service/app/rag/image_filter.py` — delete
+- `ai_service/app/rag/docx_chunker.py` — delete
+- All image fields from `rag/schemas.py` (image_urls, image_descriptions, image_blocks)
+- DOCX branch + all image logic from `rag/pipeline.py`
+- Remove from requirements.txt: PyMuPDF, Pillow, python-docx
+- Clear all existing Pinecone vectors (incompatible metadata schema — use existing `delete_book_vectors` utility)
 
+### Build
+
+**1. Subject structure module** — `ai_service/app/subject_structure/`
+- JSON placeholder files at `data/{subject}.json` for: `compulsory_math`, `optional_math`, `compulsory_english`, `compulsory_science`
+- Format: `{subject, display_name, chapters: [{id, display_name, topics: [{id, display_name, subtopics: [str]}]}]}`
+- `loader.py` — reads JSON at startup, caches in memory, exposes `get_structure(subject: str) -> dict`
+
+**2. New RAG pipeline** — rewrite `rag/pipeline.py`
+- Input: `.txt` or `.md` file only (no PDF, no DOCX, no images)
+- Step 1: structure-based chunking using subject structure for the given chapter
+- Step 2: LLM semantic refinement (gpt-4o-mini) — assigns chapter, topic, subtopic, chunk_type (explanation/example/objective_question/definition), difficulty (easy/medium/hard)
+- Step 3: embed (text-embedding-3-large) + upsert to Pinecone
+- Pinecone metadata fields: `note_id`, `subject`, `chapter`, `topic`, `subtopic`, `chunk_type`, `difficulty`
+- No R2 storage — text is processed and discarded after pipeline completes
+
+**3. Migration 005** — rename `books` → `rag_notes` (use ALTER TABLE RENAME, not recreate); drop image/book-specific columns; add `chapter` (string) column
+
+**4. New `RagNote` model** — `id`, `note_id` (string unique), `subject`, `chapter`, `display_name`, `status` (queued/processing/completed/failed), `total_chunks`, `error_message`, `created_at`, `completed_at`
+
+**5. Rewrite `api/rag.py`** — all endpoints require `X-Internal-Secret`:
 ```
-ai_service/app/
-  models/__init__.py
-  models/rag_job.py        SQLAlchemy RagJob model
-
-  rag/__init__.py
-  rag/schemas.py           Pydantic: BookUploadRequest, ChunkMetadata, JobStatus
-  rag/pipeline.py          async orchestrator — runs as background asyncio.create_task()
-                           stages: chunking → image extraction → semantic refinement → embedding
-                           updates Redis + DB at each stage
-  rag/chunker.py           PyMuPDF (fitz): open PDF, extract text blocks preserving heading hierarchy,
-                           detect image bounding boxes, group: heading + paragraphs + figures + caption
-                           output: list of RawChunk {text, page_number, chapter_hint, image_blocks}
-  rag/image_extractor.py   for each chunk with images: extract bytes from fitz, upload to R2
-                           R2 path: books/{book_id}/page_{page}_{index}.png
-                           attach image URLs to chunk metadata
-  rag/semantic_refiner.py  sliding window of 3-5 raw chunks → GPT-4o call
-                           instruction: merge chunks that are same concept, split chunks with 2 concepts,
-                           identify chunk_type, extract chapter name and topic
-                           return structured JSON list of refined chunks
-  rag/embedder.py          OpenAI text-embedding-3-large per chunk
-                           build Pinecone vector: {id: uuid, values: embedding, metadata: full dict}
-                           batch upsert to index "hamroguru" in batches of 100
-
-  api/rag.py               4 endpoints below, all require X-Internal-Secret header
-```
-
-### RagJob table
-
-```
-id              UUID PK
-book_id         String
-book_title      String
-subject         String  (physics|chemistry|math|english|optional_math|science|ik|gk)
-class_level     String  (default "10")
-stream          String  (science|management|both)
-book_type       String  (default|additional)
-publisher       String
-status          Enum    queued|processing|completed|failed
-total_chunks    Integer (null until complete)
-error_message   Text    (null unless failed)
-created_at      DateTime
-completed_at    DateTime
+POST /api/rag/upload-note         multipart: note_id, subject, chapter, display_name, file(.txt/.md)
+GET  /api/rag/status/{note_id}
+GET  /api/rag/notes
+DELETE /api/rag/notes/{note_id}   deletes DB row + all Pinecone vectors for this note_id
+GET  /api/rag/structure/{subject} returns subject structure JSON
 ```
 
-### Pinecone metadata schema (store ALL fields on every vector)
-
-```json
-{
-  "book_id": "string",
-  "book_title": "string",
-  "type": "default|additional",
-  "publisher": "string",
-  "class": "integer",
-  "subject": "physics|chemistry|math|english|optional_math|science|ik|gk",
-  "stream": "science|management|both",
-  "chapter": "string",
-  "chapter_number": "integer",
-  "topic": "string",
-  "page_number": "integer",
-  "chunk_type": "question|example|explanation|definition|diagram_description",
-  "image_urls": ["string"],
-  "text": "string"
-}
-```
-
-### Job progress tracking (Redis)
-
-Key: `rag:job:{job_id}` → JSON `{status, stage, progress_pct, message}` — TTL 24 hours.
-Update Redis at the start of each pipeline stage. DB row updated at start and end.
-
-### Endpoints
-
-```
-POST /api/rag/upload-book
-     Header: X-Internal-Secret
-     Multipart form: file(PDF), book_id, book_title, subject, class_level,
-                     stream, book_type, publisher
-     → { "job_id": "uuid", "status": "queued" }
-     Immediately returns. Pipeline runs in background asyncio task.
-
-GET  /api/rag/status/{job_id}
-     Header: X-Internal-Secret
-     → { job_id, status, stage, progress_pct, message, total_chunks, error_message }
-     Reads from Redis first (fast), falls back to DB.
-
-GET  /api/rag/books
-     Header: X-Internal-Secret
-     → list of all RagJob rows ordered by created_at desc
-
-DELETE /api/rag/books/{book_id}
-     Header: X-Internal-Secret
-     → deletes all Pinecone vectors where metadata.book_id == book_id
-        deletes RagJob row from DB
-     → { "message": "deleted", "vectors_deleted": N }
-```
-
-### Alembic migration
-
-Create migration `001_create_rag_job.py` and run `alembic upgrade head` in ai_service.
-
-### Verification checklist
-
-1. Upload a real PDF chapter → confirm `job_id` returned immediately
-2. Poll status → watch stages: queued → chunking → extracting_images → refining → embedding → completed
-3. Pinecone dashboard → vectors present with all metadata fields populated
-4. R2 dashboard → images under `books/{book_id}/` (if PDF has images)
-5. Query Pinecone directly: filter `{subject: "physics"}` → correct metadata
-6. DELETE endpoint → vectors gone from Pinecone, row deleted from DB
+**6. Update `rag/retriever.py`** — add optional `chapter` parameter to filter Pinecone query by chapter in addition to subject
 
 ---
 
-## Phase 3 — Auth + User Models
-
-**Goal:** Complete authentication system, user roles, student and affiliation profiles, onboarding flow, marksheet uploads.
-
-**Services:** `main_backend`
-
-### Files to create
-
-```
-main_backend/app/
-  models/__init__.py
-  models/user.py
-  models/student_profile.py
-  models/affiliation_profile.py
-
-  schemas/__init__.py
-  schemas/auth.py           RegisterRequest, LoginRequest, TokenResponse, UserOut
-  schemas/user.py           UserUpdate
-  schemas/student_profile.py ProfileOut, ProfileUpdate, TestScoreEntry
-
-  core/__init__.py
-  core/security.py          pwd_context (bcrypt), create_access_token, create_refresh_token,
-                            decode_token, verify_password
-  core/dependencies.py      get_current_user (reads Bearer token), require_role(roles),
-                            verify_internal_secret (X-Internal-Secret middleware)
-  core/r2_client.py         upload marksheets to R2 at students/{user_id}/marksheets/{year}.*
-
-  api/auth.py               register, login, refresh, me
-  api/onboarding.py         set-role, student set-stream, affiliation setup
-  api/profile.py            get/update student profile, upload marksheet, get referral code
-  api/admin_users.py        admin: list users, get user, deactivate user
-  api/internal.py           GET /api/internal/profile/{user_id}  (X-Internal-Secret)
-
-  alembic/versions/001_create_users_and_profiles.py
-```
-
-### User table
-
-```
-id                  UUID PK (default gen_random_uuid())
-email               String unique not null
-phone               String unique nullable
-full_name           String not null
-hashed_password     String not null
-role                Enum: student|admin|affiliation_partner  default student
-is_active           Boolean default True
-onboarding_complete Boolean default False
-referral_code       String unique not null  (auto-generated 8-char alphanumeric on register)
-referred_by         UUID FK → users.id nullable
-created_at          DateTime default now()
-updated_at          DateTime
-```
-
-### StudentProfile table
-
-```
-id                      UUID PK
-user_id                 UUID unique FK → users.id
-stream                  Enum: science|management  nullable
-school_name             String nullable
-school_address          String nullable
-class_8_scores          JSONB nullable   {subject: score, ...}
-class_9_scores          JSONB nullable
-class_10_scores         JSONB nullable
-see_gpa                 Float nullable
-marksheet_urls          JSONB nullable   [{year: "2080", url: "..."}]
-notes                   Text nullable
-profile_completion_pct  Integer default 0
-created_at              DateTime
-updated_at              DateTime
-```
-
-### AffiliationProfile table
-
-```
-id              UUID PK
-user_id         UUID unique FK → users.id
-bank_name       String nullable
-account_number  String nullable
-account_name    String nullable
-qr_image_url    String nullable
-total_referrals Integer default 0
-total_earnings  Numeric default 0
-created_at      DateTime
-```
-
-### JWT strategy
-
-- `JWT_SECRET_KEY` from `.env`, algorithm HS256
-- Access token: 30 min expiry
-- Refresh token: 7 days expiry, stored in Redis as `refresh:{user_id}` → token_hash
-- Token payload: `{sub: user_id, role: role, exp: expiry}`
-
-### Endpoints
-
-```
-POST /api/auth/register
-     Body: { email, password, full_name, referral_code? }
-     → { access_token, refresh_token, user: UserOut }
-     Creates User, auto-generates referral_code, links referred_by if code provided.
-
-POST /api/auth/login
-     Body: { email, password }
-     → { access_token, refresh_token, user: UserOut }
-
-POST /api/auth/refresh
-     Body: { refresh_token }
-     → { access_token, refresh_token }
-
-GET  /api/auth/me
-     Header: Authorization: Bearer <token>
-     → UserOut
-
-POST /api/onboarding/set-role
-     Header: Authorization: Bearer <token>
-     Body: { role: "student" | "affiliation_partner" }
-     → { message, redirect_to }
-
-POST /api/onboarding/student/set-stream
-     Header: Authorization: Bearer <token>
-     Body: { stream: "science" | "management", school_name, school_address? }
-     → { message, profile: ProfileOut }
-     Creates StudentProfile. Sets onboarding_complete=True on User.
-
-POST /api/onboarding/affiliation/setup
-     Header: Authorization: Bearer <token>
-     Body: { bank_name?, account_number?, account_name? }
-     Multipart optional: qr_image (file)
-     → { message, profile: AffiliationProfileOut }
-     Creates AffiliationProfile. Sets onboarding_complete=True.
-
-GET  /api/profile/student
-     Header: Authorization: Bearer <token>
-     → StudentProfileOut
-
-PATCH /api/profile/student
-     Header: Authorization: Bearer <token>
-     Body: { school_name?, see_gpa?, class_8_scores?, class_9_scores?, class_10_scores?, notes? }
-     → updated StudentProfileOut
-
-POST /api/profile/student/upload-marksheet
-     Header: Authorization: Bearer <token>
-     Multipart: file (image or PDF), year (string e.g. "2080")
-     → { url, year }
-
-GET  /api/users/me/referral-code
-     Header: Authorization: Bearer <token>
-     → { referral_code, referral_link: "https://hamroguru.app/register?ref=CODE" }
-
-GET  /api/admin/users
-     Header: Authorization: Bearer <admin_token>
-     Query: role?, stream?, page=1, limit=20
-     → { items: [UserOut], total, page, limit }
-
-GET  /api/admin/users/{user_id}
-     Header: Authorization: Bearer <admin_token>
-     → { user: UserOut, student_profile: StudentProfileOut | null }
-
-PATCH /api/admin/users/{user_id}/deactivate
-     Header: Authorization: Bearer <admin_token>
-     → { message }
-
-GET  /api/internal/profile/{user_id}
-     Header: X-Internal-Secret
-     → { user: UserOut, student_profile: StudentProfileOut | null }
-```
-
-### Verification checklist
-
-1. Register → login → `GET /api/auth/me` confirms user data
-2. Full onboarding flow (set-role → set-stream) → StudentProfile in Neon DB
-3. Upload marksheet → file appears in R2 under `students/{user_id}/marksheets/`
-4. Token refresh returns new access token that works on `/me`
-5. Admin-only endpoint returns 403 for student token
-6. `GET /api/internal/profile/{user_id}` with internal secret returns profile
-7. `alembic upgrade head` runs clean, all tables in Neon
-
----
-## Phase 4 — Core Tutor Agent + RAG Retrieval + Basic Personalization
-
-**Goal:** Tutor agent per subject using OpenAI Agents SDK. RAG retrieval from Pinecone. Streaming SSE chat. Personalization data models created (empty at first, filled by worker in Phase 7).
+## Phase 3 — MCQ Question Pool
 
 **Services:** `ai_service`
+**Goal:** Complete question storage, admin upload, and selection engine. Practice system depends on this.
 
-### Files to create
+### Build
 
+**Migration 006** — create three tables:
+- `main_questions`: `id`, `question_id` (string, unique), `subject`, `chapter`, `topic`, `subtopic` (nullable), `difficulty` (easy/medium/hard), `is_active` (bool, default true), `version` (int), `data` (JSONB — full question object)
+- `extra_questions`: `id`, `question_id` (unique), `subject`, `difficulty`, `is_active`, `version`, `data` (JSONB)
+- `extra_subjects`: `id`, `subject_key` (unique), `display_name`, `is_active`, `created_at`
+
+**`ai_service/app/api/questions.py`** — all admin endpoints require `X-Internal-Secret`:
 ```
-ai_service/app/
-  models/personalization.py   PersonalizationSummary, PlannerTimeline tables
-  models/chat_session.py      ChatSession, ChatMessage tables
-
-  schemas/chat.py             ChatRequest, MessageOut, SessionOut
-  schemas/personalization.py  SummaryOut, PlannerTimelineOut
-
-  rag/retriever.py            embed query → query Pinecone with subject/stream filter → return top-k
-                              output: list of {text, chapter, topic, chunk_type, image_urls, score}
-
-  agents/__init__.py
-  agents/base_agent.py        shared OpenAI client (AsyncOpenAI), model constants
-  agents/shared/__init__.py
-  agents/shared/rag_tool.py   generic RAG retrieval tool definition for use by all agents
-
-  agents/tutor/__init__.py
-  agents/tutor/agent.py       TutorAgent class
-                              - takes user_id, subject, stream as constructor args
-                              - loads full context via context_builder before each turn
-                              - uses OpenAI Agents SDK Runner.run_streamed()
-                              - tool: search_knowledge_base(query: str) → calls retriever
-  agents/tutor/prompts.py     per-subject system prompt template (Physics, Chemistry, Math, etc.)
-  agents/tutor/tools.py       tool definitions for tutor agent
-
-  personalization/__init__.py
-  personalization/context_builder.py   CRITICAL FILE
-                              assembles full context for any agent:
-                              1. fetch student profile from main_backend internal endpoint
-                              2. fetch all personalization summaries (all timelines) from DB
-                              3. fetch planner timeline from DB
-                              4. fetch last 10 messages from Redis (key: session:{session_id}:messages)
-                              5. return structured string for injection into system prompt
-                              must handle nulls gracefully (new student has no summaries yet)
-  personalization/summary_manager.py   CRUD: get_summary, save_summary, list_summaries
-
-  sessions/__init__.py
-  sessions/manager.py         create_session, append_message, get_recent_messages(n=10)
-                              messages cached in Redis: session:{session_id}:messages (list, TTL 24h)
-                              messages also persisted to ChatMessage table in DB
-
-  api/tutor.py                chat SSE endpoint, sessions, messages, summaries endpoints
+POST /api/questions/upload/main           JSON array of question objects → validated, inserted
+POST /api/questions/upload/extra          {subject, questions: [...]}
+POST /api/questions/extra-subjects        {subject_key, display_name}
+GET  /api/questions/extra-subjects
+PATCH /api/questions/extra-subjects/{key}/toggle
+GET  /api/questions/pool                  ?subject&chapter&difficulty&count&mode(practice|mock) — omits correct_option_ids
+POST /api/questions/check-answers         JWT, {question_ids, answers: {id: option}} → {results}
+GET  /api/questions/pool/stats            ?subject → count by chapter/difficulty
+PATCH /api/questions/{question_id}/toggle
+DELETE /api/questions/{question_id}
 ```
 
-### PersonalizationSummary table
-
-```
-id                  UUID PK
-user_id             UUID not null  (no FK — cross-service, store as plain UUID)
-agent_type          Enum: tutor|capsule|practice|planner
-subject             String nullable  (null for planner agent)
-timeline            Enum: daily|weekly|fifteen_day|monthly|all_time
-content             Text  (free-form LLM-generated — THE CORE VALUE)
-generated_at        DateTime
-covers_period_start DateTime
-covers_period_end   DateTime
-```
-
-### PlannerTimeline table
-
-```
-id                UUID PK
-user_id           UUID unique not null
-content           Text  (free-form LLM-generated preparation plan)
-last_updated      DateTime
-next_review_date  DateTime nullable
-version           Integer default 1
-```
-
-### ChatSession table
-
-```
-id           UUID PK
-user_id      UUID not null
-agent_type   Enum: tutor|capsule|practice|planner
-subject      String nullable
-session_date Date default today
-title        String  (auto-generated from first message, first 60 chars)
-created_at   DateTime
-```
-
-### ChatMessage table
-
-```
-id          UUID PK
-session_id  UUID FK → chat_sessions.id
-role        Enum: user|assistant
-content     Text
-metadata    JSONB nullable  {source_chunks: [{chapter, topic}], image_urls: [...]}
-created_at  DateTime
-```
-
-### Context builder system prompt structure
-
-```
-You are a personal tutor for [SUBJECT] at HamroGuru. You help Nepali students
-prepare for class 11 entrance exams after their SEE.
-
-## Student Profile
-Name: [full_name]
-Stream: [stream]
-School: [school_name]
-SEE GPA: [see_gpa or "not provided"]
-Class 10 Scores: [class_10_scores or "not provided"]
-[... other profile fields ...]
-
-## Your Knowledge of This Student
-
-### All-Time Summary
-[all_time summary content or "No summary yet — this is a new student."]
-
-### Monthly Summary
-[monthly summary or "Not yet generated."]
-
-### Weekly Summary
-[weekly summary or "Not yet generated."]
-
-### Today's Summary
-[daily summary or "Not yet generated."]
-
-## Planner's Assessment
-[planner all_time summary or "Planner has not yet assessed this student."]
-
-## Preparation Plan
-[planner timeline content or "No plan created yet. Encourage student to chat with Planner."]
-
-## Today's Capsule
-[today's capsule summary if exists, else omit section]
-
-## Today's Practice
-[today's practice summary if exists, else omit section]
-
-## Instructions
-- Always personalize responses based on the student context above.
-- ALWAYS call search_knowledge_base before answering factual/concept questions.
-- Cite the source (chapter, topic) when referencing book content.
-- If a retrieved chunk has image_urls, mention "Refer to the diagram on page X."
-- Respond in English. If student writes in Nepali, acknowledge and respond in English.
-- Warm, encouraging, patient teaching style. Never make the student feel bad.
-- Follow any planner instructions for this subject if present in the plan.
-```
-
-### Endpoints
-
-```
-POST /api/tutor/chat
-     Header: Authorization: Bearer <token>
-     Body: { subject, message, session_id? }
-     → SSE stream: text/event-stream
-       events: data: {"chunk": "..."}\n\n  (token-by-token)
-               data: {"done": true, "session_id": "...", "message_id": "..."}\n\n
-     Creates new session if session_id not provided.
-     Persists user message and complete assistant response to DB.
-
-GET  /api/tutor/sessions
-     Header: Authorization: Bearer <token>
-     Query: subject?
-     → [{ id, subject, session_date, title, agent_type }]
-
-GET  /api/tutor/sessions/{session_id}/messages
-     Header: Authorization: Bearer <token>
-     → [{ id, role, content, metadata, created_at }]
-
-GET  /api/tutor/personalization/summaries
-     Header: Authorization: Bearer <token>
-     Query: agent_type?, subject?, timeline?
-     → [PersonalizationSummary]
-
-GET  /api/tutor/personalization/timeline
-     Header: Authorization: Bearer <token>
-     → PlannerTimelineOut | null
-```
-
-### Alembic migration
-
-`002_create_personalization_and_chat_tables.py` — run `alembic upgrade head` in ai_service.
-
-### Verification checklist
-
-1. Register science student (Phase 3). Upload a physics PDF (Phase 2).
-2. `POST /api/tutor/chat` with `{subject:"physics", message:"Explain Newton's first law"}`
-3. Response streams as SSE — chunks appear token by token
-4. Add logging in `retriever.py` to confirm Pinecone was queried and chunks returned
-5. `GET /api/tutor/sessions` → session exists with auto-generated title
-6. `GET /api/tutor/sessions/{id}/messages` → both user and assistant messages stored
-7. Send follow-up in same session — agent remembers previous exchange (context continuity)
-8. New student with no summaries → tutor still responds correctly (graceful null handling)
+**Question pool selector logic:**
+- `mode=practice` with chapter: difficulty ratio 40% easy / 40% medium / 20% hard; SQL `ORDER BY RANDOM() LIMIT n`
+- `mode=mock` without chapter: distribute across all chapters for the subject
+- Never expose `correct_option_ids` in `/pool` response
+- Reject entire upload batch if any item fails schema validation; return `{accepted: n, rejected: n, errors: [...]}`
 
 ---
 
+## Phase 4 — Admin Panel Backend + Admin Panel Frontend
+
+**Services:** `main_backend`, `frontend`
+**Goal:** Admin manages all content, colleges, payments, config. Students can submit payments.
+
+### main_backend new models (Migration 002)
+- `Payment`: user_id, amount, screenshot_url, status (pending/approved/rejected), approved_by (nullable), subscription_months, referral_discount_pct, created_at
+- `Subscription`: user_id (unique), status (trial/active/expired), trial_ends_at, subscription_ends_at (nullable)
+- `PlatformConfig`: single row — subscription_price, trial_duration_days (default 7), referral_commission_pct, referral_discount_pct
+- `LevelNote`: subject, chapter, level (1/2/3), display_name, r2_key, r2_url, uploaded_by, created_at
+- `College`: name, location, total_questions, total_time_minutes, question_distribution (JSONB `{subject: count}`), is_active
+- `SubjectTimingConfig`: subject + difficulty unique, seconds_per_question (default 72)
+- `ReferralEarning`: referrer_id, referred_user_id, payment_id, commission_amount, status (pending/paid)
+
+Auto-create trial Subscription on student onboarding completion (`POST /api/onboarding/student/set-stream`).
+
+### main_backend new endpoints
+
+**Student-facing:**
+```
+POST /api/payments/submit              JWT(student), multipart: amount + screenshot
+GET  /api/payments/my                  JWT(student)
+GET  /api/subscription/status          JWT(student)
+GET  /api/colleges                     JWT(student) → list active colleges
+```
+
+**Admin:**
+```
+GET  /api/admin/analytics/overview
+GET  /api/admin/payments               ?status=pending
+POST /api/admin/payments/{id}/approve
+POST /api/admin/payments/{id}/reject
+POST /api/admin/payments/approve-all-pending
+GET  /api/admin/referral-earnings
+PATCH /api/admin/referral-earnings/{id}/mark-paid
+GET  /api/admin/config
+PATCH /api/admin/config
+POST /api/admin/colleges
+GET  /api/admin/colleges
+PATCH /api/admin/colleges/{id}
+GET  /api/admin/subject-timing
+PATCH /api/admin/subject-timing/{id}
+POST /api/admin/level-notes            multipart: subject, chapter, level, display_name, file(PDF) → R2
+GET  /api/admin/level-notes
+DELETE /api/admin/level-notes/{id}     R2 delete + DB row
+POST /api/admin/notifications/send     {target: all|paid|trial, title, body} (placeholder)
+GET  /api/admin/users/{user_id}/reactivate  (extends existing admin users API)
+```
+
+**Admin proxy to ai_service** (adds X-Internal-Secret, forward JWT):
+```
+POST /api/admin/rag/upload-note        → ai_service
+GET  /api/admin/rag/notes              → ai_service
+GET  /api/admin/rag/status/{note_id}   → ai_service
+DELETE /api/admin/rag/notes/{note_id}  → ai_service
+GET  /api/admin/rag/structure/{subj}   → ai_service
+POST /api/admin/questions/upload/main  → ai_service
+POST /api/admin/questions/upload/extra → ai_service
+GET  /api/admin/questions/stats        → ai_service
+POST /api/admin/extra-subjects         → ai_service
+GET  /api/admin/extra-subjects         → ai_service
+```
+
+**Internal:**
+```
+GET /api/internal/subscription/{user_id}  X-Internal-Secret → {status, trial_ends_at, subscription_ends_at}
+GET /api/internal/colleges/{id}           X-Internal-Secret → college + question_distribution
+```
+
+### Frontend: Admin Panel (`frontend/src/admin/`)
+Pages:
+- **Dashboard** — stat cards (total users, paid/trial/expired, by stream), pending payments alert
+- **Users** — paginated list with search/filter; detail view; deactivate/reactivate
+- **Payments** — Pending tab + History tab; approve/reject per row; "Approve All" button
+- **Referrals** — commission list with mark-paid
+- **Content > RAG Notes** — upload form (subject + chapter + .txt/.md file), list with status badge + progress polling, delete
+- **Content > Questions** — upload JSON for main/extra; upload result display (accepted/rejected); stats table by chapter/difficulty
+- **Content > Level Notes** — upload PDF form (subject + chapter + level 1/2/3), list, delete
+- **Content > Extra Subjects** — add/toggle active
+- **Colleges** — add/edit college with question distribution builder (per-subject count inputs), time settings
+- **Subject Timing** — editable table: seconds per question by subject + difficulty
+- **Config** — subscription price, trial days, referral rates
+- **Notifications** — target selector + title + body send form
+
+---
+
+## Phase 5 — Personalization System Redesign
+
+**Services:** `ai_service`
+**Goal:** Replace old summary model with new architecture. Rebuild context builder for all four agent context types.
+
+### Migration 007
+- Drop `personalization_summaries`, `planner_timelines`
+- Add `consultant` and `personalization` to `agent_type_enum` (keep `planner` for backward compat with existing chat rows)
+- Create new tables:
+  - `overall_student_summaries`: `user_id` (unique), `content`, `generated_at`, `covers_through` (date)
+  - `subject_summaries`: `user_id`, `subject`, `summary_type` (all_time/weekly/daily), `content`, `generated_at`, `summary_date` (date, nullable); unique(user_id, subject, summary_type) for all_time/weekly; unique(user_id, subject, summary_type, summary_date) for daily
+  - `session_memories`: `session_id` (FK chat_sessions, unique), `user_id`, `subject`, `content`, `message_count_at_generation`, `generated_at`
+  - `consultant_timelines`: `user_id` (unique), `content`, `last_updated`, `version`
+  - `practice_session_summaries`: `user_id`, `subject`, `chapter`, `session_date`, `total_questions`, `correct_count`, `incorrect_count`, `topic_breakdown` (JSONB), `summary_content` (text), `created_at`
+  - `student_levels`: `user_id`, `subject`, `level` (1/2/3), `assigned_at`; unique(user_id, subject)
+
+### Rebuild context builder (`ai_service/app/personalization/context_builder.py`)
+Four assembly functions:
+- `build_tutor_context(db, user_id, subject, chapter=None)` → profile + overall summary + subject all_time + subject weekly + subject previous-day daily + chapter syllabus (from subject_structure loader) + consultant timeline
+- `build_consultant_context(db, user_id)` → profile + overall summary + all-subject all_time + all-subject weekly + consultant timeline + today's practice summaries + today's session memories
+- `build_capsule_context(db, user_id, subject)` → same as tutor but today's daily summary (not previous day's)
+- `build_personalization_context(db, user_id)` → all raw data needed to generate summaries
+
+### Update session manager (`sessions/manager.py`)
+- After saving assistant message: if count==5 OR (count>5 AND (count-5)%3==0) → async trigger session memory generation (gpt-4o-mini)
+- Upsert result to `session_memories` on session_id
+- Change `get_recent_messages` → return last 6 messages (3 pairs); prepend session memory if exists
+
+### Rebuild summary manager (`personalization/summary_manager.py`)
+Key functions: `get_or_placeholder`, `save_overall_summary`, `save_subject_summary`, `get_last_n_daily_summaries`, `save_practice_session_summary`
+
+**Debug endpoint (internal, removable after testing):**
+```
+GET /api/debug/context?user_id=x&subject=compulsory_math   X-Internal-Secret
+```
+
+---
+
+## Phase 6 — Tutor Agent Redesign + Student Portal Foundation
+
+**Services:** `ai_service`, `main_backend`, `frontend`
+**Goal:** Rebuild tutor on new context/session-memory/RAG architecture. Build student UI shell and tutor chat.
+
+### ai_service changes
+- Rebuild `agents/tutor/agent.py`: use `build_tutor_context()`, chapter-scoped RAG tool, 6-message context window (3 pairs + session memory), async session memory trigger after each stream completes
+- Rebuild `agents/tutor/prompts.py`: inject new context format; always-call-RAG instruction; cite chapter/topic in answers
+- Update `agents/shared/rag_tool.py`: accept optional `chapter` parameter for filtered retrieval
+- Update `ChatRequest` schema: add `chapter: str | None`
+- Update `POST /api/tutor/chat`: accept chapter; pass to context builder and agent; validate subject is valid for student's stream
+- New: `GET /api/tutor/history?subject=&date=`
+
+### main_backend: tutor proxy (`api/tutor_proxy.py`)
+SSE proxy uses `httpx.AsyncClient.stream()`, yields bytes via FastAPI `StreamingResponse` — never buffers:
+```
+POST /api/tutor/chat                    → ai_service SSE passthrough
+GET  /api/tutor/sessions                → ai_service proxy
+GET  /api/tutor/sessions/{id}/messages  → ai_service proxy
+GET  /api/tutor/history                 → ai_service proxy
+```
+
+### Frontend: Student portal (`frontend/src/student/`)
+- Auth pages: Login, Register
+- Onboarding flow: role selection → stream + school
+- App shell: sidebar nav (Tutor, Practice, Mock Tests, Consultant, Community, Progress, Settings); profile completion banner if < 100%
+- Subject grid page: stream-appropriate subjects as Google Classroom cards
+- Subject detail page: 4 tabs — Tutor Chat, Notes, Daily Capsule, Practice
+- **Tutor Chat tab**: SSE streaming chat, chapter selector dropdown at top, session history sidebar (past sessions by date)
+
+---
+
+## Critical Files Reference
+
+| File | Phase | Action |
+|------|-------|--------|
+| `ai_service/app/rag/pipeline.py` | 2 | Full rewrite |
+| `ai_service/app/rag/image_extractor.py` | 2 | Delete |
+| `ai_service/app/rag/image_filter.py` | 2 | Delete |
+| `ai_service/app/rag/docx_chunker.py` | 2 | Delete |
+| `ai_service/app/rag/retriever.py` | 2 | Add chapter filter |
+| `ai_service/app/models/personalization.py` | 5 | Full redesign |
+| `ai_service/app/personalization/context_builder.py` | 5 | Full rewrite |
+| `ai_service/app/sessions/manager.py` | 5 | Session memory + 6-message window |
+| `ai_service/app/agents/tutor/agent.py` | 6 | Rebuild |
+| `ai_service/app/agents/tutor/prompts.py` | 6 | Rebuild |
+| `worker/worker/celery_app.py` | 9 | Updated Beat schedule |
+| `worker/worker/tasks/` (all files) | 9 | Real implementations |
+
+## Cross-Cutting Notes
+
+- **Pinecone vectors:** Clear all existing vectors at Phase 2 start — metadata schema is incompatible with new pipeline. Use existing `delete_book_vectors` utility per book, or flush the index directly.
+- **agent_type_enum:** Phase 5 migration uses `ALTER TYPE ... ADD VALUE` (not drop/recreate). Keep `planner` value — existing chat session rows reference it.
+- **SSE proxy pattern:** `frontend → main_backend → ai_service`. All streaming endpoints must use `httpx.AsyncClient.stream()` + FastAPI `StreamingResponse` in main_backend. Never buffer SSE.
+- **Context window:** Phase 6 hardcodes `n=6` (3 message pairs) + session memory. Do not revert to `n=10`.
+- **Level default:** No StudentLevel row → serve level 2 notes. Personalization agent assigns async.
+- **books → rag_notes migration:** `ALTER TABLE RENAME` in Migration 005. Add `chapter` with empty-string default. Drop: publisher, stream, book_type, class_level, book_file_url, book_file_key columns.
+- **Worker → ai_service:** Add `AI_SERVICE_URL = "http://localhost:8001"` to `worker/worker/config.py`.
+- **SSE subject validation:** Tutor and practice endpoints must fetch student stream from main_backend internal profile and reject subjects not in that stream's list.
+
+---
 
 ## Build Status
 
-Update this table after completing each phase. Mark `[x] Complete` with the date.
-
-| Phase | Name | Status | Completed | Notes |
-|-------|------|--------|-----------|-------|
-| 1 | Service Scaffolding | [x] Complete | 2026-04-16 | All 4 services boot. main_backend :8000 db=connected. ai_service :8001 db+pinecone+r2+redis=connected. Frontend builds clean. |
-| 2 | RAG Pipeline | [x] Complete | 2026-04-24 | 4-stage pipeline (chunk→image→refine→embed) working. All 4 endpoints verified. Vectors upserted to Pinecone. Improvements on 2026-04-24: OCR error correction in refiner, AI-driven image→chunk assignment (IMG_N indices), DOCX OCR artifact filtering (dimension check + prompt), max 1000-token chunks with paragraph-boundary splitting, 15%-of-chunk-size overlap between chunks. ocr.py removed (image PDFs handled externally as DOCX). |
-| 3 | Auth + User Models | [x] Complete | 2026-04-24 | JWT auth, 3 DB tables (users, student_profiles, affiliation_profiles), all 14 endpoints verified. bcrypt via direct library (passlib incompatible with bcrypt 5.x on Python 3.13). |
-| 4 | Core Tutor Agent + RAG | [ ] Pending | — | — |
-| 5 | Planner Agent + Summaries | [ ] Pending | — | — |
-| 6 | Capsule + Practice Agents | [ ] Pending | — | — |
-| 7 | Worker Jobs | [ ] Pending | — | — |
-| 8 | Main Backend Features | [ ] Pending | — | — |
-| 9 | Admin Panel Frontend | [ ] Pending | — | — |
-| 10 | Student Interface Frontend | [ ] Pending | — | — |
-| 11 | Affiliation Interface + Referral Agent | [ ] Pending | — | — |
+| Phase | Description | Status |
+|-------|-------------|--------|
+| 1 | Auth, profiles, onboarding, admin user mgmt, old RAG pipeline, basic tutor | [x] Complete |
+| 2 | Subject structure system + RAG pipeline redesign (text-only) | [ ] Pending |
+| 3 | MCQ question pool (models, upload API, selection engine) | [ ] Pending |
+| 4 | Admin panel backend + admin panel frontend | [ ] Pending |
+| 5 | Personalization system redesign (new summary models + context builder) | [ ] Pending |
+| 6 | Tutor agent redesign + student portal foundation + tutor chat UI | [ ] Pending |
+| 7 | Practice system (sessions, scoring, summaries, practice UI) | [ ] Pending |
+| 8 | Consultant agent (web search, timeline management, consultant UI) | [ ] Pending |
+| 9 | Daily capsule + worker end-of-day processing | [ ] Pending |
+| 10 | Level-based notes + notes UI | [ ] Pending |
+| 11 | Mock test system + leaderboard | [ ] Pending |
+| 12 | Community + referral agent + progress tracking | [ ] Pending |
+| 13 | Subscription gating + affiliation interface + syllabus pages | [ ] Pending |
+| 14 | Hardening, analytics, mobile polish | [ ] Pending |

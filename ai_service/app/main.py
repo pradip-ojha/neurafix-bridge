@@ -6,10 +6,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.api.health import router as health_router
 from app.api.rag import router as rag_router
+from app.api.tutor import router as tutor_router
+from app.api.questions import router as questions_router
 
 # Ensure app-level loggers are visible alongside uvicorn output
-for _log_name in ("app.rag.pipeline", "app.rag.semantic_refiner", "app.rag.chunker",
-                  "app.rag.embedder", "app.rag.image_extractor"):
+for _log_name in (
+    "app.rag.pipeline", "app.rag.semantic_refiner", "app.rag.chunker",
+    "app.rag.embedder", "app.rag.retriever",
+    "app.agents.tutor.agent",
+    "app.personalization.context_builder", "app.sessions.manager",
+):
     _logger = logging.getLogger(_log_name)
     _logger.setLevel(logging.DEBUG)
     if not _logger.handlers:
@@ -34,3 +40,5 @@ app.add_middleware(
 
 app.include_router(health_router)
 app.include_router(rag_router)
+app.include_router(tutor_router)
+app.include_router(questions_router)

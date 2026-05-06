@@ -1,0 +1,127 @@
+{
+  "subject": "compulsory_math",
+  "display_name": "Compulsory Mathematics",
+  "chapters": [
+    {
+      "id": "arithmetic",
+      "display_name": "Arithmetic",
+      "topics": [
+        {
+          "id": "ratio_proportion",
+          "display_name": "Ratio and Proportion",
+          "subtopics": ["ratio", "proportion", "continued proportion", "partnership"]
+        },
+        {
+          "id": "percentage",
+          "display_name": "Percentage",
+          "subtopics": ["percentage", "profit and loss", "discount", "commission"]
+        },
+        {
+          "id": "tax_vat",
+          "display_name": "Tax and VAT",
+          "subtopics": ["income tax", "value added tax", "calculation with VAT"]
+        },
+        {
+          "id": "compound_interest",
+          "display_name": "Compound Interest",
+          "subtopics": ["simple interest", "compound interest", "population growth", "depreciation"]
+        }
+      ]
+    },
+    {
+      "id": "algebra",
+      "display_name": "Algebra",
+      "topics": [
+        {
+          "id": "polynomials",
+          "display_name": "Polynomials",
+          "subtopics": ["algebraic expressions", "factorisation", "HCF", "LCM"]
+        },
+        {
+          "id": "linear_equations",
+          "display_name": "Linear Equations",
+          "subtopics": ["linear equations in one variable", "simultaneous linear equations", "word problems"]
+        },
+        {
+          "id": "quadratic_equations",
+          "display_name": "Quadratic Equations",
+          "subtopics": ["standard form", "factorisation method", "quadratic formula", "discriminant"]
+        },
+        {
+          "id": "indices_surds",
+          "display_name": "Indices and Surds",
+          "subtopics": ["laws of indices", "surds", "rationalisation"]
+        }
+      ]
+    },
+    {
+      "id": "geometry",
+      "display_name": "Geometry",
+      "topics": [
+        {
+          "id": "triangles",
+          "display_name": "Triangles",
+          "subtopics": ["congruence of triangles", "similarity of triangles", "Pythagoras theorem", "midpoint theorem"]
+        },
+        {
+          "id": "circles",
+          "display_name": "Circles",
+          "subtopics": ["circle theorems", "tangent to a circle", "chord properties", "arc and sector"]
+        },
+        {
+          "id": "areas_volume",
+          "display_name": "Areas and Volume",
+          "subtopics": ["area of polygons", "surface area of prism", "surface area of cylinder", "volume of prism", "volume of cylinder", "sphere and hemisphere"]
+        }
+      ]
+    },
+    {
+      "id": "trigonometry",
+      "display_name": "Trigonometry",
+      "topics": [
+        {
+          "id": "trig_ratios",
+          "display_name": "Trigonometric Ratios",
+          "subtopics": ["sin cos tan", "complementary angles", "standard angles (30 45 60 90)"]
+        },
+        {
+          "id": "trig_identities",
+          "display_name": "Trigonometric Identities",
+          "subtopics": ["Pythagorean identities", "reciprocal identities", "proof of identities"]
+        },
+        {
+          "id": "heights_distances",
+          "display_name": "Heights and Distances",
+          "subtopics": ["angle of elevation", "angle of depression", "word problems"]
+        }
+      ]
+    },
+    {
+      "id": "statistics",
+      "display_name": "Statistics",
+      "topics": [
+        {
+          "id": "measures_central_tendency",
+          "display_name": "Measures of Central Tendency",
+          "subtopics": ["mean", "median", "mode", "frequency distribution", "cumulative frequency"]
+        },
+        {
+          "id": "measures_dispersion",
+          "display_name": "Measures of Dispersion",
+          "subtopics": ["range", "quartile deviation", "mean deviation", "standard deviation"]
+        }
+      ]
+    },
+    {
+      "id": "probability",
+      "display_name": "Probability",
+      "topics": [
+        {
+          "id": "basic_probability",
+          "display_name": "Basic Probability",
+          "subtopics": ["sample space", "events", "probability formula", "mutually exclusive events", "equally likely events"]
+        }
+      ]
+    }
+  ]
+}

@@ -56,7 +56,13 @@
       "Bash(kill -9 1899 1898 1896 14808)",
       "Bash(kill -9 1899 1898)",
       "PowerShell(Get-Process | Where-Object { $_.ProcessName -match \"python\" } | Select-Object Id, ProcessName, StartTime)",
-      "Bash(kill -9 2134 2132 2130 17260)"
+      "Bash(kill -9 2134 2132 2130 17260)",
+      "Bash(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\ai_service\" -Recurse -Force)",
+      "Bash(Select-Object FullName, PSIsContainer)",
+      "Bash(Format-List)",
+      "Bash(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\ai_service\\\\app\\\\agents\\\\\" -File)",
+      "Bash(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\ai_service\" -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)"
     ]
   }
 }

@@ -90,6 +90,18 @@ async def lpush(key: str, *values: str) -> int:
         return resp.json().get("result", 0)
 
 
+async def rpush(key: str, *values: str) -> int:
+    """Append values to the tail of a list (chronological order)."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{_base_url()}",
+            headers=_headers(),
+            json=["RPUSH", key] + list(values),
+        )
+        resp.raise_for_status()
+        return resp.json().get("result", 0)
+
+
 async def lrange(key: str, start: int = 0, stop: int = -1) -> list[str]:
     """Get a range of list elements."""
     async with httpx.AsyncClient() as client:

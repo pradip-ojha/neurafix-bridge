@@ -1,0 +1,112 @@
+{
+  "subject": "optional_math",
+  "display_name": "Optional Mathematics",
+  "chapters": [
+    {
+      "id": "coordinate_geometry",
+      "display_name": "Coordinate Geometry",
+      "topics": [
+        {
+          "id": "straight_line",
+          "display_name": "Straight Line",
+          "subtopics": ["slope of a line", "equations of a line", "parallel and perpendicular lines", "distance between lines"]
+        },
+        {
+          "id": "circle_coordinate",
+          "display_name": "Circle (Coordinate)",
+          "subtopics": ["standard equation of circle", "general equation", "centre and radius", "tangent to circle"]
+        },
+        {
+          "id": "conic_sections",
+          "display_name": "Conic Sections",
+          "subtopics": ["parabola", "ellipse basics"]
+        }
+      ]
+    },
+    {
+      "id": "trigonometry_advanced",
+      "display_name": "Trigonometry",
+      "topics": [
+        {
+          "id": "compound_angles",
+          "display_name": "Compound Angles",
+          "subtopics": ["addition and subtraction formulas", "double angle formulas", "half angle formulas"]
+        },
+        {
+          "id": "trig_equations",
+          "display_name": "Trigonometric Equations",
+          "subtopics": ["general solution", "specific angle solutions"]
+        }
+      ]
+    },
+    {
+      "id": "vectors",
+      "display_name": "Vectors",
+      "topics": [
+        {
+          "id": "vector_basics",
+          "display_name": "Vector Basics",
+          "subtopics": ["types of vectors", "addition and subtraction", "scalar multiplication", "position vectors"]
+        },
+        {
+          "id": "dot_product",
+          "display_name": "Dot Product",
+          "subtopics": ["definition", "properties", "angle between vectors", "projection"]
+        }
+      ]
+    },
+    {
+      "id": "matrices",
+      "display_name": "Matrices and Determinants",
+      "topics": [
+        {
+          "id": "matrix_operations",
+          "display_name": "Matrix Operations",
+          "subtopics": ["types of matrices", "addition and subtraction", "multiplication", "transpose"]
+        },
+        {
+          "id": "determinants",
+          "display_name": "Determinants",
+          "subtopics": ["determinant of 2x2 and 3x3 matrix", "properties", "Cramer's rule"]
+        },
+        {
+          "id": "inverse_matrix",
+          "display_name": "Inverse of a Matrix",
+          "subtopics": ["adjoint method", "solving linear equations using matrices"]
+        }
+      ]
+    },
+    {
+      "id": "calculus",
+      "display_name": "Calculus",
+      "topics": [
+        {
+          "id": "limits",
+          "display_name": "Limits and Continuity",
+          "subtopics": ["concept of limit", "rules of limits", "continuity of a function"]
+        },
+        {
+          "id": "differentiation",
+          "display_name": "Differentiation",
+          "subtopics": ["first principles", "rules (sum product quotient chain)", "derivative of standard functions", "application to tangent and normal"]
+        },
+        {
+          "id": "integration",
+          "display_name": "Integration",
+          "subtopics": ["indefinite integration", "standard formulas", "definite integral"]
+        }
+      ]
+    },
+    {
+      "id": "probability_advanced",
+      "display_name": "Probability",
+      "topics": [
+        {
+          "id": "probability_theorems",
+          "display_name": "Probability Theorems",
+          "subtopics": ["addition theorem", "multiplication theorem", "conditional probability", "independent events"]
+        }
+      ]
+    }
+  ]
+}

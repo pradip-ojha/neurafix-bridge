@@ -1,221 +1,71 @@
 """
-LLM-based semantic refinement of raw chunks.
+LLM-based semantic refinement using gpt-4o-mini.
 
-Changes from v1:
-  - OCR error correction: GPT-4o fixes spelling, broken words, garbled formulas.
-  - Image assignment: each output chunk receives only the images it actually
-    references, identified by IMG_N indices in the batch.
-  - Max 1000-token chunks: post-processing splits oversized chunks at paragraph
-    boundaries (hard token split as fallback).
-  - Overlap: 150-token overlap prepended to each chunk from the previous chunk.
+The chunker extracts topic_hint (from ## headings) and subtopic_hint (from ###
+headings) from the markdown structure. These are passed to the LLM as
+suggestions alongside the full list of valid topic_ids from the subject
+structure. The LLM confirms or corrects topic/subtopic and assigns chunk_type.
+
+This hybrid approach means:
+- Topic assignment is almost always correct (heading context + structure list)
+- LLM can correct the rare case where a chunk belongs to a different topic
+- Output topic is always a valid topic_id from the structure
 """
 
 from __future__ import annotations
 
 import json
 import logging
+import re
 
-import tiktoken
 from openai import AsyncOpenAI
 
 from app.config import settings
-from app.rag.schemas import PageImage, RawChunk, RefinedChunk
+from app.rag.schemas import RawChunk, RefinedChunk
 
 logger = logging.getLogger(__name__)
 
 _client: AsyncOpenAI | None = None
-_BATCH_SIZE = 6
-
-_MAX_TOKENS = 1000
-_OVERLAP_RATIO = 0.15  # 15% of the previous chunk's token count
-
-try:
-    _ENC = tiktoken.encoding_for_model("gpt-4o")
-except Exception:
-    _ENC = tiktoken.get_encoding("cl100k_base")
-
-
-# ── Token helpers ─────────────────────────────────────────────────────────────
-
-def _token_count(text: str) -> int:
-    return len(_ENC.encode(text))
-
-
-def _decode_tokens(tokens: list[int]) -> str:
-    return _ENC.decode(tokens)
-
-
-# ── Prompt builder ────────────────────────────────────────────────────────────
+_BATCH_SIZE = 8
+_MODEL = "gpt-4o-mini"
 
 _SYSTEM_PROMPT = """\
-You are an expert educational content processor specializing in the Nepali school curriculum (class 8–10).
+You are an expert educational content classifier for the Nepali school curriculum (class 8–10, SEE exam preparation).
 
-Your task: take raw text chunks (possibly extracted via OCR from a textbook) and return a clean, structured JSON list of refined chunks.
+For each chunk you are given:
+- suggested_topic: the topic derived from the ## section heading in the source file
+- suggested_subtopic: the subtopic derived from the ### section heading (empty if none)
+- The full list of valid topic_ids and their subtopic lists for this chapter
 
-RULES:
-1. Each refined chunk must represent EXACTLY ONE complete learning concept.
-2. MERGE chunks that belong to the same concept (e.g., a definition that spills across two raw chunks).
-3. SPLIT chunks that contain two or more distinct concepts — create a separate chunk for each.
-4. Let content determine chunk size. A concise definition is small; a full derivation or worked example is large. Do NOT split a concept mid-explanation just to keep size uniform.
-5. Only discard a chunk if it is purely a page number, a chapter number alone, or a decorative separator with zero educational content. Preserve ALL subject matter.
-6. FIX OCR ERRORS: The text may have been extracted via OCR. Correct spelling errors, broken/joined words, garbled characters, and malformed formulas or equations. If a formula appears broken (e.g., "E=m c2" instead of "E=mc²"), reconstruct it correctly using context. Remove stray characters that are clearly OCR noise.
-7. IMAGE ASSIGNMENT: A list of images found in this batch is provided above the chunks (IMG_0, IMG_1, ...). For each output chunk, set "assigned_image_indices" to the list of IMG indices whose image is directly referenced by, illustrated in, or most relevant to that chunk's content. If no image belongs to a chunk, use an empty list [].
+Your job per chunk:
+1. **Confirm or correct the topic** — if the chunk content clearly belongs to the suggested_topic, keep it.
+   Only change it if the content unmistakably belongs to a different topic in the list.
+   The output topic MUST be one of the valid topic_ids listed in the structure. Never invent a new topic_id.
+2. **Confirm or refine the subtopic** — use the suggested_subtopic if accurate, or pick the closest match
+   from the structure's subtopic list for that topic. Keep it as a short descriptive string.
+3. **Assign chunk_type**:
+   - "objective_question": any MCQ, true/false, or fill-in-the-blank question
+   - "example": a worked example, solved problem, or numerical illustration
+   - "definition": a precise definition of a term or concept
+   - "explanation": everything else (theory, derivation, notes, rules, concept explanation)
+4. **Clean the text**: fix typos, normalise spacing. Keep ALL educational content intact.
 
-For each chunk output:
-  - "chapter"               : chapter name (infer from heading/context; "Unknown" if unclear)
-  - "topic"                 : specific topic within the chapter
-  - "chunk_type"            : "question" | "example" | "explanation" | "definition" | "diagram_description"
-  - "text"                  : full corrected text (preserve equations, lists, table content)
-  - "page_number"           : page number of the input chunk (first page if merging)
-  - "assigned_image_indices": list of IMG_N indices (integers) that belong to this chunk
+Rules:
+- Return exactly one output item per input chunk, in the same order.
+- Do NOT discard, merge, or split chunks.
+- topic must be a valid topic_id from the structure list — never invent one.
 
-Return a JSON object with a single key "chunks":
+Return ONLY valid JSON:
 {"chunks": [
   {
-    "text": "Newton's First Law states that an object remains at rest...",
-    "page_number": 12,
-    "chapter": "Laws of Motion",
-    "topic": "Newton's First Law",
-    "chunk_type": "explanation",
-    "assigned_image_indices": [0]
+    "text": "cleaned chunk text",
+    "topic": "valid_topic_id",
+    "subtopic": "subtopic string",
+    "chunk_type": "explanation"
   }
 ]}
-
-If the batch has truly no educational content, return {"chunks": []}.
 """
 
-
-def _build_batch_context(
-    chunks: list[RawChunk],
-    image_map: dict[int, list[PageImage]],
-) -> tuple[str, list[tuple[int, PageImage]]]:
-    """
-    Build prompt text and collect images for this batch.
-
-    Returns:
-        prompt_text  : full user-facing prompt (images section + chunks section)
-        batch_images : [(global_index, PageImage)] for all images in this batch
-    """
-    # Collect unique images across pages touched by this batch
-    batch_images: list[tuple[int, PageImage]] = []
-    seen_pages: set[int] = set()
-    for c in chunks:
-        if c.page_number not in seen_pages:
-            seen_pages.add(c.page_number)
-            for pi in image_map.get(c.page_number, []):
-                batch_images.append((len(batch_images), pi))
-
-    # Build image listing section
-    img_section = ""
-    if batch_images:
-        lines = [
-            f"  [IMG_{idx}] (page {pi.page_number}) {pi.description or 'image'}"
-            for idx, pi in batch_images
-        ]
-        img_section = "IMAGES IN THIS BATCH:\n" + "\n".join(lines) + "\n\n"
-
-    # Build chunks section
-    chunk_parts = []
-    for i, c in enumerate(chunks):
-        pre_assigned = ""
-        if c.image_urls:
-            pre_assigned = "\n[NOTE: this chunk has pre-assigned images — reflect them in assigned_image_indices if any match]"
-        chunk_parts.append(
-            f"[CHUNK {i + 1} | page {c.page_number} | heading: {c.chapter_hint or 'none'}]{pre_assigned}\n{c.text}"
-        )
-
-    return img_section + "\n\n---\n\n".join(chunk_parts), batch_images
-
-
-# ── Post-processing: split + overlap ─────────────────────────────────────────
-
-def _split_large_chunk(chunk: RefinedChunk) -> list[RefinedChunk]:
-    """Split chunks exceeding MAX_TOKENS at paragraph boundaries; hard-split as fallback."""
-    if _token_count(chunk.text) <= _MAX_TOKENS:
-        return [chunk]
-
-    paragraphs = chunk.text.split("\n\n")
-    parts: list[RefinedChunk] = []
-    current_text = ""
-    is_first = True
-
-    def _make_part(text: str) -> RefinedChunk:
-        nonlocal is_first
-        r = RefinedChunk(
-            text=text.strip(),
-            page_number=chunk.page_number,
-            chapter=chunk.chapter,
-            topic=chunk.topic,
-            chunk_type=chunk.chunk_type,
-            image_urls=chunk.image_urls if is_first else [],
-            image_descriptions=chunk.image_descriptions if is_first else [],
-        )
-        is_first = False
-        return r
-
-    for para in paragraphs:
-        candidate = (current_text + "\n\n" + para).strip() if current_text else para
-        if _token_count(candidate) > _MAX_TOKENS and current_text:
-            # Para would overflow — flush current, start fresh
-            if _token_count(current_text) > _MAX_TOKENS:
-                # current_text itself is too large — hard split by tokens
-                toks = _ENC.encode(current_text)
-                for i in range(0, len(toks), _MAX_TOKENS):
-                    parts.append(_make_part(_decode_tokens(toks[i : i + _MAX_TOKENS])))
-            else:
-                parts.append(_make_part(current_text))
-            current_text = para
-        else:
-            current_text = candidate
-
-    if current_text.strip():
-        if _token_count(current_text) > _MAX_TOKENS:
-            toks = _ENC.encode(current_text)
-            for i in range(0, len(toks), _MAX_TOKENS):
-                parts.append(_make_part(_decode_tokens(toks[i : i + _MAX_TOKENS])))
-        else:
-            parts.append(_make_part(current_text))
-
-    return parts if parts else [chunk]
-
-
-def _add_overlap(chunks: list[RefinedChunk]) -> list[RefinedChunk]:
-    """Prepend 15% of the previous chunk's tokens to each chunk as overlap context."""
-    if len(chunks) <= 1:
-        return chunks
-
-    result: list[RefinedChunk] = [chunks[0]]
-    for i in range(1, len(chunks)):
-        prev_tokens = _ENC.encode(chunks[i - 1].text)
-        overlap_n = max(1, int(len(prev_tokens) * _OVERLAP_RATIO))
-        if len(prev_tokens) > overlap_n:
-            overlap_text = _decode_tokens(prev_tokens[-overlap_n:])
-        else:
-            overlap_text = chunks[i - 1].text
-        c = chunks[i]
-        result.append(
-            RefinedChunk(
-                text=overlap_text + "\n\n" + c.text,
-                page_number=c.page_number,
-                chapter=c.chapter,
-                topic=c.topic,
-                chunk_type=c.chunk_type,
-                image_urls=c.image_urls,
-                image_descriptions=c.image_descriptions,
-            )
-        )
-    return result
-
-
-def _postprocess(refined: list[RefinedChunk]) -> list[RefinedChunk]:
-    """Split oversized chunks, then add inter-chunk overlap."""
-    split: list[RefinedChunk] = []
-    for chunk in refined:
-        split.extend(_split_large_chunk(chunk))
-    return _add_overlap(split)
-
-
-# ── Client ────────────────────────────────────────────────────────────────────
 
 def _get_client() -> AsyncOpenAI:
     global _client
@@ -224,36 +74,102 @@ def _get_client() -> AsyncOpenAI:
     return _client
 
 
-# ── Main refiner ──────────────────────────────────────────────────────────────
+def _valid_topic_ids(chapter_structure: dict | None) -> set[str]:
+    if not chapter_structure:
+        return set()
+    return {t["id"] for t in chapter_structure.get("topics", [])}
+
+
+def _format_structure(chapter_structure: dict | None) -> str:
+    if not chapter_structure:
+        return "No structure available."
+    lines = [f"Chapter: {chapter_structure.get('display_name', 'Unknown')}",
+             "Valid topic_ids (use these exactly):"]
+    for topic in chapter_structure.get("topics", []):
+        lines.append(f"  topic_id: \"{topic['id']}\"  ({topic['display_name']})")
+        subtopics = topic.get("subtopics", [])
+        if subtopics:
+            lines.append(f"    subtopics: {', '.join(subtopics)}")
+    return "\n".join(lines)
+
+
+def _slugify(text: str) -> str:
+    return re.sub(r'[^a-z0-9]+', '_', text.lower()).strip('_') or "general"
+
+
+def _best_topic_fallback(hint: str, chapter_structure: dict | None) -> str:
+    """Deterministic fallback when LLM returns an invalid or missing topic_id."""
+    if not hint:
+        return "general"
+    if not chapter_structure:
+        return _slugify(hint)
+
+    hint_lower = hint.lower().strip()
+    topics = chapter_structure.get("topics", [])
+
+    for topic in topics:
+        if topic["display_name"].lower().strip() == hint_lower:
+            return topic["id"]
+
+    for topic in topics:
+        name = topic["display_name"].lower()
+        if hint_lower in name or name in hint_lower:
+            return topic["id"]
+
+    hint_words = set(hint_lower.split())
+    best_id, best_score = None, 0
+    for topic in topics:
+        name_words = set(topic["display_name"].lower().split())
+        overlap = len(hint_words & name_words)
+        if overlap > best_score:
+            best_score, best_id = overlap, topic["id"]
+    if best_id and best_score >= max(1, len(hint_words) // 2):
+        return best_id
+
+    return _slugify(hint)
+
 
 async def refine_chunks(
     raw_chunks: list[RawChunk],
-    image_map: dict[int, list[PageImage]],
+    chapter_structure: dict | None,
     subject: str,
-    book_title: str,
+    chapter: str,
 ) -> list[RefinedChunk]:
     """
-    Process all raw_chunks through GPT-4o in batches.
-    Returns refined chunks with OCR corrections, smart image assignment,
-    max-1000-token size, and 150-token overlap between chunks.
+    Classify all raw chunks through gpt-4o-mini in batches.
+    The LLM receives the heading-derived topic/subtopic hints as suggestions
+    and the full structure's valid topic_ids. It confirms or corrects each.
     """
     client = _get_client()
+    structure_text = _format_structure(chapter_structure)
+    valid_ids = _valid_topic_ids(chapter_structure)
     refined: list[RefinedChunk] = []
 
     for batch_start in range(0, len(raw_chunks), _BATCH_SIZE):
-        batch = raw_chunks[batch_start : batch_start + _BATCH_SIZE]
-        prompt_text, batch_images = _build_batch_context(batch, image_map)
+        batch = raw_chunks[batch_start: batch_start + _BATCH_SIZE]
+
+        chunk_parts = []
+        for i, c in enumerate(batch):
+            header = (
+                f"[CHUNK {i + 1} | suggested_topic: {c.topic_hint!r}"
+                + (f" | suggested_subtopic: {c.subtopic_hint!r}" if c.subtopic_hint else "")
+                + "]"
+            )
+            chunk_parts.append(f"{header}\n{c.text}")
+
+        chunks_text = "\n\n---\n\n".join(chunk_parts)
 
         try:
             response = await client.chat.completions.create(
-                model="gpt-4o",
+                model=_MODEL,
                 messages=[
                     {"role": "system", "content": _SYSTEM_PROMPT},
                     {
                         "role": "user",
                         "content": (
-                            f"Book: {book_title}\nSubject: {subject}\n\n"
-                            f"Process these {len(batch)} chunks:\n\n{prompt_text}"
+                            f"Subject: {subject}\nChapter: {chapter}\n\n"
+                            f"Structure:\n{structure_text}\n\n"
+                            f"Process these {len(batch)} chunks:\n\n{chunks_text}"
                         ),
                     },
                 ],
@@ -265,7 +181,7 @@ async def refine_chunks(
             parsed = json.loads(raw_json)
 
             if isinstance(parsed, dict):
-                items = parsed.get("chunks") or parsed.get("results") or parsed.get("items") or []
+                items = parsed.get("chunks") or []
                 if not items:
                     for v in parsed.values():
                         if isinstance(v, list):
@@ -274,62 +190,39 @@ async def refine_chunks(
             else:
                 items = parsed if isinstance(parsed, list) else []
 
-            logger.warning("[refiner] batch %d: %d items from GPT-4o", batch_start, len(items))
+            logger.warning("[refiner] batch %d: %d items from LLM", batch_start, len(items))
 
-            # Build a lookup: global image index → PageImage
-            img_lookup: dict[int, PageImage] = {idx: pi for idx, pi in batch_images}
+            for i, item in enumerate(items):
+                src = batch[i] if i < len(batch) else batch[-1]
 
-            for item in items:
-                page = item.get("page_number", batch[0].page_number)
-                matching_chunk = next((c for c in batch if c.page_number == page), batch[0])
-
-                # Smart image assignment via GPT-4o-assigned indices
-                assigned_indices: list[int] = item.get("assigned_image_indices", [])
-                if assigned_indices:
-                    image_urls = [img_lookup[i].url for i in assigned_indices if i in img_lookup]
-                    image_descriptions = [
-                        img_lookup[i].description for i in assigned_indices
-                        if i in img_lookup and img_lookup[i].description
-                    ]
-                elif matching_chunk.image_urls:
-                    # DOCX pre-assigned images
-                    image_urls = matching_chunk.image_urls
-                    image_descriptions = []
-                else:
-                    # Fallback: all images from this page (old behaviour)
-                    page_imgs = image_map.get(page, [])
-                    image_urls = [pi.url for pi in page_imgs]
-                    image_descriptions = [pi.description for pi in page_imgs if pi.description]
-
-                refined.append(
-                    RefinedChunk(
-                        text=item.get("text", ""),
-                        page_number=page,
-                        chapter=item.get("chapter", ""),
-                        topic=item.get("topic", ""),
-                        chunk_type=item.get("chunk_type", "explanation"),
-                        image_urls=image_urls,
-                        image_descriptions=image_descriptions,
+                llm_topic = item.get("topic", "")
+                # Validate LLM topic is in structure; fall back to deterministic if not
+                if valid_ids and llm_topic not in valid_ids:
+                    logger.warning(
+                        "[refiner] LLM returned invalid topic_id %r for chunk %d — using fallback",
+                        llm_topic, batch_start + i,
                     )
-                )
+                    llm_topic = _best_topic_fallback(src.topic_hint, chapter_structure)
+
+                refined.append(RefinedChunk(
+                    text=item.get("text", src.text),
+                    chapter=chapter,
+                    topic=llm_topic,
+                    subtopic=item.get("subtopic", src.subtopic_hint),
+                    chunk_type=item.get("chunk_type", "explanation"),
+                ))
 
         except Exception as exc:
-            logger.warning("Batch %d refinement failed: %s — using raw chunks", batch_start, exc)
-            img_lookup = {idx: pi for idx, pi in batch_images}
+            logger.warning(
+                "Batch %d refinement failed: %s — using raw chunks as fallback", batch_start, exc
+            )
             for c in batch:
-                page_imgs = image_map.get(c.page_number, [])
-                image_urls = c.image_urls or [pi.url for pi in page_imgs]
-                image_descriptions = [pi.description for pi in page_imgs if pi.description]
-                refined.append(
-                    RefinedChunk(
-                        text=c.text,
-                        page_number=c.page_number,
-                        chapter=c.chapter_hint,
-                        topic=c.chapter_hint,
-                        chunk_type="explanation",
-                        image_urls=image_urls,
-                        image_descriptions=image_descriptions,
-                    )
-                )
+                refined.append(RefinedChunk(
+                    text=c.text,
+                    chapter=chapter,
+                    topic=_best_topic_fallback(c.topic_hint, chapter_structure),
+                    subtopic=c.subtopic_hint,
+                    chunk_type="explanation",
+                ))
 
-    return _postprocess(refined)
+    return [r for r in refined if r.text.strip()]

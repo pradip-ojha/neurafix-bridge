@@ -1,14 +1,8 @@
 """
 Embed refined chunks with text-embedding-3-large and upsert to Pinecone.
 
-Pinecone metadata stored per vector:
-  book_id, book_title, type, publisher, class, subject, stream,
-  chapter, topic, chunk_type, image_urls, image_descriptions, text
-
-page_number and chapter_number are intentionally excluded:
-  - Agents retrieve by semantic similarity + topic/chapter/subject filters.
-  - Page numbers are irrelevant to retrieval quality.
-  - Chapter name (string) is more useful than chapter number for filtering.
+Pinecone metadata per vector:
+  note_id, subject, chapter, topic, subtopic, chunk_type, text
 """
 
 from __future__ import annotations
@@ -41,13 +35,8 @@ def _get_client() -> AsyncOpenAI:
 
 async def embed_and_upsert(
     chunks: list[RefinedChunk],
-    book_id: str,
-    book_title: str,
+    note_id: str,
     subject: str,
-    stream: str,
-    book_type: str,
-    publisher: str,
-    class_level: str,
 ) -> int:
     """Embed all chunks and upsert to Pinecone. Returns total vectors upserted."""
     if not chunks:
@@ -75,19 +64,13 @@ async def embed_and_upsert(
     vectors = []
     for chunk, embedding in zip(chunks, all_embeddings):
         metadata = {
-            "book_id": book_id,
-            "book_title": book_title,
-            "type": book_type,
-            "publisher": publisher,
-            "class": class_level,
+            "note_id": note_id,
             "subject": subject,
-            "stream": stream,
             "chapter": chunk.chapter,
             "topic": chunk.topic,
+            "subtopic": chunk.subtopic,
             "chunk_type": chunk.chunk_type,
-            "image_urls": chunk.image_urls,
-            "image_descriptions": chunk.image_descriptions,
-            "text": chunk.text[:2000],  # Pinecone metadata string limit
+            "text": chunk.text[:2000],
         }
         vectors.append({"id": str(uuid.uuid4()), "values": embedding, "metadata": metadata})
 
@@ -102,11 +85,11 @@ async def embed_and_upsert(
     return total_upserted
 
 
-async def delete_book_vectors(book_id: str) -> int:
+async def delete_note_vectors(note_id: str) -> None:
+    """Delete all Pinecone vectors for a given note_id."""
     index = get_index()
     try:
-        index.delete(filter={"book_id": {"$eq": book_id}})
-        return 0
+        index.delete(filter={"note_id": {"$eq": note_id}})
     except Exception as exc:
-        logger.error("Failed to delete vectors for book_id=%s: %s", book_id, exc)
+        logger.error("Failed to delete vectors for note_id=%s: %s", note_id, exc)
         raise
