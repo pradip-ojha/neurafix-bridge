@@ -4,7 +4,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import verify_internal_secret
 from app.database import get_db
+from app.models.college import College
 from app.models.student_profile import StudentProfile
+from app.models.subscription import Subscription
 from app.models.user import User
 from app.schemas.auth import UserOut
 from app.schemas.student_profile import ProfileOut
@@ -25,4 +27,34 @@ async def get_internal_profile(user_id: str, db: AsyncSession = Depends(get_db))
     return {
         "user": UserOut.model_validate(user),
         "student_profile": ProfileOut.model_validate(sp) if sp else None,
+    }
+
+
+@router.get("/subscription/{user_id}", dependencies=[Depends(verify_internal_secret)])
+async def get_internal_subscription(user_id: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Subscription).where(Subscription.user_id == user_id))
+    sub = result.scalar_one_or_none()
+    if not sub:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+    return {
+        "status": sub.status,
+        "trial_ends_at": sub.trial_ends_at,
+        "subscription_ends_at": sub.subscription_ends_at,
+    }
+
+
+@router.get("/colleges/{college_id}", dependencies=[Depends(verify_internal_secret)])
+async def get_internal_college(college_id: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(College).where(College.id == college_id))
+    college = result.scalar_one_or_none()
+    if not college:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="College not found")
+    return {
+        "id": college.id,
+        "name": college.name,
+        "location": college.location,
+        "total_questions": college.total_questions,
+        "total_time_minutes": college.total_time_minutes,
+        "question_distribution": college.question_distribution,
+        "is_active": college.is_active,
     }

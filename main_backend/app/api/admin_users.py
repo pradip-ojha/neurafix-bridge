@@ -82,3 +82,20 @@ async def deactivate_user(
     db.add(user)
     await db.commit()
     return {"message": f"User {user_id} deactivated"}
+
+
+@router.patch("/users/{user_id}/reactivate")
+async def reactivate_user(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(_admin_only),
+):
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    user.is_active = True
+    db.add(user)
+    await db.commit()
+    return {"message": f"User {user_id} reactivated"}

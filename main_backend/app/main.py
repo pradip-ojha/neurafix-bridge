@@ -8,6 +8,13 @@ from app.api.onboarding import router as onboarding_router
 from app.api.profile import router as profile_router
 from app.api.admin_users import router as admin_router
 from app.api.internal import router as internal_router
+from app.api.payments import router as payments_router
+from app.api.subscriptions import router as subscriptions_router
+from app.api.colleges import router as colleges_router
+from app.api.admin_content import router as admin_content_router
+from app.api.admin_analytics import router as admin_analytics_router
+from app.api.admin_referrals import router as admin_referrals_router
+from app.api.admin_proxy import router as admin_proxy_router
 
 app = FastAPI(
     title="HamroGuru Main Backend",
@@ -29,3 +36,10 @@ app.include_router(onboarding_router)
 app.include_router(profile_router)
 app.include_router(admin_router)
 app.include_router(internal_router)
+app.include_router(payments_router)
+app.include_router(subscriptions_router)
+app.include_router(colleges_router)
+app.include_router(admin_content_router)
+app.include_router(admin_analytics_router)
+app.include_router(admin_referrals_router)
+app.include_router(admin_proxy_router)

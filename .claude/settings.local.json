@@ -62,7 +62,17 @@
       "Bash(Format-List)",
       "Bash(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\ai_service\\\\app\\\\agents\\\\\" -File)",
       "Bash(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\ai_service\" -Recurse -Directory)",
-      "Bash(Select-Object -ExpandProperty FullName)"
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\main_backend\" -Force)",
+      "Bash(Select-Object Name, FullName)",
+      "Bash(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\frontend\" -Recurse -Depth 2)",
+      "Bash(Format-Table -AutoSize)",
+      "Bash(Out-String -Width 200)",
+      "Bash(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\ai_service\" -Recurse -Name)",
+      "Bash(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\frontend\\\\src\" -Recurse)",
+      "PowerShell(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\frontend\" -File | Where-Object {$_.Name -match \"vite|env|postcss|tsconfig\"} | Select-Object -ExpandProperty Name)",
+      "PowerShell(Start-Sleep -Seconds 4; Invoke-WebRequest -Uri \"http://localhost:8000/health\" -Method GET -UseBasicParsing 2>&1 | Select-Object -ExpandProperty Content)",
+      "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:8000/health\" -Method GET -UseBasicParsing -TimeoutSec 5; $r.Content)"
     ]
   }
 }

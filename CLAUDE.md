@@ -1132,9 +1132,9 @@ GET  /api/tutor/history                 → ai_service proxy
 | Phase | Description | Status |
 |-------|-------------|--------|
 | 1 | Auth, profiles, onboarding, admin user mgmt, old RAG pipeline, basic tutor | [x] Complete |
-| 2 | Subject structure system + RAG pipeline redesign (text-only) | [ ] Pending |
-| 3 | MCQ question pool (models, upload API, selection engine) | [ ] Pending |
-| 4 | Admin panel backend + admin panel frontend | [ ] Pending |
+| 2 | Subject structure system + RAG pipeline redesign (text-only) | [x] Complete 2026-05-07 |
+| 3 | MCQ question pool (models, upload API, selection engine) | [x] Complete 2026-05-07 |
+| 4 | Admin panel backend + admin panel frontend | [x] Complete 2026-05-07 |
 | 5 | Personalization system redesign (new summary models + context builder) | [ ] Pending |
 | 6 | Tutor agent redesign + student portal foundation + tutor chat UI | [ ] Pending |
 | 7 | Practice system (sessions, scoring, summaries, practice UI) | [ ] Pending |
