@@ -28,7 +28,6 @@ async def upload_level_note(
     subject: str = Form(...),
     chapter: str = Form(...),
     level: int = Form(..., ge=1, le=3),
-    display_name: str = Form(...),
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(_admin_only),
@@ -37,6 +36,7 @@ async def upload_level_note(
     if not data:
         raise HTTPException(status_code=400, detail="File is empty")
 
+    display_name = f"{subject} — {chapter} (Level {level})"
     r2_key = f"level-notes/{subject}/{chapter}/level{level}.pdf"
 
     # Delete old R2 object if it exists (replacing)

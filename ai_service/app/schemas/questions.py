@@ -110,6 +110,7 @@ class UploadResult(BaseModel):
     accepted: int
     rejected: int
     errors: list[str]
+    file_id: str | None = None
 
 
 class AnswerCheckRequest(BaseModel):
@@ -143,3 +144,39 @@ class ChapterStats(BaseModel):
 class PoolStatsResult(BaseModel):
     subject: str
     chapters: list[ChapterStats]
+
+
+class QuestionFileOut(BaseModel):
+    id: str
+    file_id: str
+    file_type: str
+    subject: str
+    chapter: str | None
+    display_name: str
+    r2_key: str
+    r2_url: str
+    total_questions: int
+    uploaded_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class QuestionDetail(BaseModel):
+    question_id: str
+    data: dict[str, Any]
+    is_active: bool
+    difficulty: str
+
+
+class QuestionFileDetailOut(BaseModel):
+    id: str
+    file_id: str
+    file_type: str
+    subject: str
+    chapter: str | None
+    display_name: str
+    r2_key: str
+    r2_url: str
+    total_questions: int
+    uploaded_at: datetime
+    questions: list[QuestionDetail]

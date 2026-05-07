@@ -6,20 +6,25 @@ check-answers requires JWT Bearer token.
 
 from __future__ import annotations
 
+import asyncio
+import functools
 import json
 import logging
 import math
+import re
+from datetime import datetime, UTC
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, UploadFile
 from pydantic import ValidationError
-from sqlalchemy import func, select, text
+from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.auth import get_current_user_id
 from app.database import get_db
-from app.models.mcq_question import DifficultyEnum, ExtraQuestion, ExtraSubject, MainQuestion
+from app.models.mcq_question import DifficultyEnum, ExtraQuestion, ExtraSubject, MainQuestion, QuestionFile
+from app.r2_client import delete_object, upload_bytes
 from app.schemas.questions import (
     AnswerCheckRequest,
     AnswerCheckResult,
@@ -28,6 +33,9 @@ from app.schemas.questions import (
     ExtraSubjectIn,
     ExtraSubjectOut,
     PoolStatsResult,
+    QuestionDetail,
+    QuestionFileDetailOut,
+    QuestionFileOut,
     QuestionIn,
     SingleAnswerResult,
     UploadResult,
@@ -44,7 +52,7 @@ def require_internal_secret(x_internal_secret: str = Header(...)) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Upload endpoints
+# Helpers
 # ---------------------------------------------------------------------------
 
 def _parse_json_file(raw: bytes, filename: str) -> list[dict]:
@@ -62,15 +70,40 @@ def _parse_json_file(raw: bytes, filename: str) -> list[dict]:
     return parsed
 
 
+def _make_file_id(file_type: str, subject: str, chapter: str | None) -> str:
+    """Generate a unique, URL-safe slug for a question file."""
+    ts = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
+    parts = [file_type, subject] + ([chapter] if chapter else [])
+    slug = "_".join(re.sub(r"[^a-z0-9]+", "_", p.lower()).strip("_") for p in parts)
+    return f"{slug}_{ts}"
+
+
+async def _cleanup_orphaned_files(db: AsyncSession, file_type: str) -> None:
+    """Remove QuestionFile rows that have no questions linked (after re-upload reassignment)."""
+    table = MainQuestion if file_type == "main" else ExtraQuestion
+    linked_file_ids = select(table.file_id).where(table.file_id.is_not(None)).distinct()
+    await db.execute(
+        delete(QuestionFile).where(
+            QuestionFile.file_type == file_type,
+            QuestionFile.id.not_in(linked_file_ids),
+        )
+    )
+
+
+# ---------------------------------------------------------------------------
+# Upload endpoints
+# ---------------------------------------------------------------------------
+
 @router.post("/upload/main", response_model=UploadResult)
 async def upload_main_questions(
     file: UploadFile = File(...),
+    display_name: str = Form(default=""),
     db: AsyncSession = Depends(get_db),
     _: None = Depends(require_internal_secret),
 ):
     """
     Upload a .json file containing an array of main subject question objects.
-    Each question is validated and stored as its own DB row.
+    Stores the original file in R2 and creates a QuestionFile tracking row.
     Re-uploading a question_id that already exists updates that row.
     Rejects the entire batch if any item fails schema validation.
     """
@@ -91,6 +124,8 @@ async def upload_main_questions(
     if errors:
         return UploadResult(accepted=0, rejected=len(questions), errors=errors)
 
+    # Upsert all questions
+    upserted_ids: list[str] = []
     for q in validated:
         existing = await db.execute(
             select(MainQuestion).where(MainQuestion.question_id == q.question_id)
@@ -118,24 +153,64 @@ async def upload_main_questions(
                 version=q.version,
                 data=data,
             ))
+        upserted_ids.append(q.question_id)
+
+    await db.flush()
+
+    # Upload raw JSON to R2
+    first_q = validated[0]
+    fid = _make_file_id("main", first_q.subject, first_q.chapter)
+    r2_key = f"question-files/{fid}.json"
+    loop = asyncio.get_running_loop()
+    try:
+        r2_url = await loop.run_in_executor(
+            None, functools.partial(upload_bytes, r2_key, raw, "application/json")
+        )
+    except Exception as exc:
+        logger.error("R2 upload failed for key=%s: %s", r2_key, exc)
+        raise HTTPException(status_code=500, detail="Failed to store question file in R2")
+
+    # Create QuestionFile tracking row
+    qfile = QuestionFile(
+        file_id=fid,
+        file_type="main",
+        subject=first_q.subject,
+        chapter=first_q.chapter,
+        display_name=display_name or (file.filename or fid),
+        r2_key=r2_key,
+        r2_url=r2_url,
+        total_questions=len(validated),
+    )
+    db.add(qfile)
+    await db.flush()
+
+    # Link all upserted questions to the new file
+    await db.execute(
+        update(MainQuestion)
+        .where(MainQuestion.question_id.in_(upserted_ids))
+        .values(file_id=qfile.id)
+    )
+
+    # Remove orphaned QuestionFile rows from previous uploads of same questions
+    await _cleanup_orphaned_files(db, "main")
 
     await db.commit()
-    logger.info("Uploaded %d main questions from file %s", len(validated), file.filename)
-    return UploadResult(accepted=len(validated), rejected=0, errors=[])
+    logger.info("Uploaded %d main questions (file_id=%s)", len(validated), fid)
+    return UploadResult(accepted=len(validated), rejected=0, errors=[], file_id=fid)
 
 
 @router.post("/upload/extra", response_model=UploadResult)
 async def upload_extra_questions(
     subject: str = Form(...),
     file: UploadFile = File(...),
+    display_name: str = Form(default=""),
     db: AsyncSession = Depends(get_db),
     _: None = Depends(require_internal_secret),
 ):
     """
     Upload a .json file containing an array of extra subject question objects.
-    subject is provided as a form field (since extra questions have no subject inside each object).
-    Re-uploading a question_id that already exists updates that row.
-    Rejects the entire batch if any item fails schema validation.
+    subject is provided as a form field.
+    Stores the original file in R2 and creates a QuestionFile tracking row.
     """
     from app.schemas.questions import ExtraQuestionIn
 
@@ -156,6 +231,7 @@ async def upload_extra_questions(
     if errors:
         return UploadResult(accepted=0, rejected=len(questions), errors=errors)
 
+    upserted_ids: list[str] = []
     for q in validated:
         existing = await db.execute(
             select(ExtraQuestion).where(ExtraQuestion.question_id == q.question_id)
@@ -177,10 +253,45 @@ async def upload_extra_questions(
                 version=q.version,
                 data=data,
             ))
+        upserted_ids.append(q.question_id)
 
+    await db.flush()
+
+    # Upload raw JSON to R2
+    fid = _make_file_id("extra", subject, None)
+    r2_key = f"question-files/{fid}.json"
+    loop = asyncio.get_running_loop()
+    try:
+        r2_url = await loop.run_in_executor(
+            None, functools.partial(upload_bytes, r2_key, raw, "application/json")
+        )
+    except Exception as exc:
+        logger.error("R2 upload failed for key=%s: %s", r2_key, exc)
+        raise HTTPException(status_code=500, detail="Failed to store question file in R2")
+
+    qfile = QuestionFile(
+        file_id=fid,
+        file_type="extra",
+        subject=subject,
+        chapter=None,
+        display_name=display_name or (file.filename or fid),
+        r2_key=r2_key,
+        r2_url=r2_url,
+        total_questions=len(validated),
+    )
+    db.add(qfile)
+    await db.flush()
+
+    await db.execute(
+        update(ExtraQuestion)
+        .where(ExtraQuestion.question_id.in_(upserted_ids))
+        .values(file_id=qfile.id)
+    )
+
+    await _cleanup_orphaned_files(db, "extra")
     await db.commit()
-    logger.info("Uploaded %d extra questions for subject %s from file %s", len(validated), subject, file.filename)
-    return UploadResult(accepted=len(validated), rejected=0, errors=[])
+    logger.info("Uploaded %d extra questions for subject %s (file_id=%s)", len(validated), subject, fid)
+    return UploadResult(accepted=len(validated), rejected=0, errors=[], file_id=fid)
 
 
 # ---------------------------------------------------------------------------
@@ -232,11 +343,10 @@ async def toggle_extra_subject(
 
 
 # ---------------------------------------------------------------------------
-# Question pool
+# Question pool (student-facing — strips correct answers)
 # ---------------------------------------------------------------------------
 
 def _strip_answers(data: dict) -> dict:
-    """Return question data without correct_option_ids."""
     return {k: v for k, v in data.items() if k != "correct_option_ids"}
 
 
@@ -273,7 +383,6 @@ async def get_question_pool(
             raise HTTPException(status_code=400, detail="chapter is required for mode=practice")
 
         if difficulty:
-            # Single difficulty override
             rows = (await db.execute(
                 select(MainQuestion)
                 .where(
@@ -306,7 +415,6 @@ async def get_question_pool(
                 )).scalars().all()
                 collected.extend([_strip_answers(r.data) for r in rows])
 
-            # If total < count, fill remainder randomly from the chapter
             if len(collected) < count:
                 existing_ids = {q["question_id"] for q in collected}
                 extra_needed = count - len(collected)
@@ -326,7 +434,6 @@ async def get_question_pool(
             questions = collected
 
     else:  # mode=mock
-        # Get distinct chapters for this subject
         chapter_rows = (await db.execute(
             select(MainQuestion.chapter)
             .where(MainQuestion.subject == subject, MainQuestion.is_active == True)
@@ -375,7 +482,6 @@ async def check_answers(
     for qid in body.question_ids:
         student_answer = body.answers.get(qid)
 
-        # Look in main_questions first
         row = (await db.execute(
             select(MainQuestion).where(MainQuestion.question_id == qid)
         )).scalar_one_or_none()
@@ -447,7 +553,103 @@ async def get_pool_stats(
 
 
 # ---------------------------------------------------------------------------
-# Toggle / Delete (searches main then extra)
+# Question file management (admin — includes correct answers)
+# ---------------------------------------------------------------------------
+
+@router.get("/files", response_model=list[QuestionFileOut])
+async def list_question_files(
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_internal_secret),
+):
+    """List all uploaded question files, newest first."""
+    result = await db.execute(
+        select(QuestionFile).order_by(QuestionFile.uploaded_at.desc())
+    )
+    return result.scalars().all()
+
+
+@router.get("/files/{file_id}", response_model=QuestionFileDetailOut)
+async def get_question_file(
+    file_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_internal_secret),
+):
+    """Return file metadata plus all questions in the file (admin — includes correct answers)."""
+    result = await db.execute(
+        select(QuestionFile).where(QuestionFile.file_id == file_id)
+    )
+    qfile = result.scalar_one_or_none()
+    if not qfile:
+        raise HTTPException(status_code=404, detail="Question file not found")
+
+    if qfile.file_type == "main":
+        q_result = await db.execute(
+            select(MainQuestion).where(MainQuestion.file_id == qfile.id)
+        )
+    else:
+        q_result = await db.execute(
+            select(ExtraQuestion).where(ExtraQuestion.file_id == qfile.id)
+        )
+
+    questions = [
+        QuestionDetail(
+            question_id=q.question_id,
+            data=q.data,
+            is_active=q.is_active,
+            difficulty=q.difficulty,
+        )
+        for q in q_result.scalars().all()
+    ]
+
+    return QuestionFileDetailOut(
+        id=qfile.id,
+        file_id=qfile.file_id,
+        file_type=qfile.file_type,
+        subject=qfile.subject,
+        chapter=qfile.chapter,
+        display_name=qfile.display_name,
+        r2_key=qfile.r2_key,
+        r2_url=qfile.r2_url,
+        total_questions=qfile.total_questions,
+        uploaded_at=qfile.uploaded_at,
+        questions=questions,
+    )
+
+
+@router.delete("/files/{file_id}")
+async def delete_question_file(
+    file_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_internal_secret),
+):
+    """Delete file from R2 and hard-delete all questions linked to this file."""
+    result = await db.execute(
+        select(QuestionFile).where(QuestionFile.file_id == file_id)
+    )
+    qfile = result.scalar_one_or_none()
+    if not qfile:
+        raise HTTPException(status_code=404, detail="Question file not found")
+
+    # Delete from R2 (non-fatal)
+    loop = asyncio.get_running_loop()
+    try:
+        await loop.run_in_executor(None, functools.partial(delete_object, qfile.r2_key))
+    except Exception as exc:
+        logger.warning("R2 delete failed for key=%s: %s (continuing)", qfile.r2_key, exc)
+
+    # Hard-delete all linked questions
+    if qfile.file_type == "main":
+        await db.execute(delete(MainQuestion).where(MainQuestion.file_id == qfile.id))
+    else:
+        await db.execute(delete(ExtraQuestion).where(ExtraQuestion.file_id == qfile.id))
+
+    await db.delete(qfile)
+    await db.commit()
+    return {"deleted": True, "file_id": file_id}
+
+
+# ---------------------------------------------------------------------------
+# Toggle / Delete single question (searches main then extra)
 # ---------------------------------------------------------------------------
 
 @router.patch("/{question_id}/toggle")

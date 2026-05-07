@@ -72,7 +72,10 @@
       "Bash(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\frontend\\\\src\" -Recurse)",
       "PowerShell(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\frontend\" -File | Where-Object {$_.Name -match \"vite|env|postcss|tsconfig\"} | Select-Object -ExpandProperty Name)",
       "PowerShell(Start-Sleep -Seconds 4; Invoke-WebRequest -Uri \"http://localhost:8000/health\" -Method GET -UseBasicParsing 2>&1 | Select-Object -ExpandProperty Content)",
-      "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:8000/health\" -Method GET -UseBasicParsing -TimeoutSec 5; $r.Content)"
+      "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:8000/health\" -Method GET -UseBasicParsing -TimeoutSec 5; $r.Content)",
+      "Bash(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\" -Directory)",
+      "Bash(Select-Object -ExpandProperty Name)",
+      "Bash(dir -Recurse -File)"
     ]
   }
 }

@@ -91,6 +91,7 @@ async def proxy_rag_structure(subject: str, _: User = Depends(_admin_only)):
 @router.post("/questions/upload/main")
 async def proxy_upload_main_questions(
     file: UploadFile = File(...),
+    display_name: str = Form(default=""),
     _: User = Depends(_admin_only),
 ):
     data = await file.read()
@@ -99,6 +100,7 @@ async def proxy_upload_main_questions(
             _ai_url("/api/questions/upload/main"),
             headers=_INTERNAL_HEADERS,
             files={"file": (file.filename, data, file.content_type or "application/json")},
+            data={"display_name": display_name},
         )
     return JSONResponse(content=resp.json(), status_code=resp.status_code)
 
@@ -107,6 +109,7 @@ async def proxy_upload_main_questions(
 async def proxy_upload_extra_questions(
     subject: str = Form(...),
     file: UploadFile = File(...),
+    display_name: str = Form(default=""),
     _: User = Depends(_admin_only),
 ):
     data = await file.read()
@@ -115,7 +118,7 @@ async def proxy_upload_extra_questions(
             _ai_url("/api/questions/upload/extra"),
             headers=_INTERNAL_HEADERS,
             files={"file": (file.filename, data, file.content_type or "application/json")},
-            data={"subject": subject},
+            data={"subject": subject, "display_name": display_name},
         )
     return JSONResponse(content=resp.json(), status_code=resp.status_code)
 
@@ -129,6 +132,31 @@ async def proxy_question_stats(
     if subject:
         params["subject"] = subject
     return await _forward_get("/api/questions/pool/stats", params)
+
+
+@router.get("/questions/files")
+async def proxy_list_question_files(_: User = Depends(_admin_only)):
+    return await _forward_get("/api/questions/files")
+
+
+@router.get("/questions/files/{file_id}")
+async def proxy_get_question_file(file_id: str, _: User = Depends(_admin_only)):
+    return await _forward_get(f"/api/questions/files/{file_id}")
+
+
+@router.delete("/questions/files/{file_id}")
+async def proxy_delete_question_file(file_id: str, _: User = Depends(_admin_only)):
+    return await _forward_delete(f"/api/questions/files/{file_id}")
+
+
+@router.patch("/questions/{question_id}/toggle")
+async def proxy_toggle_question(question_id: str, _: User = Depends(_admin_only)):
+    return await _forward_json("patch", f"/api/questions/{question_id}/toggle")
+
+
+@router.delete("/questions/{question_id}")
+async def proxy_delete_question(question_id: str, _: User = Depends(_admin_only)):
+    return await _forward_delete(f"/api/questions/{question_id}")
 
 
 @router.post("/extra-subjects")
