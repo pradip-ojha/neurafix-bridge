@@ -1,36 +1,41 @@
 """
-Assembles the full personalization context string injected into every agent's system prompt.
+Assembles personalization context strings injected into agent system prompts.
 
-Sources:
-  1. Student profile  — fetched from main_backend internal endpoint
-  2. Personalization summaries — from local DB (populated by worker in Phase 7)
-  3. Planner timeline — from local DB (populated by planner agent in Phase 5)
+Four context types:
+  build_tutor_context      — for subject tutor agent
+  build_capsule_context    — for daily capsule agent
+  build_consultant_context — for consultant agent
+  build_personalization_context — raw data for worker/personalization agent
 """
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timedelta, UTC
 
 import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.models.personalization import PersonalizationSummary, PlannerTimeline
+from app.models.personalization import PracticeSessionSummary, SessionMemory, SubjectSummary
+from app.personalization import summary_manager
+from app.subject_structure.loader import get_structure
 
 logger = logging.getLogger(__name__)
 
-_TIMELINE_ORDER = ["all_time", "monthly", "weekly", "fifteen_day", "daily"]
-_TIMELINE_LABELS = {
-    "all_time": "All-Time Summary",
-    "monthly": "Monthly Summary",
-    "weekly": "Weekly Summary",
-    "fifteen_day": "15-Day Summary",
-    "daily": "Today's Summary",
-}
+_ALL_SUBJECTS = [
+    "compulsory_math",
+    "optional_math",
+    "compulsory_english",
+    "compulsory_science",
+]
 
+
+# ---------------------------------------------------------------------------
+# Profile fetching (shared)
+# ---------------------------------------------------------------------------
 
 async def _fetch_profile(user_id: str) -> dict:
-    """Fetch student profile from main_backend. Returns empty dict on failure."""
     url = f"{settings.MAIN_BACKEND_URL}/api/internal/profile/{user_id}"
     headers = {"X-Internal-Secret": settings.MAIN_BACKEND_INTERNAL_SECRET}
     try:
@@ -43,12 +48,13 @@ async def _fetch_profile(user_id: str) -> dict:
     return {}
 
 
-def _format_profile_section(profile_data: dict) -> str:
+def _format_profile(profile_data: dict) -> tuple[str, str]:
+    """Returns (formatted_profile_section, student_stream)."""
     user = profile_data.get("user", {})
     sp = profile_data.get("student_profile") or {}
 
     name = user.get("full_name") or "Unknown"
-    stream = sp.get("stream") or "Not set"
+    stream = sp.get("stream") or "both"
     school = sp.get("school_name") or "Not provided"
     see_gpa = sp.get("see_gpa")
     class_10 = sp.get("class_10_scores")
@@ -68,58 +74,260 @@ def _format_profile_section(profile_data: dict) -> str:
         lines.append(f"Class 9 Scores: {class_9}")
     if class_8:
         lines.append(f"Class 8 Scores: {class_8}")
-    return "\n".join(lines)
+    return "\n".join(lines), stream
 
 
-def _format_summaries_section(summaries: list[PersonalizationSummary], agent_type: str) -> str:
-    by_timeline = {s.timeline: s.content for s in summaries if s.agent_type == agent_type}
-    lines = [f"## Your Knowledge of This Student ({agent_type.title()} Agent)"]
-    for key in _TIMELINE_ORDER:
-        label = _TIMELINE_LABELS[key]
-        content = by_timeline.get(key, "Not yet generated.")
-        lines.append(f"\n### {label}\n{content}")
-    return "\n".join(lines)
+def _subject_display(subject: str) -> str:
+    return subject.replace("_", " ").title()
 
 
-def _format_planner_section(planner_summaries: list[PersonalizationSummary], timeline: PlannerTimeline | None) -> str:
-    planner_all_time = next(
-        (s.content for s in planner_summaries if s.agent_type == "planner" and s.timeline == "all_time"),
-        "Planner has not yet assessed this student.",
-    )
-    plan_content = timeline.content if timeline else "No plan created yet. Encourage the student to chat with the Planner agent first."
-    return (
-        f"## Planner's Assessment\n{planner_all_time}\n\n"
-        f"## Preparation Plan\n{plan_content}"
-    )
+# ---------------------------------------------------------------------------
+# build_tutor_context
+# ---------------------------------------------------------------------------
 
-
-async def build_context(db: AsyncSession, user_id: str, subject: str) -> tuple[str, str]:
+async def build_tutor_context(
+    db: AsyncSession,
+    user_id: str,
+    subject: str,
+    chapter: str | None = None,
+) -> tuple[str, str]:
     """
     Returns (context_string, student_stream).
     student_stream is used to scope Pinecone retrieval.
     """
     profile_data = await _fetch_profile(user_id)
-    student_stream = (profile_data.get("student_profile") or {}).get("stream") or "both"
+    profile_section, student_stream = _format_profile(profile_data)
 
-    # Fetch all summaries for this user and subject (includes planner rows with subject=None)
-    stmt = select(PersonalizationSummary).where(
-        PersonalizationSummary.user_id == user_id,
-    ).where(
-        (PersonalizationSummary.subject == subject) | (PersonalizationSummary.subject == None)  # noqa: E711
+    overall = await summary_manager.get_or_placeholder_overall(db, user_id)
+    all_time = await summary_manager.get_or_placeholder(db, user_id, subject, "all_time")
+    weekly = await summary_manager.get_or_placeholder(db, user_id, subject, "weekly")
+
+    yesterday = (datetime.now(UTC) - timedelta(days=1)).date()
+    daily_prev = await summary_manager.get_or_placeholder(db, user_id, subject, "daily", summary_date=yesterday)
+
+    timeline = await summary_manager.get_consultant_timeline(db, user_id)
+    timeline_section = timeline.content if timeline else "[No preparation timeline yet]"
+
+    chapter_syllabus = ""
+    if chapter:
+        try:
+            structure = get_structure(subject)
+            chapters = structure.get("chapters", [])
+            match = next((c for c in chapters if c.get("id") == chapter or c.get("display_name") == chapter), None)
+            if match:
+                chapter_syllabus = f"\n\n## Chapter Syllabus: {match.get('display_name', chapter)}\n"
+                for topic in match.get("topics", []):
+                    chapter_syllabus += f"- {topic.get('display_name', '')}"
+                    subtopics = topic.get("subtopics", [])
+                    if subtopics:
+                        chapter_syllabus += ": " + ", ".join(subtopics)
+                    chapter_syllabus += "\n"
+        except Exception as exc:
+            logger.warning("Could not load chapter syllabus for subject=%s chapter=%s: %s", subject, chapter, exc)
+
+    context = f"""{profile_section}
+
+## Overall Student Summary
+{overall}
+
+## {_subject_display(subject)} — All-Time Summary
+{all_time}
+
+## {_subject_display(subject)} — Weekly Summary
+{weekly}
+
+## {_subject_display(subject)} — Yesterday's Summary
+{daily_prev}
+
+## Preparation Timeline
+{timeline_section}{chapter_syllabus}"""
+
+    return context, student_stream
+
+
+# ---------------------------------------------------------------------------
+# build_capsule_context
+# ---------------------------------------------------------------------------
+
+async def build_capsule_context(
+    db: AsyncSession,
+    user_id: str,
+    subject: str,
+) -> tuple[str, str]:
+    """
+    Same as tutor context but uses TODAY's daily summary (capsule is generated after day ends).
+    Returns (context_string, student_stream).
+    """
+    profile_data = await _fetch_profile(user_id)
+    profile_section, student_stream = _format_profile(profile_data)
+
+    overall = await summary_manager.get_or_placeholder_overall(db, user_id)
+    all_time = await summary_manager.get_or_placeholder(db, user_id, subject, "all_time")
+    weekly = await summary_manager.get_or_placeholder(db, user_id, subject, "weekly")
+
+    today = datetime.now(UTC).date()
+    daily_today = await summary_manager.get_or_placeholder(db, user_id, subject, "daily", summary_date=today)
+
+    timeline = await summary_manager.get_consultant_timeline(db, user_id)
+    timeline_section = timeline.content if timeline else "[No preparation timeline yet]"
+
+    context = f"""{profile_section}
+
+## Overall Student Summary
+{overall}
+
+## {_subject_display(subject)} — All-Time Summary
+{all_time}
+
+## {_subject_display(subject)} — Weekly Summary
+{weekly}
+
+## {_subject_display(subject)} — Today's Summary
+{daily_today}
+
+## Preparation Timeline
+{timeline_section}"""
+
+    return context, student_stream
+
+
+# ---------------------------------------------------------------------------
+# build_consultant_context
+# ---------------------------------------------------------------------------
+
+async def build_consultant_context(
+    db: AsyncSession,
+    user_id: str,
+) -> str:
+    """Context for the consultant agent."""
+    profile_data = await _fetch_profile(user_id)
+    profile_section, _ = _format_profile(profile_data)
+
+    overall = await summary_manager.get_or_placeholder_overall(db, user_id)
+
+    subject_sections = []
+    for subj in _ALL_SUBJECTS:
+        all_time = await summary_manager.get_or_placeholder(db, user_id, subj, "all_time")
+        weekly = await summary_manager.get_or_placeholder(db, user_id, subj, "weekly")
+        subject_sections.append(
+            f"### {_subject_display(subj)}\n"
+            f"**All-Time:** {all_time}\n\n"
+            f"**Weekly:** {weekly}"
+        )
+
+    timeline = await summary_manager.get_consultant_timeline(db, user_id)
+    timeline_section = timeline.content if timeline else "[No preparation timeline yet]"
+
+    # Today's practice summaries (all subjects)
+    practice_rows = await summary_manager.get_today_practice_summaries(db, user_id)
+    practice_section = ""
+    if practice_rows:
+        practice_section = "\n\n## Today's Practice Sessions\n"
+        for p in practice_rows:
+            practice_section += (
+                f"- {_subject_display(p.subject)} / {p.chapter}: "
+                f"{p.correct_count}/{p.total_questions} correct — {p.summary_content}\n"
+            )
+    else:
+        practice_section = "\n\n## Today's Practice Sessions\n[No practice sessions today]"
+
+    # Today's session memories
+    today_midnight = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+    stmt = (
+        select(SessionMemory)
+        .where(
+            SessionMemory.user_id == user_id,
+            SessionMemory.generated_at >= today_midnight,
+        )
+        .order_by(SessionMemory.generated_at.asc())
     )
     result = await db.execute(stmt)
-    summaries = list(result.scalars().all())
+    memories = result.scalars().all()
+    memory_section = ""
+    if memories:
+        memory_section = "\n\n## Today's Tutor Session Memories\n"
+        for m in memories:
+            subj_label = _subject_display(m.subject) if m.subject else "General"
+            memory_section += f"### {subj_label}\n{m.content}\n\n"
+    else:
+        memory_section = "\n\n## Today's Tutor Session Memories\n[No tutor sessions today]"
 
-    planner_summaries = [s for s in summaries if s.agent_type == "planner"]
-    tutor_summaries = [s for s in summaries if s.agent_type == "tutor" and s.subject == subject]
+    context = f"""{profile_section}
 
-    stmt_timeline = select(PlannerTimeline).where(PlannerTimeline.user_id == user_id)
-    timeline_result = await db.execute(stmt_timeline)
-    planner_timeline = timeline_result.scalar_one_or_none()
+## Overall Student Summary
+{overall}
 
-    profile_section = _format_profile_section(profile_data)
-    tutor_section = _format_summaries_section(tutor_summaries, "tutor")
-    planner_section = _format_planner_section(planner_summaries, planner_timeline)
+## Subject Summaries
+{"".join(subject_sections)}{practice_section}{memory_section}
 
-    context = f"{profile_section}\n\n{tutor_section}\n\n{planner_section}"
-    return context, student_stream
+## Preparation Timeline
+{timeline_section}"""
+
+    return context
+
+
+# ---------------------------------------------------------------------------
+# build_personalization_context
+# ---------------------------------------------------------------------------
+
+async def build_personalization_context(
+    db: AsyncSession,
+    user_id: str,
+) -> dict:
+    """
+    Returns raw data dict for the worker's personalization agent.
+    Includes all summaries, session memories, and practice data for the day.
+    """
+    profile_data = await _fetch_profile(user_id)
+
+    overall = await summary_manager.get_or_placeholder_overall(db, user_id)
+
+    subject_data = {}
+    for subj in _ALL_SUBJECTS:
+        all_time = await summary_manager.get_or_placeholder(db, user_id, subj, "all_time")
+        weekly = await summary_manager.get_or_placeholder(db, user_id, subj, "weekly")
+        daily_list = await summary_manager.get_last_n_daily_summaries(db, user_id, subj, n=7)
+        subject_data[subj] = {
+            "all_time": all_time,
+            "weekly": weekly,
+            "recent_daily": [{"date": str(s.summary_date), "content": s.content} for s in daily_list],
+        }
+
+    # All session memories
+    stmt = (
+        select(SessionMemory)
+        .where(SessionMemory.user_id == user_id)
+        .order_by(SessionMemory.generated_at.desc())
+        .limit(20)
+    )
+    result = await db.execute(stmt)
+    memories = [
+        {"session_id": m.session_id, "subject": m.subject, "content": m.content, "generated_at": m.generated_at.isoformat()}
+        for m in result.scalars().all()
+    ]
+
+    today_practice = await summary_manager.get_today_practice_summaries(db, user_id)
+    practice_data = [
+        {
+            "subject": p.subject,
+            "chapter": p.chapter,
+            "total": p.total_questions,
+            "correct": p.correct_count,
+            "incorrect": p.incorrect_count,
+            "topic_breakdown": p.topic_breakdown,
+            "summary": p.summary_content,
+        }
+        for p in today_practice
+    ]
+
+    timeline = await summary_manager.get_consultant_timeline(db, user_id)
+
+    return {
+        "user_id": user_id,
+        "profile": profile_data,
+        "overall_summary": overall,
+        "subject_summaries": subject_data,
+        "session_memories": memories,
+        "today_practice_sessions": practice_data,
+        "consultant_timeline": timeline.content if timeline else None,
+    }

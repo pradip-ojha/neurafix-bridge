@@ -1,19 +1,23 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from datetime import datetime, UTC
 
+from openai import AsyncOpenAI
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.models.chat_session import ChatMessage, ChatSession
+from app.models.personalization import SessionMemory
 from app.redis_client import lrange, rpush, set
 
 logger = logging.getLogger(__name__)
 
 _SESSION_TTL = 86400  # 24 hours
-_MSG_KEY = "session:{session_id}:messages"
+_MEMORY_MODEL = "gpt-4o-mini"
 
 
 def _msg_key(session_id: str) -> str:
@@ -69,6 +73,8 @@ async def append_message(
     role: str,
     content: str,
     metadata: dict | None = None,
+    user_id: str | None = None,
+    subject: str | None = None,
 ) -> ChatMessage:
     msg = ChatMessage(
         session_id=session_id,
@@ -84,15 +90,21 @@ async def append_message(
     key = _msg_key(session_id)
     payload = json.dumps({"role": role, "content": content, "created_at": msg.created_at.isoformat()})
     await rpush(key, payload)
-    # Reset TTL on every new message
     await set(f"{key}:ttl_marker", "1", ex=_SESSION_TTL)
+
+    # Trigger session memory generation after assistant messages at count 5, 8, 11, ...
+    if role == "assistant" and user_id:
+        count = await count_messages(db, session_id)
+        if count >= 5 and (count - 5) % 3 == 0:
+            asyncio.create_task(
+                _generate_and_save_session_memory(session_id, user_id, subject, count)
+            )
 
     return msg
 
 
-async def get_recent_messages(db: AsyncSession, session_id: str, n: int = 10) -> list[dict]:
+async def get_recent_messages(db: AsyncSession, session_id: str, n: int = 6) -> list[dict]:
     key = _msg_key(session_id)
-    # lrange returns chronological order since we use rpush
     raw_list = await lrange(key, -n, -1)
     if raw_list:
         messages = []
@@ -101,28 +113,84 @@ async def get_recent_messages(db: AsyncSession, session_id: str, n: int = 10) ->
                 messages.append(json.loads(item))
             except Exception:
                 pass
-        return messages
+    else:
+        # Cache miss — fall back to DB, get last n messages
+        stmt_all = (
+            select(ChatMessage)
+            .where(ChatMessage.session_id == session_id)
+            .order_by(ChatMessage.created_at.desc())
+            .limit(n)
+        )
+        result = await db.execute(stmt_all)
+        rows = list(reversed(result.scalars().all()))
+        messages = [{"role": r.role, "content": r.content, "created_at": r.created_at.isoformat()} for r in rows]
 
-    # Cache miss — fall back to DB
-    stmt = (
-        select(ChatMessage)
-        .where(ChatMessage.session_id == session_id)
-        .order_by(ChatMessage.created_at.asc())
-        .limit(n)
-    )
-    # Get last n by doing a subquery workaround: get all, take last n
-    stmt_all = (
-        select(ChatMessage)
-        .where(ChatMessage.session_id == session_id)
-        .order_by(ChatMessage.created_at.desc())
-        .limit(n)
-    )
-    result = await db.execute(stmt_all)
-    rows = list(reversed(result.scalars().all()))
-    return [{"role": r.role, "content": r.content, "created_at": r.created_at.isoformat()} for r in rows]
+    # Prepend session memory if it exists
+    stmt_mem = select(SessionMemory).where(SessionMemory.session_id == session_id)
+    mem_result = await db.execute(stmt_mem)
+    memory = mem_result.scalar_one_or_none()
+    if memory:
+        messages = [{"role": "system", "content": f"[Session Memory — Context from earlier in this conversation]\n{memory.content}"}] + messages
+
+    return messages
 
 
 async def count_messages(db: AsyncSession, session_id: str) -> int:
     stmt = select(ChatMessage).where(ChatMessage.session_id == session_id)
     result = await db.execute(stmt)
     return len(result.scalars().all())
+
+
+async def _generate_and_save_session_memory(
+    session_id: str,
+    user_id: str,
+    subject: str | None,
+    message_count: int,
+) -> None:
+    """Background task — generates a session memory summary and upserts it."""
+    from app.database import AsyncSessionLocal
+    from app.personalization import summary_manager
+
+    try:
+        async with AsyncSessionLocal() as db:
+            stmt = (
+                select(ChatMessage)
+                .where(ChatMessage.session_id == session_id)
+                .order_by(ChatMessage.created_at.desc())
+                .limit(6)
+            )
+            result = await db.execute(stmt)
+            rows = list(reversed(result.scalars().all()))
+
+            if not rows:
+                return
+
+            conversation = "\n".join(
+                f"{r.role.upper()}: {r.content}" for r in rows
+            )
+
+            client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+            resp = await client.chat.completions.create(
+                model=_MEMORY_MODEL,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are summarizing a tutoring conversation for future context. "
+                            "In 3-5 sentences, note: key topics covered, any confusion the student had, "
+                            "what explanations helped, and any unresolved questions."
+                        ),
+                    },
+                    {"role": "user", "content": conversation},
+                ],
+                max_tokens=250,
+            )
+
+            memory_content = (resp.choices[0].message.content or "").strip()
+            if memory_content:
+                await summary_manager.upsert_session_memory(
+                    db, session_id, user_id, subject, memory_content, message_count
+                )
+
+    except Exception as exc:
+        logger.error("Session memory generation failed for session=%s: %s", session_id, exc)

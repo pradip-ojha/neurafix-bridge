@@ -4,14 +4,12 @@ Tutor agent API endpoints.
 POST /api/tutor/chat                         → SSE stream
 GET  /api/tutor/sessions                     → list sessions
 GET  /api/tutor/sessions/{id}/messages       → list messages in a session
-GET  /api/tutor/personalization/summaries    → list summaries
-GET  /api/tutor/personalization/timeline     → planner timeline
 """
 from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,11 +17,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.auth import get_current_user_id
 from app.database import get_db
 from app.models.chat_session import ChatSession, ChatMessage
-from app.models.personalization import PersonalizationSummary, PlannerTimeline
 from app.personalization import context_builder
-from app.personalization import summary_manager
 from app.schemas.chat import ChatRequest, MessageOut, SessionOut
-from app.schemas.personalization import PlannerTimelineOut, SummaryOut
 from app.sessions import manager as session_manager
 from app.agents.tutor.agent import TutorAgent
 
@@ -39,7 +34,6 @@ async def chat(
     db: AsyncSession = Depends(get_db),
 ):
     """Stream a tutor response as SSE (text/event-stream)."""
-    # Resolve or create today's session
     if req.session_id:
         session = await db.get(ChatSession, req.session_id)
         if not session or session.user_id != user_id:
@@ -49,20 +43,19 @@ async def chat(
 
     session_id = session.id
 
-    # Persist user message
-    user_msg = await session_manager.append_message(db, session_id, "user", req.message)
+    await session_manager.append_message(db, session_id, "user", req.message)
 
-    # Auto-title on first message
     msg_count = await session_manager.count_messages(db, session_id)
     if msg_count <= 1:
         await session_manager.update_session_title(db, session_id, req.message)
 
-    # Build personalization context (also gives us the student's stream)
-    student_context, student_stream = await context_builder.build_context(db, user_id, req.subject)
+    # Build personalization context (also returns student stream for RAG filtering)
+    student_context, student_stream = await context_builder.build_tutor_context(
+        db, user_id, req.subject, getattr(req, "chapter", None)
+    )
 
-    # Recent message history for conversation continuity
-    recent = await session_manager.get_recent_messages(db, session_id, n=10)
-    # Format for OpenAI Agents SDK input
+    # Recent messages (last 6) with session memory prepended if available
+    recent = await session_manager.get_recent_messages(db, session_id)
     messages = [{"role": m["role"], "content": m["content"]} for m in recent]
 
     agent = TutorAgent(user_id=user_id, subject=req.subject, stream=student_stream)
@@ -70,7 +63,6 @@ async def chat(
     async def generate():
         full_text = ""
         async for chunk in agent.stream_response(student_context, messages, session_id):
-            # Capture full_text from the final done event so we can persist it
             if '"done": true' in chunk or '"done":true' in chunk:
                 import json as _json
                 try:
@@ -80,9 +72,11 @@ async def chat(
                     pass
             yield chunk
 
-        # Persist assistant response to DB after stream ends
         if full_text:
-            await session_manager.append_message(db, session_id, "assistant", full_text)
+            await session_manager.append_message(
+                db, session_id, "assistant", full_text,
+                user_id=user_id, subject=req.subject,
+            )
 
     return StreamingResponse(
         generate(),
@@ -128,7 +122,6 @@ async def list_messages(
     result = await db.execute(stmt)
     rows = result.scalars().all()
 
-    # Map metadata_ column to metadata field in schema
     return [
         MessageOut(
             id=r.id,
@@ -139,24 +132,3 @@ async def list_messages(
         )
         for r in rows
     ]
-
-
-@router.get("/personalization/summaries", response_model=list[SummaryOut])
-async def list_summaries(
-    agent_type: str | None = Query(default=None),
-    subject: str | None = Query(default=None),
-    timeline: str | None = Query(default=None),
-    user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db),
-):
-    return await summary_manager.list_summaries(db, user_id, agent_type, subject, timeline)
-
-
-@router.get("/personalization/timeline", response_model=PlannerTimelineOut | None)
-async def get_timeline(
-    user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db),
-):
-    stmt = select(PlannerTimeline).where(PlannerTimeline.user_id == user_id)
-    result = await db.execute(stmt)
-    return result.scalar_one_or_none()

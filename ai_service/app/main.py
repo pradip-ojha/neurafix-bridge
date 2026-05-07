@@ -8,8 +8,8 @@ from app.api.health import router as health_router
 from app.api.rag import router as rag_router
 from app.api.tutor import router as tutor_router
 from app.api.questions import router as questions_router
+from app.api.debug import router as debug_router
 
-# Ensure app-level loggers are visible alongside uvicorn output
 for _log_name in (
     "app.rag.pipeline", "app.rag.semantic_refiner", "app.rag.chunker",
     "app.rag.embedder", "app.rag.retriever",
@@ -42,3 +42,4 @@ app.include_router(health_router)
 app.include_router(rag_router)
 app.include_router(tutor_router)
 app.include_router(questions_router)
+app.include_router(debug_router)

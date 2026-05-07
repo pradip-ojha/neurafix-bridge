@@ -75,7 +75,12 @@
       "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:8000/health\" -Method GET -UseBasicParsing -TimeoutSec 5; $r.Content)",
       "Bash(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\" -Directory)",
       "Bash(Select-Object -ExpandProperty Name)",
-      "Bash(dir -Recurse -File)"
+      "Bash(dir -Recurse -File)",
+      "Bash(Sort-Object FullName)",
+      "Bash(Get-ChildItem *)",
+      "PowerShell(Start-Sleep -Seconds 4; Invoke-RestMethod -Uri \"http://localhost:8001/api/health\" -Method Get 2>&1)",
+      "PowerShell(Invoke-RestMethod -Uri \"http://localhost:8001/api/health/ping\" -Method Get 2>&1)",
+      "PowerShell(Invoke-RestMethod -Uri \"http://localhost:8001/health\" -Method Get | ConvertTo-Json)"
     ]
   }
 }
