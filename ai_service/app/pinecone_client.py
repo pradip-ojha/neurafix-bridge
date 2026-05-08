@@ -3,6 +3,7 @@ from pinecone import Pinecone, ServerlessSpec
 from app.config import settings
 
 _pc: Pinecone | None = None
+_index = None
 INDEX_NAME = "hamroguru"
 
 
@@ -14,17 +15,20 @@ def get_pinecone() -> Pinecone:
 
 
 def get_index():
-    """Return the hamroguru Pinecone index. Creates it if it doesn't exist."""
-    pc = get_pinecone()
-    existing = [i.name for i in pc.list_indexes()]
-    if INDEX_NAME not in existing:
-        pc.create_index(
-            name=INDEX_NAME,
-            dimension=3072,  # text-embedding-3-large dimension
-            metric="cosine",
-            spec=ServerlessSpec(cloud="aws", region="us-east-1"),
-        )
-    return pc.Index(INDEX_NAME)
+    """Return the hamroguru Pinecone index. Creates it if needed. Cached after first call."""
+    global _index
+    if _index is None:
+        pc = get_pinecone()
+        existing = [i.name for i in pc.list_indexes()]
+        if INDEX_NAME not in existing:
+            pc.create_index(
+                name=INDEX_NAME,
+                dimension=3072,
+                metric="cosine",
+                spec=ServerlessSpec(cloud="aws", region="us-east-1"),
+            )
+        _index = pc.Index(INDEX_NAME)
+    return _index
 
 
 def check_connection() -> bool:

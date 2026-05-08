@@ -83,9 +83,9 @@ async def chat(
     if msg_count <= 1:
         await session_manager.update_session_title(db, session_id, req.message)
 
-    # Build personalization context (classifier decides RAG depth; also returns stream)
+    # Build personalization context — pass already-fetched stream to avoid double profile fetch
     student_context, ctx_stream = await context_builder.build_tutor_context(
-        db, user_id, req.subject, req.message, req.chapter
+        db, user_id, req.subject, req.message, req.chapter, student_stream=student_stream
     )
 
     # Recent messages (last 6) with session memory prepended if available

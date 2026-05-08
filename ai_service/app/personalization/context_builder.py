@@ -9,8 +9,9 @@ Four context types:
 """
 from __future__ import annotations
 
+import asyncio
 import logging
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, UTC
 
 import httpx
 from sqlalchemy import select
@@ -136,38 +137,42 @@ async def build_tutor_context(
     subject: str,
     message: str,
     chapter: str | None = None,
+    student_stream: str = "both",
 ) -> tuple[str, str]:
     """
     Returns (context_string, student_stream).
+
+    All independent fetches (profile, summaries, classifier) run in parallel via asyncio.gather.
+    Profile is only fetched when the overall summary doesn't exist yet (new-user fallback).
 
     Context layout — static first for prompt cache hits:
       needs_rag=False: chapter_syllabus --- overall + all_time + yesterday + timeline
       needs_rag=True:  rag_chunks + chapter_syllabus --- overall + all_time + weekly + yesterday + timeline
     """
-    # Always fetch profile to get student_stream (and for new-user fallback)
-    profile_data = await _fetch_profile(user_id)
-    _, student_stream = _format_profile(profile_data)
+    # Classifier (OpenAI API, no DB) fires concurrently while cache + timeline are fetched
+    classify_task = asyncio.create_task(classify_tutor_query(message, subject, chapter))
 
-    # Overall student summary — fall back to profile text for new users
-    overall = await summary_manager.get_or_placeholder_overall(db, user_id)
+    # Cache: overall + this subject only (not all 4) — 1 Redis GET, 4 DB queries on miss
+    summaries = await summary_manager.get_subject_summaries_cached(db, user_id, subject)
+    # Timeline always fresh — consultant can update it mid-session
+    timeline_row = await summary_manager.get_consultant_timeline(db, user_id)
+
+    classification = await classify_task
+
+    overall = summaries["overall"]
+    all_time = summaries.get("all_time", _NO_SUMMARY)
+    weekly = summaries.get("weekly", _NO_SUMMARY)
+    daily_prev = summaries.get("daily_prev", _NO_SUMMARY)
+    timeline_section = timeline_row.content if timeline_row else "[No preparation timeline yet]"
+
+    # Only fetch profile if no summary yet (new user — rare path)
     if overall == _NO_SUMMARY:
-        profile_section, _ = _format_profile(profile_data)
+        profile_data = await _fetch_profile(user_id)
+        profile_section, student_stream = _format_profile(profile_data)
         student_context_section = profile_section
     else:
         student_context_section = f"## Overall Student Summary\n{overall}"
 
-    # Subject summaries
-    all_time = await summary_manager.get_or_placeholder(db, user_id, subject, "all_time")
-    weekly = await summary_manager.get_or_placeholder(db, user_id, subject, "weekly")
-    yesterday = (datetime.now(UTC) - timedelta(days=1)).date()
-    daily_prev = await summary_manager.get_or_placeholder(db, user_id, subject, "daily", summary_date=yesterday)
-
-    # Preparation timeline
-    timeline = await summary_manager.get_consultant_timeline(db, user_id)
-    timeline_section = timeline.content if timeline else "[No preparation timeline yet]"
-
-    # Classify message to decide whether to load RAG chunks
-    classification = await classify_tutor_query(message, subject, chapter)
     needs_rag: bool = classification["needs_rag"]
     rag_chapter: str | None = classification.get("chapter") or chapter
     rag_topic: str | None = classification.get("topic")
@@ -225,20 +230,22 @@ async def build_capsule_context(
     Dynamic: overall summary + weekly + today's daily + today's practice + timeline.
     Returns (context_string, student_stream).
     """
-    profile_data = await _fetch_profile(user_id)
-    _, student_stream = _format_profile(profile_data)
+    # Cache: overall + this subject only — same key as tutor uses for the same subject
+    summaries = await summary_manager.get_subject_summaries_cached(db, user_id, subject)
+    overall = summaries["overall"]
+    weekly = summaries.get("weekly", _NO_SUMMARY)
 
-    overall = await summary_manager.get_or_placeholder_overall(db, user_id)
     if overall == _NO_SUMMARY:
-        profile_section, _ = _format_profile(profile_data)
+        profile_data = await _fetch_profile(user_id)
+        profile_section, student_stream = _format_profile(profile_data)
         student_context_section = profile_section
     else:
         student_context_section = f"## Overall Student Summary\n{overall}"
+        student_stream = "both"
 
-    weekly = await summary_manager.get_or_placeholder(db, user_id, subject, "weekly")
+    # Dynamic data fetched fresh
     today = datetime.now(UTC).date()
     daily_today = await summary_manager.get_or_placeholder(db, user_id, subject, "daily", summary_date=today)
-
     timeline = await summary_manager.get_consultant_timeline(db, user_id)
     timeline_section = timeline.content if timeline else "[No preparation timeline yet]"
 
@@ -324,6 +331,10 @@ async def build_capsule_context(
 # build_consultant_context
 # ---------------------------------------------------------------------------
 
+async def _noop_general() -> dict:
+    return {"query_type": "general"}
+
+
 async def build_consultant_context(
     db: AsyncSession,
     user_id: str,
@@ -331,47 +342,66 @@ async def build_consultant_context(
 ) -> str:
     """Context for the consultant agent.
 
-    Overall student summary embeds profile facts (name, stream, school, GPA, goals) and learning
-    insights together — no raw profile block needed separately. Falls back to raw profile only
-    for new users who have no overall summary generated yet.
+    Classifier + always-needed data (overall summary + timeline) run in parallel.
+    If student_performance, the full subject batch also runs in a single gather.
 
-    student_performance query → full context (overall summary + all subject summaries + practice + memories + timeline)
-    general query             → lean context (overall summary + timeline only)
+    student_performance → full context (overall + all subject summaries + practice + memories + timeline)
+    general             → lean context (overall + timeline only)
     """
-    classification = await classify_consultant_query(message) if message else {"query_type": "general"}
+    today_midnight = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+    memory_stmt = (
+        select(SessionMemory)
+        .where(
+            SessionMemory.user_id == user_id,
+            SessionMemory.generated_at >= today_midnight,
+        )
+        .order_by(SessionMemory.generated_at.asc())
+    )
+
+    classify_coro = classify_consultant_query(message) if message else _noop_general()
+    classify_task = asyncio.create_task(classify_coro)
+
+    # Overall always needed; cache: 1 Redis GET, 1 DB query on miss
+    overall = await summary_manager.get_overall_cached(db, user_id)
+    # Timeline always fresh — consultant can update it mid-session
+    timeline_row = await summary_manager.get_consultant_timeline(db, user_id)
+
+    classification = await classify_task
     query_type = classification["query_type"]
 
-    overall = await summary_manager.get_or_placeholder_overall(db, user_id)
+    timeline_section = timeline_row.content if timeline_row else "[No preparation timeline yet]"
+
     if overall == _NO_SUMMARY:
-        # New user — no summary generated yet, fall back to raw profile until first summary is created
         profile_data = await _fetch_profile(user_id)
         profile_section, _ = _format_profile(profile_data)
         student_context_section = profile_section
     else:
         student_context_section = f"## Overall Student Summary\n{overall}"
 
-    timeline = await summary_manager.get_consultant_timeline(db, user_id)
-    timeline_section = timeline.content if timeline else "[No preparation timeline yet]"
-
     if query_type != "student_performance":
-        # Lean context — overall summary already contains stream, goals, and academic background.
         return f"""{student_context_section}
 
 ## Preparation Timeline
 {timeline_section}"""
 
-    # Full context — student asking about their own subject-level mistakes/performance/plan
-    subject_sections = []
-    for subj in _ALL_SUBJECTS:
-        all_time = await summary_manager.get_or_placeholder(db, user_id, subj, "all_time")
-        weekly = await summary_manager.get_or_placeholder(db, user_id, subj, "weekly")
-        subject_sections.append(
-            f"### {_subject_display(subj)}\n"
-            f"**All-Time:** {all_time}\n\n"
-            f"**Weekly:** {weekly}"
-        )
-
+    # Full context — fetch all 4 subjects from cache (1 Redis GET, 13 DB queries on miss)
+    all_summaries = await summary_manager.get_all_subjects_summaries_cached(db, user_id)
+    subj_cache = all_summaries["subjects"]
+    # Practice and memories always fresh — change as the student works through the day
     practice_rows = await summary_manager.get_today_practice_summaries(db, user_id)
+    mem_result = await db.execute(memory_stmt)
+
+    subject_values = [
+        ("compulsory_math", subj_cache.get("compulsory_math", {})),
+        ("optional_math", subj_cache.get("optional_math", {})),
+        ("compulsory_english", subj_cache.get("compulsory_english", {})),
+        ("compulsory_science", subj_cache.get("compulsory_science", {})),
+    ]
+    subject_sections = [
+        f"### {_subject_display(subj)}\n**All-Time:** {d.get('all_time', _NO_SUMMARY)}\n\n**Weekly:** {d.get('weekly', _NO_SUMMARY)}"
+        for subj, d in subject_values
+    ]
+
     if practice_rows:
         practice_lines = [
             f"- {_subject_display(p.subject)} / {p.chapter}: "
@@ -382,22 +412,12 @@ async def build_consultant_context(
     else:
         practice_section = "## Today's Practice Sessions\n[No practice sessions today]"
 
-    today_midnight = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
-    stmt = (
-        select(SessionMemory)
-        .where(
-            SessionMemory.user_id == user_id,
-            SessionMemory.generated_at >= today_midnight,
-        )
-        .order_by(SessionMemory.generated_at.asc())
-    )
-    result = await db.execute(stmt)
-    memories = result.scalars().all()
+    memories = mem_result.scalars().all()
     if memories:
-        mem_lines = []
-        for m in memories:
-            subj_label = _subject_display(m.subject) if m.subject else "General"
-            mem_lines.append(f"### {subj_label}\n{m.content}")
+        mem_lines = [
+            f"### {_subject_display(m.subject) if m.subject else 'General'}\n{m.content}"
+            for m in memories
+        ]
         memory_section = "## Today's Tutor Session Memories\n" + "\n\n".join(mem_lines)
     else:
         memory_section = "## Today's Tutor Session Memories\n[No tutor sessions today]"

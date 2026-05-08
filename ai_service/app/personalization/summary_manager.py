@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, date, UTC
+from datetime import datetime, date, timedelta, UTC
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -314,3 +314,107 @@ async def get_session_memory(db: AsyncSession, session_id: str) -> SessionMemory
     stmt = select(SessionMemory).where(SessionMemory.session_id == session_id)
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
+
+
+# ---------------------------------------------------------------------------
+# Personalization summary cache (Redis)
+# ---------------------------------------------------------------------------
+
+_PSNL_CACHE_TTL = 900  # 15 minutes, sliding on each access
+_PSNL_SUBJECTS = [
+    "compulsory_math",
+    "optional_math",
+    "compulsory_english",
+    "compulsory_science",
+]
+
+
+async def get_overall_cached(db: AsyncSession, user_id: str) -> str:
+    """
+    Overall student summary from cache (or DB on miss).
+    Used by consultant lean context — only overall is needed there.
+    Key: user:{id}:psnl:overall
+    """
+    import asyncio
+    from app.redis_client import get_json, set_json
+
+    key = f"user:{user_id}:psnl:overall"
+    cached = await get_json(key)
+    if cached:
+        asyncio.create_task(set_json(key, cached, ex=_PSNL_CACHE_TTL))
+        return cached
+
+    overall = await get_or_placeholder_overall(db, user_id)
+    await set_json(key, overall, ex=_PSNL_CACHE_TTL)
+    return overall
+
+
+async def get_subject_summaries_cached(db: AsyncSession, user_id: str, subject: str) -> dict:
+    """
+    Overall + one subject's static summaries from cache (or DB on miss).
+    Used by tutor and capsule agents — only the active subject is needed.
+    Key: user:{id}:psnl:{subject}
+    Returns: {date, overall, all_time, weekly, daily_prev}
+    Cache miss: 4 DB queries (overall + all_time + weekly + daily_prev).
+    """
+    import asyncio
+    from app.redis_client import get_json, set_json
+
+    yesterday = (datetime.now(UTC) - timedelta(days=1)).date()
+    key = f"user:{user_id}:psnl:{subject}"
+
+    cached = await get_json(key)
+    if cached and cached.get("date") == str(yesterday):
+        asyncio.create_task(set_json(key, cached, ex=_PSNL_CACHE_TTL))
+        return cached
+
+    overall = await get_or_placeholder_overall(db, user_id)
+    all_time = await get_or_placeholder(db, user_id, subject, "all_time")
+    weekly = await get_or_placeholder(db, user_id, subject, "weekly")
+    daily_prev = await get_or_placeholder(db, user_id, subject, "daily", summary_date=yesterday)
+
+    data = {
+        "date": str(yesterday),
+        "overall": overall,
+        "all_time": all_time,
+        "weekly": weekly,
+        "daily_prev": daily_prev,
+    }
+    await set_json(key, data, ex=_PSNL_CACHE_TTL)
+    return data
+
+
+async def get_all_subjects_summaries_cached(db: AsyncSession, user_id: str) -> dict:
+    """
+    Overall + all 4 subjects' static summaries from cache (or DB on miss).
+    Used by consultant full context only.
+    Key: user:{id}:psnl:all_subjects
+    Returns: {date, overall, subjects: {subject: {all_time, weekly, daily_prev}}}
+    Cache miss: 13 DB queries (overall + 4 subjects × 3 types).
+    """
+    import asyncio
+    from app.redis_client import get_json, set_json
+
+    yesterday = (datetime.now(UTC) - timedelta(days=1)).date()
+    key = f"user:{user_id}:psnl:all_subjects"
+
+    cached = await get_json(key)
+    if cached and cached.get("date") == str(yesterday):
+        asyncio.create_task(set_json(key, cached, ex=_PSNL_CACHE_TTL))
+        return cached
+
+    overall = await get_or_placeholder_overall(db, user_id)
+    subjects: dict[str, dict] = {}
+    for subj in _PSNL_SUBJECTS:
+        all_time = await get_or_placeholder(db, user_id, subj, "all_time")
+        weekly = await get_or_placeholder(db, user_id, subj, "weekly")
+        daily_prev = await get_or_placeholder(db, user_id, subj, "daily", summary_date=yesterday)
+        subjects[subj] = {"all_time": all_time, "weekly": weekly, "daily_prev": daily_prev}
+
+    data = {
+        "date": str(yesterday),
+        "overall": overall,
+        "subjects": subjects,
+    }
+    await set_json(key, data, ex=_PSNL_CACHE_TTL)
+    return data

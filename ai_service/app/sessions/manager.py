@@ -105,7 +105,14 @@ async def append_message(
 
 async def get_recent_messages(db: AsyncSession, session_id: str, n: int = 6) -> list[dict]:
     key = _msg_key(session_id)
-    raw_list = await lrange(key, -n, -1)
+    stmt_mem = select(SessionMemory).where(SessionMemory.session_id == session_id)
+
+    # Fetch Redis messages and session memory in parallel
+    raw_list, mem_result = await asyncio.gather(
+        lrange(key, -n, -1),
+        db.execute(stmt_mem),
+    )
+
     if raw_list:
         messages = []
         for item in raw_list:
@@ -114,7 +121,7 @@ async def get_recent_messages(db: AsyncSession, session_id: str, n: int = 6) -> 
             except Exception:
                 pass
     else:
-        # Cache miss — fall back to DB, get last n messages
+        # Cache miss — fall back to DB
         stmt_all = (
             select(ChatMessage)
             .where(ChatMessage.session_id == session_id)
@@ -125,9 +132,6 @@ async def get_recent_messages(db: AsyncSession, session_id: str, n: int = 6) -> 
         rows = list(reversed(result.scalars().all()))
         messages = [{"role": r.role, "content": r.content, "created_at": r.created_at.isoformat()} for r in rows]
 
-    # Prepend session memory if it exists
-    stmt_mem = select(SessionMemory).where(SessionMemory.session_id == session_id)
-    mem_result = await db.execute(stmt_mem)
     memory = mem_result.scalar_one_or_none()
     if memory:
         messages = [{"role": "system", "content": f"[Session Memory — Context from earlier in this conversation]\n{memory.content}"}] + messages

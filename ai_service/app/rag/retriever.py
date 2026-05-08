@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from openai import AsyncOpenAI
@@ -43,11 +44,16 @@ async def retrieve(
     if topic:
         pinecone_filter["topic"] = {"$eq": topic}
 
-    results = index.query(
-        vector=query_vector,
-        top_k=top_k,
-        filter=pinecone_filter,
-        include_metadata=True,
+    # Pinecone SDK query is synchronous — run in thread pool to avoid blocking the event loop
+    loop = asyncio.get_event_loop()
+    results = await loop.run_in_executor(
+        None,
+        lambda: index.query(
+            vector=query_vector,
+            top_k=top_k,
+            filter=pinecone_filter,
+            include_metadata=True,
+        ),
     )
 
     matches = results.get("matches", [])
