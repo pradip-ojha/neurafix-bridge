@@ -1,5 +1,5 @@
 """Debug endpoint for inspecting assembled personalization context.
-Removable after Phase 5 testing is complete.
+Removable after Phase 6 testing is complete.
 """
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,11 +21,14 @@ async def get_context(
     user_id: str = Query(...),
     subject: str = Query(...),
     chapter: str | None = Query(default=None),
+    message: str = Query(default="[debug inspection]"),
     _: None = Depends(_verify_internal),
     db: AsyncSession = Depends(get_db),
 ):
     """Returns the assembled tutor context string for a given user and subject."""
-    ctx, student_stream = await context_builder.build_tutor_context(db, user_id, subject, chapter)
+    ctx, student_stream = await context_builder.build_tutor_context(
+        db, user_id, subject, message, chapter
+    )
     return {
         "user_id": user_id,
         "subject": subject,

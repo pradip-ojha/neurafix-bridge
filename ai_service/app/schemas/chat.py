@@ -10,6 +10,7 @@ class ChatRequest(BaseModel):
     subject: str
     message: str
     session_id: str | None = None
+    chapter: str | None = None
 
 
 class MessageOut(BaseModel):

@@ -1,6 +1,6 @@
 """
 Upstash Redis client using the REST API (httpx).
-Used in main_backend for: refresh token storage, rate limiting.
+Uses a singleton AsyncClient to reuse the TCP connection across calls.
 """
 import json
 from typing import Any
@@ -9,33 +9,43 @@ import httpx
 
 from app.config import settings
 
-
-def _headers() -> dict:
-    return {
-        "Authorization": f"Bearer {settings.UPSTASH_REDIS_REST_TOKEN}",
-        "Content-Type": "application/json",
-    }
+_client: httpx.AsyncClient | None = None
 
 
-def _base_url() -> str:
-    return settings.UPSTASH_REDIS_REST_URL.rstrip("/")
+def _get_client() -> httpx.AsyncClient:
+    global _client
+    if _client is None:
+        _client = httpx.AsyncClient(
+            base_url=settings.UPSTASH_REDIS_REST_URL.rstrip("/"),
+            headers={
+                "Authorization": f"Bearer {settings.UPSTASH_REDIS_REST_TOKEN}",
+                "Content-Type": "application/json",
+            },
+            timeout=5.0,
+        )
+    return _client
+
+
+async def close() -> None:
+    global _client
+    if _client is not None:
+        await _client.aclose()
+        _client = None
 
 
 async def get(key: str) -> str | None:
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(f"{_base_url()}/get/{key}", headers=_headers())
-        resp.raise_for_status()
-        return resp.json().get("result")
+    resp = await _get_client().get(f"/get/{key}")
+    resp.raise_for_status()
+    return resp.json().get("result")
 
 
 async def set(key: str, value: str, ex: int | None = None) -> bool:
     parts = ["SET", key, value]
     if ex is not None:
         parts += ["EX", str(ex)]
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(_base_url(), headers=_headers(), json=parts)
-        resp.raise_for_status()
-        return resp.json().get("result") == "OK"
+    resp = await _get_client().post("/", json=parts)
+    resp.raise_for_status()
+    return resp.json().get("result") == "OK"
 
 
 async def set_json(key: str, value: Any, ex: int | None = None) -> bool:
@@ -53,7 +63,6 @@ async def get_json(key: str) -> Any | None:
 
 
 async def delete(key: str) -> int:
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(f"{_base_url()}/del/{key}", headers=_headers())
-        resp.raise_for_status()
-        return resp.json().get("result", 0)
+    resp = await _get_client().get(f"/del/{key}")
+    resp.raise_for_status()
+    return resp.json().get("result", 0)

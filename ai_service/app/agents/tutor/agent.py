@@ -14,14 +14,15 @@ logger = logging.getLogger(__name__)
 
 
 class TutorAgent:
-    def __init__(self, user_id: str, subject: str, stream: str = "both"):
+    def __init__(self, user_id: str, subject: str, stream: str = "both", chapter: str | None = None):
         self.user_id = user_id
         self.subject = subject
         self.stream = stream
+        self.chapter = chapter
 
     def _build_agent(self, student_context: str) -> Agent:
         system_prompt = build_system_prompt(self.subject, student_context)
-        rag_tool = make_rag_tool(self.subject, self.stream)
+        rag_tool = make_rag_tool(self.subject, self.chapter)
         return Agent(
             name=f"Tutor-{self.subject}",
             instructions=system_prompt,

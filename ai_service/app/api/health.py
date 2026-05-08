@@ -1,3 +1,6 @@
+import asyncio
+import time
+
 from fastapi import APIRouter
 from sqlalchemy import text
 
@@ -8,31 +11,61 @@ from app import redis_client
 
 router = APIRouter()
 
+_cache: dict = {"result": None, "expires_at": 0.0}
 
-@router.get("/health")
-async def health_check():
-    db_status = "disconnected"
+
+async def _check_db() -> str:
     try:
         async with AsyncSessionLocal() as session:
             await session.execute(text("SELECT 1"))
-        db_status = "connected"
+        return "connected"
     except Exception as e:
-        db_status = f"error: {str(e)}"
+        return f"error: {e}"
 
-    pinecone_status = "connected" if pinecone_check() else "error"
 
-    r2_status = "connected" if r2_check() else "error"
+async def _check_pinecone() -> str:
+    try:
+        ok = await asyncio.to_thread(pinecone_check)
+        return "connected" if ok else "error"
+    except Exception:
+        return "error"
 
-    redis_ok = await redis_client.check_connection()
-    redis_status = "connected" if redis_ok else "error"
 
-    all_ok = all(s == "connected" for s in [db_status, pinecone_status, r2_status, redis_status])
+async def _check_r2() -> str:
+    try:
+        ok = await asyncio.to_thread(r2_check)
+        return "connected" if ok else "error"
+    except Exception:
+        return "error"
 
-    return {
+
+async def _check_redis() -> str:
+    try:
+        ok = await redis_client.check_connection()
+        return "connected" if ok else "error"
+    except Exception:
+        return "error"
+
+
+@router.get("/health")
+async def health_check():
+    now = time.time()
+    if _cache["result"] is not None and now < _cache["expires_at"]:
+        return _cache["result"]
+
+    db, pinecone, r2, redis = await asyncio.gather(
+        _check_db(), _check_pinecone(), _check_r2(), _check_redis()
+    )
+
+    all_ok = all(s == "connected" for s in [db, pinecone, r2, redis])
+    result = {
         "service": "ai_service",
         "status": "ok" if all_ok else "degraded",
-        "db": db_status,
-        "pinecone": pinecone_status,
-        "r2": r2_status,
-        "redis": redis_status,
+        "db": db,
+        "pinecone": pinecone,
+        "r2": r2,
+        "redis": redis,
     }
+    _cache["result"] = result
+    _cache["expires_at"] = now + 30
+    return result

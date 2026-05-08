@@ -2,7 +2,7 @@
 Assembles personalization context strings injected into agent system prompts.
 
 Four context types:
-  build_tutor_context      — for subject tutor agent
+  build_tutor_context      — for subject tutor agent (smart RAG gating via classifier)
   build_capsule_context    — for daily capsule agent
   build_consultant_context — for consultant agent
   build_personalization_context — raw data for worker/personalization agent
@@ -17,8 +17,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.models.personalization import PracticeSessionSummary, SessionMemory, SubjectSummary
+from app.models.personalization import SessionMemory
 from app.personalization import summary_manager
+from app.personalization.context_classifier import classify_tutor_query
+from app.rag import retriever
 from app.subject_structure.loader import get_structure
 
 logger = logging.getLogger(__name__)
@@ -29,6 +31,8 @@ _ALL_SUBJECTS = [
     "compulsory_english",
     "compulsory_science",
 ]
+
+_NO_SUMMARY = "[No summary yet]"
 
 
 # ---------------------------------------------------------------------------
@@ -82,6 +86,47 @@ def _subject_display(subject: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _build_chapter_syllabus(subject: str, chapter: str | None) -> str:
+    if not chapter:
+        return ""
+    try:
+        structure = get_structure(subject)
+        chapters = structure.get("chapters", [])
+        match = next(
+            (c for c in chapters if c.get("id") == chapter or c.get("display_name") == chapter),
+            None,
+        )
+        if match:
+            lines = [f"## Chapter Syllabus: {match.get('display_name', chapter)}"]
+            for topic in match.get("topics", []):
+                line = f"- {topic.get('display_name', '')}"
+                subtopics = topic.get("subtopics", [])
+                if subtopics:
+                    line += ": " + ", ".join(subtopics)
+                lines.append(line)
+            return "\n".join(lines)
+    except Exception as exc:
+        logger.warning("Could not load chapter syllabus for subject=%s chapter=%s: %s", subject, chapter, exc)
+    return ""
+
+
+def _format_rag_chunks(chunks: list[dict]) -> str:
+    if not chunks:
+        return ""
+    parts = []
+    for c in chunks:
+        header = f"Chapter: {c['chapter']} | Topic: {c['topic']}"
+        if c.get("subtopic"):
+            header += f" | Subtopic: {c['subtopic']}"
+        header += f" | Type: {c['chunk_type']}"
+        parts.append(f"{header}\n{c['text']}")
+    return "## Knowledge Base Notes\n" + "\n---\n".join(parts)
+
+
+# ---------------------------------------------------------------------------
 # build_tutor_context
 # ---------------------------------------------------------------------------
 
@@ -89,58 +134,78 @@ async def build_tutor_context(
     db: AsyncSession,
     user_id: str,
     subject: str,
+    message: str,
     chapter: str | None = None,
 ) -> tuple[str, str]:
     """
     Returns (context_string, student_stream).
-    student_stream is used to scope Pinecone retrieval.
-    """
-    profile_data = await _fetch_profile(user_id)
-    profile_section, student_stream = _format_profile(profile_data)
 
+    Context layout — static first for prompt cache hits:
+      needs_rag=False: chapter_syllabus --- overall + all_time + yesterday + timeline
+      needs_rag=True:  rag_chunks + chapter_syllabus --- overall + all_time + weekly + yesterday + timeline
+    """
+    # Always fetch profile to get student_stream (and for new-user fallback)
+    profile_data = await _fetch_profile(user_id)
+    _, student_stream = _format_profile(profile_data)
+
+    # Overall student summary — fall back to profile text for new users
     overall = await summary_manager.get_or_placeholder_overall(db, user_id)
+    if overall == _NO_SUMMARY:
+        profile_section, _ = _format_profile(profile_data)
+        student_context_section = profile_section
+    else:
+        student_context_section = f"## Overall Student Summary\n{overall}"
+
+    # Subject summaries
     all_time = await summary_manager.get_or_placeholder(db, user_id, subject, "all_time")
     weekly = await summary_manager.get_or_placeholder(db, user_id, subject, "weekly")
-
     yesterday = (datetime.now(UTC) - timedelta(days=1)).date()
     daily_prev = await summary_manager.get_or_placeholder(db, user_id, subject, "daily", summary_date=yesterday)
 
+    # Preparation timeline
     timeline = await summary_manager.get_consultant_timeline(db, user_id)
     timeline_section = timeline.content if timeline else "[No preparation timeline yet]"
 
-    chapter_syllabus = ""
-    if chapter:
-        try:
-            structure = get_structure(subject)
-            chapters = structure.get("chapters", [])
-            match = next((c for c in chapters if c.get("id") == chapter or c.get("display_name") == chapter), None)
-            if match:
-                chapter_syllabus = f"\n\n## Chapter Syllabus: {match.get('display_name', chapter)}\n"
-                for topic in match.get("topics", []):
-                    chapter_syllabus += f"- {topic.get('display_name', '')}"
-                    subtopics = topic.get("subtopics", [])
-                    if subtopics:
-                        chapter_syllabus += ": " + ", ".join(subtopics)
-                    chapter_syllabus += "\n"
-        except Exception as exc:
-            logger.warning("Could not load chapter syllabus for subject=%s chapter=%s: %s", subject, chapter, exc)
+    # Classify message to decide whether to load RAG chunks
+    classification = await classify_tutor_query(message, subject, chapter)
+    needs_rag: bool = classification["needs_rag"]
+    rag_chapter: str | None = classification.get("chapter") or chapter
+    rag_topic: str | None = classification.get("topic")
 
-    context = f"""{profile_section}
+    # --- Static section (same for all students on the same topic) ---
+    static_parts: list[str] = []
 
-## Overall Student Summary
-{overall}
+    if needs_rag:
+        chunks = await retriever.retrieve(
+            query=message,
+            subject=subject,
+            chapter=rag_chapter,
+            topic=rag_topic,
+            top_k=4,
+        )
+        rag_block = _format_rag_chunks(chunks)
+        if rag_block:
+            static_parts.append(rag_block)
 
-## {_subject_display(subject)} — All-Time Summary
-{all_time}
+    chapter_syllabus = _build_chapter_syllabus(subject, chapter or rag_chapter)
+    if chapter_syllabus:
+        static_parts.append(chapter_syllabus)
 
-## {_subject_display(subject)} — Weekly Summary
-{weekly}
+    # --- Dynamic section (student-specific) ---
+    dynamic_parts: list[str] = [student_context_section]
+    dynamic_parts.append(f"## {_subject_display(subject)} — All-Time Summary\n{all_time}")
+    if needs_rag:
+        dynamic_parts.append(f"## {_subject_display(subject)} — Weekly Summary\n{weekly}")
+    dynamic_parts.append(f"## {_subject_display(subject)} — Yesterday's Summary\n{daily_prev}")
+    dynamic_parts.append(f"## Preparation Timeline\n{timeline_section}")
 
-## {_subject_display(subject)} — Yesterday's Summary
-{daily_prev}
+    static_block = "\n\n".join(static_parts)
+    dynamic_block = "\n\n".join(dynamic_parts)
 
-## Preparation Timeline
-{timeline_section}{chapter_syllabus}"""
+    if static_block:
+        context = f"{static_block}\n\n---\n\n{dynamic_block}"
+    else:
+        context = dynamic_block
 
     return context, student_stream
 
@@ -155,38 +220,102 @@ async def build_capsule_context(
     subject: str,
 ) -> tuple[str, str]:
     """
-    Same as tutor context but uses TODAY's daily summary (capsule is generated after day ends).
+    Context for daily capsule agent.
+    Static: RAG chunks for chapters studied/practiced today.
+    Dynamic: overall summary + weekly + today's daily + today's practice + timeline.
     Returns (context_string, student_stream).
     """
     profile_data = await _fetch_profile(user_id)
-    profile_section, student_stream = _format_profile(profile_data)
+    _, student_stream = _format_profile(profile_data)
 
     overall = await summary_manager.get_or_placeholder_overall(db, user_id)
-    all_time = await summary_manager.get_or_placeholder(db, user_id, subject, "all_time")
-    weekly = await summary_manager.get_or_placeholder(db, user_id, subject, "weekly")
+    if overall == _NO_SUMMARY:
+        profile_section, _ = _format_profile(profile_data)
+        student_context_section = profile_section
+    else:
+        student_context_section = f"## Overall Student Summary\n{overall}"
 
+    weekly = await summary_manager.get_or_placeholder(db, user_id, subject, "weekly")
     today = datetime.now(UTC).date()
     daily_today = await summary_manager.get_or_placeholder(db, user_id, subject, "daily", summary_date=today)
 
     timeline = await summary_manager.get_consultant_timeline(db, user_id)
     timeline_section = timeline.content if timeline else "[No preparation timeline yet]"
 
-    context = f"""{profile_section}
+    # Today's practice sessions for this subject
+    today_practice = await summary_manager.get_today_practice_summaries(db, user_id, subject)
 
-## Overall Student Summary
-{overall}
+    # Collect chapters studied today
+    chapters_today: set[str] = {p.chapter for p in today_practice if p.chapter}
+    today_midnight = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+    stmt = (
+        select(SessionMemory)
+        .where(
+            SessionMemory.user_id == user_id,
+            SessionMemory.subject == subject,
+            SessionMemory.generated_at >= today_midnight,
+        )
+    )
+    mem_result = await db.execute(stmt)
+    today_memories = mem_result.scalars().all()
 
-## {_subject_display(subject)} — All-Time Summary
-{all_time}
+    # Fetch RAG chunks for chapters studied today (cap at 3 chapters)
+    all_chunks: list[dict] = []
+    if chapters_today:
+        capped_chapters = list(chapters_today)[:3]
+        chunks_per_chapter = max(1, 6 // len(capped_chapters))
+        for ch in capped_chapters:
+            try:
+                structure = get_structure(subject)
+                match = next(
+                    (c for c in structure.get("chapters", []) if c.get("id") == ch),
+                    None,
+                )
+                display = match.get("display_name", ch) if match else ch
+                chunks = await retriever.retrieve(
+                    query=f"key concepts for {display}",
+                    subject=subject,
+                    chapter=ch,
+                    top_k=chunks_per_chapter,
+                )
+                all_chunks.extend(chunks)
+            except Exception as exc:
+                logger.warning("Capsule RAG fetch failed for chapter=%s: %s", ch, exc)
 
-## {_subject_display(subject)} — Weekly Summary
-{weekly}
+    # Static section
+    static_parts: list[str] = []
+    rag_block = _format_rag_chunks(all_chunks)
+    if rag_block:
+        static_parts.append(rag_block)
 
-## {_subject_display(subject)} — Today's Summary
-{daily_today}
+    # Dynamic section
+    practice_lines = []
+    for p in today_practice:
+        practice_lines.append(
+            f"- {_subject_display(p.subject)} / {p.chapter}: "
+            f"{p.correct_count}/{p.total_questions} correct — {p.summary_content}"
+        )
+    practice_section = (
+        "## Today's Practice Sessions\n" + "\n".join(practice_lines)
+        if practice_lines
+        else "## Today's Practice Sessions\n[No practice sessions today]"
+    )
 
-## Preparation Timeline
-{timeline_section}"""
+    dynamic_parts: list[str] = [
+        student_context_section,
+        f"## {_subject_display(subject)} — Weekly Summary\n{weekly}",
+        f"## {_subject_display(subject)} — Today's Summary\n{daily_today}",
+        practice_section,
+        f"## Preparation Timeline\n{timeline_section}",
+    ]
+
+    static_block = "\n\n".join(static_parts)
+    dynamic_block = "\n\n".join(dynamic_parts)
+
+    if static_block:
+        context = f"{static_block}\n\n---\n\n{dynamic_block}"
+    else:
+        context = dynamic_block
 
     return context, student_stream
 
@@ -218,9 +347,7 @@ async def build_consultant_context(
     timeline = await summary_manager.get_consultant_timeline(db, user_id)
     timeline_section = timeline.content if timeline else "[No preparation timeline yet]"
 
-    # Today's practice summaries (all subjects)
     practice_rows = await summary_manager.get_today_practice_summaries(db, user_id)
-    practice_section = ""
     if practice_rows:
         practice_section = "\n\n## Today's Practice Sessions\n"
         for p in practice_rows:
@@ -231,7 +358,6 @@ async def build_consultant_context(
     else:
         practice_section = "\n\n## Today's Practice Sessions\n[No practice sessions today]"
 
-    # Today's session memories
     today_midnight = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
     stmt = (
         select(SessionMemory)
@@ -243,7 +369,6 @@ async def build_consultant_context(
     )
     result = await db.execute(stmt)
     memories = result.scalars().all()
-    memory_section = ""
     if memories:
         memory_section = "\n\n## Today's Tutor Session Memories\n"
         for m in memories:
@@ -293,7 +418,6 @@ async def build_personalization_context(
             "recent_daily": [{"date": str(s.summary_date), "content": s.content} for s in daily_list],
         }
 
-    # All session memories
     stmt = (
         select(SessionMemory)
         .where(SessionMemory.user_id == user_id)
@@ -302,7 +426,12 @@ async def build_personalization_context(
     )
     result = await db.execute(stmt)
     memories = [
-        {"session_id": m.session_id, "subject": m.subject, "content": m.content, "generated_at": m.generated_at.isoformat()}
+        {
+            "session_id": m.session_id,
+            "subject": m.subject,
+            "content": m.content,
+            "generated_at": m.generated_at.isoformat(),
+        }
         for m in result.scalars().all()
     ]
 

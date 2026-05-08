@@ -80,7 +80,11 @@
       "Bash(Get-ChildItem *)",
       "PowerShell(Start-Sleep -Seconds 4; Invoke-RestMethod -Uri \"http://localhost:8001/api/health\" -Method Get 2>&1)",
       "PowerShell(Invoke-RestMethod -Uri \"http://localhost:8001/api/health/ping\" -Method Get 2>&1)",
-      "PowerShell(Invoke-RestMethod -Uri \"http://localhost:8001/health\" -Method Get | ConvertTo-Json)"
+      "PowerShell(Invoke-RestMethod -Uri \"http://localhost:8001/health\" -Method Get | ConvertTo-Json)",
+      "Bash(Select-Object Name)",
+      "PowerShell(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\ai_service\" -Recurse -Force | Select-Object -Property FullName | Sort-Object FullName | ForEach-Object { $_.FullName.Replace\\('D:\\\\hamroguru\\\\hamroguru-platform\\\\ai_service\\\\', ''\\) })",
+      "PowerShell(Out-Null *)",
+      "Bash(npx tsc *)"
     ]
   }
 }

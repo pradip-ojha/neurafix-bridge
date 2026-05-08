@@ -3,6 +3,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import HealthCheck from './components/HealthCheck'
 import Login from './auth/Login'
+import Register from './auth/Register'
 import AdminLayout from './admin/layout/AdminLayout'
 import Dashboard from './admin/pages/Dashboard'
 import Users from './admin/pages/Users'
@@ -16,6 +17,16 @@ import Colleges from './admin/pages/Colleges'
 import SubjectTiming from './admin/pages/SubjectTiming'
 import Config from './admin/pages/Config'
 import Notifications from './admin/pages/Notifications'
+import Onboarding from './student/pages/Onboarding'
+import StudentLayout from './student/layout/StudentLayout'
+import SubjectGrid from './student/pages/SubjectGrid'
+import SubjectDetail from './student/pages/SubjectDetail'
+import Practice from './student/pages/Practice'
+import MockTests from './student/pages/MockTests'
+import Consultant from './student/pages/Consultant'
+import Community from './student/pages/Community'
+import Progress from './student/pages/Progress'
+import Settings from './student/pages/Settings'
 
 export default function App() {
   return (
@@ -23,6 +34,16 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute>
+                <Onboarding />
+              </ProtectedRoute>
+            }
+          />
 
           <Route
             path="/admin"
@@ -44,6 +65,25 @@ export default function App() {
             <Route path="subject-timing" element={<SubjectTiming />} />
             <Route path="config" element={<Config />} />
             <Route path="notifications" element={<Notifications />} />
+          </Route>
+
+          <Route
+            path="/student"
+            element={
+              <ProtectedRoute role="student">
+                <StudentLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="tutor" replace />} />
+            <Route path="tutor" element={<SubjectGrid />} />
+            <Route path="tutor/:subject" element={<SubjectDetail />} />
+            <Route path="practice" element={<Practice />} />
+            <Route path="mock-tests" element={<MockTests />} />
+            <Route path="consultant" element={<Consultant />} />
+            <Route path="community" element={<Community />} />
+            <Route path="progress" element={<Progress />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
 
           <Route path="/" element={<HealthCheck />} />

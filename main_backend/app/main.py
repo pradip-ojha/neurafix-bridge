@@ -1,7 +1,10 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
+from app.core import redis_client
 from app.api.health import router as health_router
 from app.api.auth import router as auth_router
 from app.api.onboarding import router as onboarding_router
@@ -15,11 +18,19 @@ from app.api.admin_content import router as admin_content_router
 from app.api.admin_analytics import router as admin_analytics_router
 from app.api.admin_referrals import router as admin_referrals_router
 from app.api.admin_proxy import router as admin_proxy_router
+from app.api.tutor_proxy import router as tutor_proxy_router
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    await redis_client.close()
+
 
 app = FastAPI(
     title="HamroGuru Main Backend",
     version="0.1.0",
     debug=settings.DEBUG,
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -43,3 +54,4 @@ app.include_router(admin_content_router)
 app.include_router(admin_analytics_router)
 app.include_router(admin_referrals_router)
 app.include_router(admin_proxy_router)
+app.include_router(tutor_proxy_router)

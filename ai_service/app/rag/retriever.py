@@ -23,6 +23,7 @@ async def retrieve(
     query: str,
     subject: str,
     chapter: str | None = None,
+    topic: str | None = None,
     top_k: int = 5,
 ) -> list[dict]:
     """Embed query and retrieve top-k relevant chunks from Pinecone."""
@@ -39,6 +40,8 @@ async def retrieve(
     pinecone_filter: dict = {"subject": {"$eq": subject}}
     if chapter:
         pinecone_filter["chapter"] = {"$eq": chapter}
+    if topic:
+        pinecone_filter["topic"] = {"$eq": topic}
 
     results = index.query(
         vector=query_vector,
@@ -49,8 +52,8 @@ async def retrieve(
 
     matches = results.get("matches", [])
     logger.debug(
-        "Pinecone returned %d matches for subject=%s chapter=%s query=%r",
-        len(matches), subject, chapter, query[:80],
+        "Pinecone returned %d matches for subject=%s chapter=%s topic=%s query=%r",
+        len(matches), subject, chapter, topic, query[:80],
     )
 
     chunks = []
