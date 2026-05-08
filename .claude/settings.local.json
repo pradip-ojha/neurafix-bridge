@@ -84,7 +84,10 @@
       "Bash(Select-Object Name)",
       "PowerShell(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\ai_service\" -Recurse -Force | Select-Object -Property FullName | Sort-Object FullName | ForEach-Object { $_.FullName.Replace\\('D:\\\\hamroguru\\\\hamroguru-platform\\\\ai_service\\\\', ''\\) })",
       "PowerShell(Out-Null *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "PowerShell(uvicorn app.main:app *)",
+      "PowerShell(npm run *)",
+      "PowerShell(Start-Sleep -Seconds 4; Invoke-RestMethod -Uri \"http://localhost:8001/health\" 2>&1; Invoke-RestMethod -Uri \"http://localhost:8000/health\" 2>&1)"
     ]
   }
 }

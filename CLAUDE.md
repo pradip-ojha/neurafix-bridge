@@ -861,44 +861,6 @@ Services communicate using `X-Internal-Secret` header. Value = `MAIN_BACKEND_INT
 
 ---
 
-## Phase 5 — Personalization System Redesign
-
-**Services:** `ai_service`
-**Goal:** Replace old summary model with new architecture. Rebuild context builder for all four agent context types.
-
-### Migration 007
-- Drop `personalization_summaries`, `planner_timelines`
-- Add `consultant` and `personalization` to `agent_type_enum` (keep `planner` for backward compat with existing chat rows)
-- Create new tables:
-  - `overall_student_summaries`: `user_id` (unique), `content`, `generated_at`, `covers_through` (date)
-  - `subject_summaries`: `user_id`, `subject`, `summary_type` (all_time/weekly/daily), `content`, `generated_at`, `summary_date` (date, nullable); unique(user_id, subject, summary_type) for all_time/weekly; unique(user_id, subject, summary_type, summary_date) for daily
-  - `session_memories`: `session_id` (FK chat_sessions, unique), `user_id`, `subject`, `content`, `message_count_at_generation`, `generated_at`
-  - `consultant_timelines`: `user_id` (unique), `content`, `last_updated`, `version`
-  - `practice_session_summaries`: `user_id`, `subject`, `chapter`, `session_date`, `total_questions`, `correct_count`, `incorrect_count`, `topic_breakdown` (JSONB), `summary_content` (text), `created_at`
-  - `student_levels`: `user_id`, `subject`, `level` (1/2/3), `assigned_at`; unique(user_id, subject)
-
-### Rebuild context builder (`ai_service/app/personalization/context_builder.py`)
-Four assembly functions:
-- `build_tutor_context(db, user_id, subject, chapter=None)` → profile + overall summary + subject all_time + subject weekly + subject previous-day daily + chapter syllabus (from subject_structure loader) + consultant timeline
-- `build_consultant_context(db, user_id)` → profile + overall summary + all-subject all_time + all-subject weekly + consultant timeline + today's practice summaries + today's session memories
-- `build_capsule_context(db, user_id, subject)` → same as tutor but today's daily summary (not previous day's)
-- `build_personalization_context(db, user_id)` → all raw data needed to generate summaries
-
-### Update session manager (`sessions/manager.py`)
-- After saving assistant message: if count==5 OR (count>5 AND (count-5)%3==0) → async trigger session memory generation (gpt-4o-mini)
-- Upsert result to `session_memories` on session_id
-- Change `get_recent_messages` → return last 6 messages (3 pairs); prepend session memory if exists
-
-### Rebuild summary manager (`personalization/summary_manager.py`)
-Key functions: `get_or_placeholder`, `save_overall_summary`, `save_subject_summary`, `get_last_n_daily_summaries`, `save_practice_session_summary`
-
-**Debug endpoint (internal, removable after testing):**
-```
-GET /api/debug/context?user_id=x&subject=compulsory_math   X-Internal-Secret
-```
-
----
-
 ## Phase 6 — Tutor Agent Redesign + Student Portal Foundation
 
 **Services:** `ai_service`, `main_backend`, `frontend`
@@ -1062,6 +1024,462 @@ POST /api/practice/followup → ai_service SSE passthrough
 
 
 ---
+## Phase 8 — Consultant Agent
+
+**Services:** `ai_service`, `main_backend`, `frontend`
+**Goal:** Advanced consultant with web search, timeline management, career guidance, and guardrails.
+
+### ai_service: Context Classifier for Consultant (`personalization/context_classifier.py`)
+Before building consultant context, run a fast gpt-4o-mini call on the student's message:
+```python
+async def classify_consultant_query(message: str) -> dict
+# Returns: {"query_type": "career_college" | "learning_performance" | "general"}
+```
+- `career_college`: asking about which college, stream choice, future career, admission criteria
+- `learning_performance`: asking about study methods, subject weakness, how to improve, performance review
+- `general`: motivation, anything else → same as learning_performance
+
+
+**Updated `build_consultant_context` signature:**
+```python
+async def build_consultant_context(db, user_id, message: str) -> str
+```
+Takes the student's message, runs classifier, then assembles context based on query type.
+
+
+**Context for `career_college` queries (lean — don't waste tokens):**
+```
+Overall Student Summary
+Preparation Timeline
+```
+Overall summary contains stream, school, and goal info — sufficient for career/college guidance. Weekly summaries, practice data, and session memories add no value here.
+
+
+**Context for `learning_performance` and `general` queries (full):**
+```
+Overall Student Summary
+All-Subject All-Time Summaries
+All-Subject Weekly Summaries
+Today's Practice Sessions (all subjects)
+Today's Tutor Session Memories
+Preparation Timeline
+```
+
+
+### ai_service: `agents/consultant/agent.py` (OpenAI Agents SDK)
+**Tools:**
+1. `search_web(query)` — web search for college/career research
+2. `update_timeline(content)` — writes directly to `consultant_timelines`; called immediately on explicit student request
+3. `get_subject_progress(subject)` — reads all_time + weekly summaries; returns formatted string
+
+
+
+
+**System prompt key elements:**
+- Role: consultant + advisor + motivator + career guide
+- Context from `build_consultant_context(db, user_id, message)` — dynamic based on query type
+- Guardrails: never use "you must/should/have to"; always frame as "one option is...", "many students find..."
+- Stream neutrality: no stream is inherently hard; goals > difficulty when advising
+- Web search instruction: use for any college-specific or career-specific questions
+- Timeline update instruction: call `update_timeline` immediately if student explicitly requests plan change
+
+
+### ai_service: `api/consultant.py`
+```
+POST /api/consultant/chat                     JWT, {message, session_id?} → SSE stream
+GET  /api/consultant/sessions                 JWT
+GET  /api/consultant/sessions/{id}/messages   JWT
+GET  /api/consultant/timeline                 JWT
+```
+
+### main_backend proxy
+```
+POST /api/consultant/chat                   → ai_service SSE passthrough
+GET  /api/consultant/sessions               → ai_service
+GET  /api/consultant/sessions/{id}/messages → ai_service
+GET  /api/consultant/timeline               → ai_service
+```
+
+
+### Frontend: Consultant page
+- Full-page chat (no subject scope)
+- Left sidebar: past sessions by date
+- Collapsible "Preparation Plan" panel below input — shows ConsultantTimeline content; auto-refreshes on SSE "done" event
+
+
+---
+## Phase 9 — Daily Capsule + Worker Jobs (End-of-Day Processing)
+
+
+
+
+**Services:** `ai_service`, `worker`, `frontend`
+**Goal:** Personalization agent, Capsule agent, and all real Celery worker implementations.
+
+
+
+
+### Migration 009
+`daily_capsules` table: `id`, `user_id`, `subject`, `capsule_date` (date), `content` (text), `created_at`; unique(user_id, subject, capsule_date)
+
+
+
+
+### ai_service: Personalization agent (`agents/personalization/agent.py`)
+Called by internal endpoints only (never by students). Functions:
+- `generate_daily_summary(user_id, subject, date)`: practice summaries + session memory + consultant chat → gpt-4o-mini → `subject_summaries` (daily)
+- `regenerate_weekly_summary(user_id, subject)`: last 7 daily summaries → gpt-4o-mini → `subject_summaries` (weekly)
+- `update_alltime_summary(user_id, subject)`: new daily summaries + previous all_time → gpt-4o-mini → `subject_summaries` (all_time)
+- `update_overall_summary(user_id)`: **must fetch student profile from `GET /api/internal/profile/{user_id}` in main_backend** + all subject all-time summaries → gpt-4o-mini → `overall_student_summaries`. The output prose naturally embeds profile facts (name, stream, school, goal college, SEE GPA, class scores) alongside learning insights so downstream agents can use it as a single self-contained student description without fetching the profile separately.
+- `assign_level(user_id, subject)`: profile + practice performance → level 1/2/3 → `student_levels`
+
+
+
+
+### ai_service: Capsule agent (`agents/capsule/agent.py`)
+- Context from `build_capsule_context(db, user_id, subject)` which assembles:
+  - **RAG chunks** for chapters the student studied or practiced today (top_k=6, chunk_type=explanation+example). Determine chapters from: (a) today's `practice_session_summaries` chapter list, (b) today's `session_memories` subject/chapter field. RAG chunks placed first (static — prompt cache friendly).
+  - Overall Student Summary
+  - Subject Weekly Summary (always included for capsule — full day recap needs it)
+  - Subject Today's Daily Summary
+  - Today's Practice Session Summaries (full detail per topic)
+  - Preparation Timeline
+- Output sections: Key Concepts | Watch Out For | Remember | Tomorrow's Focus | Quick Review Question
+- Saves to `daily_capsules`
+- Also handles interactive capsule chat (agent_type=capsule sessions)
+
+
+
+
+### ai_service: new internal endpoints (X-Internal-Secret)
+```
+GET  /api/internal/active-users
+POST /api/internal/personalization/generate-daily-summary     {user_id, subject, date}
+POST /api/internal/personalization/generate-capsule           {user_id, subject, date}
+POST /api/internal/personalization/regenerate-weekly-summary  {user_id, subject}
+POST /api/internal/personalization/update-alltime-summary     {user_id, subject}
+POST /api/internal/personalization/review-consultant          {user_id}
+GET  /api/internal/student-level/{user_id}                    ?subject
+```
+
+
+
+
+### ai_service: student capsule endpoints
+```
+GET  /api/capsule/{subject}              JWT → today's capsule (or latest)
+GET  /api/capsule/{subject}/history      JWT → list of capsule dates
+GET  /api/capsule/{subject}/{date}       JWT → capsule for specific date
+POST /api/capsule/{subject}/chat         JWT, {message, session_id?} → SSE stream
+```
+
+
+
+
+### Worker: real implementations + updated Beat schedule
+- `summary_tasks.py`: GET active users → POST generate-daily-summary per user+subject
+- `capsule_tasks.py`: POST generate-capsule per user+subject with activity
+- `consultant_tasks.py` (renamed from planner_tasks.py): POST review-consultant per user
+- `weekly_summary_tasks.py` (new): POST regenerate-weekly-summary per user+subject
+- Add `AI_SERVICE_URL` to `worker/worker/config.py`
+
+
+
+
+**Beat schedule:**
+```
+16:15 UTC (22:00 NPT) daily    → end-of-day-summaries
+16:45 UTC (22:30 NPT) daily    → generate-capsules
+17:15 UTC (23:00 NPT) daily    → consultant-review
+00:15 UTC (06:00 NPT) daily    → regenerate-weekly-summaries
+00:15 UTC (06:00 NPT) Monday   → update-alltime-summaries
+```
+
+
+
+
+### main_backend capsule proxy
+```
+GET  /api/capsule/{subject}           → ai_service
+GET  /api/capsule/{subject}/history   → ai_service
+GET  /api/capsule/{subject}/{date}    → ai_service
+POST /api/capsule/{subject}/chat      → ai_service SSE passthrough
+```
+
+
+
+
+### Frontend: Daily Capsule tab
+- "Not yet generated" state (shown before day ends)
+- Capsule content rendered as markdown; PDF download button
+- History sidebar (past capsule dates)
+- Capsule chat below content (SSE streaming)
+
+
+
+
+---
+
+
+
+
+## Phase 10 — Level-Based Notes + Notes UI
+
+
+
+
+**Services:** `main_backend`, `ai_service` (level), `frontend`
+**Goal:** Students view their level-appropriate chapter notes via chapter sidebar.
+
+
+
+
+### main_backend: notes delivery
+```
+GET /api/notes/{subject}               JWT(student) → list chapters with notes for student's level
+GET /api/notes/{subject}/{chapter}     JWT(student) → {url, level, display_name} for student's level
+```
+Logic: fetch level from `GET /api/internal/student-level/{user_id}?subject=...`; default to level 2 if no level assigned; query `LevelNote` table.
+
+
+
+
+### ai_service: initial level assignment
+On first tutor chat for a subject with no existing level: async assess using SEE GPA + class scores from profile; default level 2 if no profile data.
+
+
+
+
+### Frontend: Notes tab
+- Chapter sidebar (left): all chapters from subject structure; uploaded chapters show document icon; unuploaded greyed out with "Coming soon"
+- Note view (right): PDF inline via iframe; download button
+- Student level badge (e.g., "Level 2 — Average") with tooltip explaining automatic assessment
+
+
+
+
+---
+
+
+
+
+## Phase 11 — Mock Test System + Leaderboard
+
+
+
+
+**Services:** `ai_service`, `main_backend`, `frontend`
+**Goal:** College-format and customizable mock tests with leaderboard.
+
+
+
+
+### Migration 010
+`mock_sessions` table: `id`, `user_id`, `college_id` (nullable), `session_date`, `status` (active/submitted), `question_ids` (JSONB), `time_limit_minutes`, `score_data` (JSONB nullable), `created_at`
+
+
+
+
+### ai_service: mock test endpoints
+```
+POST /api/mock/start          JWT, {college_id? OR custom_distribution: {subject: count}, time_limit_minutes}
+                              → questions from main + extra pools per distribution; returns MockSession + questions
+POST /api/mock/submit         JWT, {session_id, answers} → scores, saves results
+GET  /api/mock/history        JWT
+GET  /api/mock/leaderboard    JWT, ?college_id&date → top 10 scores
+```
+
+
+
+
+### main_backend proxy
+```
+GET /api/colleges              JWT(student) (already in Phase 4)
+GET /api/colleges/{id}         JWT(student)
+POST /api/mock/start           → ai_service
+POST /api/mock/submit          → ai_service
+GET  /api/mock/history         → ai_service
+GET  /api/mock/leaderboard     → ai_service
+```
+
+
+
+
+### Frontend: Mock Tests page
+- **College Format tab**: college cards; click → timed MCQ interface (overall countdown timer, not per-question)
+- **Customizable tab**: subject checkboxes + question count sliders + time input
+- Results: score per subject breakdown
+- Leaderboard: today's + all-time top scores per college; student's own rank highlighted
+
+
+
+
+---
+
+
+
+
+## Phase 12 — Community + Referral Agent + Progress Tracking
+
+
+
+
+**Services:** `main_backend`, `ai_service`, `frontend`
+**Goal:** Community posts, referral content generation, student progress page.
+
+
+
+
+### main_backend Migration 003
+New tables:
+- `community_posts`: author_id, author_role, content, image_url (nullable), link_url (nullable), post_type (post/announcement/notice), is_active, created_at
+- `post_likes`: user_id + post_id (composite PK)
+- `college_syllabi`: college_id, year, file_url, display_name
+- `past_question_papers`: college_id, year, file_url
+
+
+
+
+### main_backend new endpoints
+```
+GET    /api/community/posts              ?type=post|announcement|notice&page
+POST   /api/community/posts             JWT(student|admin), {content, image_url?, link_url?, post_type}
+DELETE /api/community/posts/{id}        JWT (own or admin)
+POST   /api/community/posts/{id}/like   JWT(student)
+GET    /api/progress/overview           JWT(student) → aggregated practice + mock stats
+GET    /api/colleges/{id}/syllabus      JWT(student)
+GET    /api/colleges/{id}/past-questions JWT(student)
+POST   /api/admin/colleges/{id}/syllabus         JWT(admin), multipart
+POST   /api/admin/colleges/{id}/past-questions   JWT(admin), multipart
+```
+
+
+
+
+### ai_service: Referral content agent (`agents/referral/agent.py`)
+Input: referral_link, platform_url, optional message, recent post history → generates social media post with referral link
+```
+POST /api/referral/generate-post   JWT, {platform_url, user_message?} → {post_text}
+```
+
+
+
+
+### main_backend proxy
+```
+POST /api/referral/generate-post   → ai_service
+```
+
+
+
+
+### Frontend
+- **Community page**: 3 tabs (Community, Announcements, Notices); Facebook-style feed; post creation modal; like button
+- **Progress page**: stat cards; practice sessions/week bar chart; mock test score trend line chart; avg score by subject radar chart; level badges per subject
+- **Affiliation interface** (`frontend/src/affiliation/`): dashboard (referral stats + earnings); referral link copy button; post generator form; payment details form; earnings history table
+
+
+
+
+---
+
+
+
+
+## Phase 13 — Subscription Gating + Affiliation Interface + Syllabus Pages
+
+
+
+
+**Services:** `main_backend`, `ai_service`, `frontend`
+**Goal:** Enforce subscription access, complete affiliation interface, student settings, syllabus & past questions.
+
+
+
+
+### Subscription gating
+- `main_backend`: `require_active_subscription` FastAPI dependency on paid-feature routes
+- `ai_service`: check `GET /api/internal/subscription/{user_id}` at start of tutor/practice/consultant/capsule endpoints; return 402 if inactive
+- `frontend`: paywall screen on 402 response; show QR payment instructions; link to payment submission form
+
+
+
+
+### main_backend: rate limiting
+Redis counter `ratelimit:{user_id}:{date}:messages`; daily limit per plan tier (configurable in PlatformConfig)
+
+
+
+
+### Student Settings page
+- Profile edit wizard (name, school, class 8/9/10 scores, SEE GPA, marksheet uploads)
+- Gradual profile completion prompts after login if completion < 60%
+- Initial mock test prompt if no practice data yet
+
+
+
+
+### Syllabus & Past Questions page
+- Per-college syllabus PDF viewer
+- Past question papers list per college + year
+
+
+
+
+---
+
+
+
+
+## Phase 14 — Hardening, Analytics, Mobile Polish
+
+
+
+
+**Services:** All four
+**Goal:** Production readiness — error handling, resilience, analytics, responsive UI, PWA.
+
+
+
+
+### Error handling
+- `ai_service`: timeouts + fallbacks for OpenAI/Pinecone/main_backend; tutor degrades gracefully without RAG ("Knowledge base temporarily unavailable")
+- `worker`: `max_retries=3`, exponential backoff; error logging to admin notification endpoint
+- `main_backend`: standardize error format `{error: {code, message, field?}}`
+
+
+
+
+### Admin analytics (new endpoints)
+```
+GET /api/admin/analytics/daily-active-users   ?days=30
+GET /api/admin/analytics/subject-usage
+GET /api/admin/analytics/mock-test-scores     ?college_id
+GET /api/admin/analytics/retention
+```
+
+
+
+
+### Performance
+- Cache profile fetches in ai_service: Redis `profile:{user_id}` TTL=5min
+- Cache `SubjectTimingConfig` in main_backend
+- DB connection pool tuning in all services
+- Pinecone query result cache: Redis `pinecone:{hash(query+subject+chapter)}` TTL=10min
+
+
+
+
+### Frontend polish
+- Fully responsive for mobile viewports (primary device = mobile in Nepal)
+- Loading skeletons on chat, practice, and notes pages
+- Offline error handling ("No internet connection")
+- PWA manifest for "Add to home screen"
+
+
+
+
+---
 
 ## Critical Files Reference
 
@@ -1103,7 +1521,7 @@ POST /api/practice/followup → ai_service SSE passthrough
 | 4 | Admin panel backend + admin panel frontend | [x] Complete 2026-05-07 |
 | 5 | Personalization system redesign (new summary models + context builder) | [x] Complete 2026-05-07 |
 | 6 | Tutor agent redesign + student portal foundation + tutor chat UI | [ ] Pending |
-| 7 | Practice system (sessions, scoring, summaries, practice UI) | [ ] Pending |
+| 7 | Practice system (sessions, scoring, summaries, practice UI) | [x] Complete 2026-05-08 |
 | 8 | Consultant agent (web search, timeline management, consultant UI) | [ ] Pending |
 | 9 | Daily capsule + worker end-of-day processing | [ ] Pending |
 | 10 | Level-based notes + notes UI | [ ] Pending |

@@ -5,6 +5,7 @@ export interface Chapter {
 
 export const SUBJECT_CHAPTERS: Record<string, Chapter[]> = {
   compulsory_math: [
+    { id: 'sets', display_name: 'Sets' },
     { id: 'arithmetic', display_name: 'Arithmetic' },
     { id: 'algebra', display_name: 'Algebra' },
     { id: 'geometry', display_name: 'Geometry' },

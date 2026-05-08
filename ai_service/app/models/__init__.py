@@ -11,3 +11,4 @@ from app.models.personalization import (  # noqa: F401
 )
 from app.models.chat_session import ChatSession, ChatMessage  # noqa: F401
 from app.models.mcq_question import MainQuestion, ExtraQuestion, ExtraSubject, QuestionFile  # noqa: F401
+from app.models.practice_session import PracticeSession  # noqa: F401
