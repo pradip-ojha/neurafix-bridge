@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.models.personalization import SessionMemory
 from app.personalization import summary_manager
-from app.personalization.context_classifier import classify_tutor_query
+from app.personalization.context_classifier import classify_tutor_query, classify_consultant_query
 from app.rag import retriever
 from app.subject_structure.loader import get_structure
 
@@ -327,13 +327,40 @@ async def build_capsule_context(
 async def build_consultant_context(
     db: AsyncSession,
     user_id: str,
+    message: str = "",
 ) -> str:
-    """Context for the consultant agent."""
-    profile_data = await _fetch_profile(user_id)
-    profile_section, _ = _format_profile(profile_data)
+    """Context for the consultant agent.
+
+    Overall student summary embeds profile facts (name, stream, school, GPA, goals) and learning
+    insights together — no raw profile block needed separately. Falls back to raw profile only
+    for new users who have no overall summary generated yet.
+
+    student_performance query → full context (overall summary + all subject summaries + practice + memories + timeline)
+    general query             → lean context (overall summary + timeline only)
+    """
+    classification = await classify_consultant_query(message) if message else {"query_type": "general"}
+    query_type = classification["query_type"]
 
     overall = await summary_manager.get_or_placeholder_overall(db, user_id)
+    if overall == _NO_SUMMARY:
+        # New user — no summary generated yet, fall back to raw profile until first summary is created
+        profile_data = await _fetch_profile(user_id)
+        profile_section, _ = _format_profile(profile_data)
+        student_context_section = profile_section
+    else:
+        student_context_section = f"## Overall Student Summary\n{overall}"
 
+    timeline = await summary_manager.get_consultant_timeline(db, user_id)
+    timeline_section = timeline.content if timeline else "[No preparation timeline yet]"
+
+    if query_type != "student_performance":
+        # Lean context — overall summary already contains stream, goals, and academic background.
+        return f"""{student_context_section}
+
+## Preparation Timeline
+{timeline_section}"""
+
+    # Full context — student asking about their own subject-level mistakes/performance/plan
     subject_sections = []
     for subj in _ALL_SUBJECTS:
         all_time = await summary_manager.get_or_placeholder(db, user_id, subj, "all_time")
@@ -344,19 +371,16 @@ async def build_consultant_context(
             f"**Weekly:** {weekly}"
         )
 
-    timeline = await summary_manager.get_consultant_timeline(db, user_id)
-    timeline_section = timeline.content if timeline else "[No preparation timeline yet]"
-
     practice_rows = await summary_manager.get_today_practice_summaries(db, user_id)
     if practice_rows:
-        practice_section = "\n\n## Today's Practice Sessions\n"
-        for p in practice_rows:
-            practice_section += (
-                f"- {_subject_display(p.subject)} / {p.chapter}: "
-                f"{p.correct_count}/{p.total_questions} correct — {p.summary_content}\n"
-            )
+        practice_lines = [
+            f"- {_subject_display(p.subject)} / {p.chapter}: "
+            f"{p.correct_count}/{p.total_questions} correct — {p.summary_content}"
+            for p in practice_rows
+        ]
+        practice_section = "## Today's Practice Sessions\n" + "\n".join(practice_lines)
     else:
-        practice_section = "\n\n## Today's Practice Sessions\n[No practice sessions today]"
+        practice_section = "## Today's Practice Sessions\n[No practice sessions today]"
 
     today_midnight = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
     stmt = (
@@ -370,25 +394,25 @@ async def build_consultant_context(
     result = await db.execute(stmt)
     memories = result.scalars().all()
     if memories:
-        memory_section = "\n\n## Today's Tutor Session Memories\n"
+        mem_lines = []
         for m in memories:
             subj_label = _subject_display(m.subject) if m.subject else "General"
-            memory_section += f"### {subj_label}\n{m.content}\n\n"
+            mem_lines.append(f"### {subj_label}\n{m.content}")
+        memory_section = "## Today's Tutor Session Memories\n" + "\n\n".join(mem_lines)
     else:
-        memory_section = "\n\n## Today's Tutor Session Memories\n[No tutor sessions today]"
+        memory_section = "## Today's Tutor Session Memories\n[No tutor sessions today]"
 
-    context = f"""{profile_section}
-
-## Overall Student Summary
-{overall}
+    return f"""{student_context_section}
 
 ## Subject Summaries
-{"".join(subject_sections)}{practice_section}{memory_section}
+{"".join(subject_sections)}
+
+{practice_section}
+
+{memory_section}
 
 ## Preparation Timeline
 {timeline_section}"""
-
-    return context
 
 
 # ---------------------------------------------------------------------------
