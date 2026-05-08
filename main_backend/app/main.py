@@ -24,6 +24,7 @@ from app.api.consultant_proxy import router as consultant_proxy_router
 from app.api.capsule_proxy import router as capsule_proxy_router
 from app.api.config import router as config_router
 from app.api.notes import router as notes_router
+from app.api.mock_proxy import router as mock_proxy_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -65,3 +66,4 @@ app.include_router(consultant_proxy_router)
 app.include_router(capsule_proxy_router)
 app.include_router(config_router)
 app.include_router(notes_router)
+app.include_router(mock_proxy_router)

@@ -15,6 +15,7 @@ from app.api.consultant import router as consultant_router
 from app.api.capsule import router as capsule_router
 from app.api.internal import router as internal_router
 from app.api.debug import router as debug_router
+from app.api.mock import router as mock_router
 
 for _log_name in (
     "app.rag.pipeline", "app.rag.semantic_refiner", "app.rag.chunker",
@@ -61,4 +62,5 @@ app.include_router(practice_router)
 app.include_router(consultant_router)
 app.include_router(capsule_router)
 app.include_router(internal_router)
+app.include_router(mock_router)
 app.include_router(debug_router)

@@ -98,7 +98,8 @@
       "Bash(grep -E \"\\\\.\\(py\\)$\")",
       "Bash(findstr \"LISTEN\")",
       "Bash(findstr \":8001\\\\|:5173\")",
-      "PowerShell(Get-CimInstance *)"
+      "PowerShell(Get-CimInstance *)",
+      "PowerShell(Get-Process *)"
     ]
   }
 }

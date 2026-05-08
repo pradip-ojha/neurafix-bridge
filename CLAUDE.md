@@ -861,127 +861,10 @@ Services communicate using `X-Internal-Secret` header. Value = `MAIN_BACKEND_INT
 
 ---
 
-## Phase 9 — Daily Capsule + Worker Jobs (End-of-Day Processing)
-
-
-
-
-**Services:** `ai_service`, `worker`, `frontend`
-**Goal:** Personalization agent, Capsule agent, and all real Celery worker implementations.
-
-
-
-
-### Migration 009
-`daily_capsules` table: `id`, `user_id`, `subject`, `capsule_date` (date), `content` (text), `created_at`; unique(user_id, subject, capsule_date)
-
-
-
-
-### ai_service: Personalization agent (`agents/personalization/agent.py`)
-Called by internal endpoints only (never by students). Functions:
-- `generate_daily_summary(user_id, subject, date)`: practice summaries + session memory + consultant chat → gpt-4o-mini → `subject_summaries` (daily)
-- `regenerate_weekly_summary(user_id, subject)`: last 7 daily summaries → gpt-4o-mini → `subject_summaries` (weekly)
-- `update_alltime_summary(user_id, subject)`: new daily summaries + previous all_time → gpt-4o-mini → `subject_summaries` (all_time)
-- `update_overall_summary(user_id)`: **must fetch student profile from `GET /api/internal/profile/{user_id}` in main_backend** + all subject all-time summaries → gpt-4o-mini → `overall_student_summaries`. The output prose naturally embeds profile facts (name, stream, school, goal college, SEE GPA, class scores) alongside learning insights so downstream agents can use it as a single self-contained student description without fetching the profile separately.
-- `assign_level(user_id, subject)`: profile + practice performance → level 1/2/3 → `student_levels`
-
-
-
-
-### ai_service: Capsule agent (`agents/capsule/agent.py`)
-- Context from `build_capsule_context(db, user_id, subject)` which assembles:
-  - **RAG chunks** for chapters the student studied or practiced today (top_k=6, chunk_type=explanation+example). Determine chapters from: (a) today's `practice_session_summaries` chapter list, (b) today's `session_memories` subject/chapter field. RAG chunks placed first (static — prompt cache friendly).
-  - Overall Student Summary
-  - Subject Weekly Summary (always included for capsule — full day recap needs it)
-  - Subject Today's Daily Summary
-  - Today's Practice Session Summaries (full detail per topic)
-  - Preparation Timeline
-- Output sections: Key Concepts | Watch Out For | Remember | Tomorrow's Focus | Quick Review Question
-- Saves to `daily_capsules`
-- Also handles interactive capsule chat (agent_type=capsule sessions)
-
-
-
-
-### ai_service: new internal endpoints (X-Internal-Secret)
-```
-GET  /api/internal/active-users
-POST /api/internal/personalization/generate-daily-summary     {user_id, subject, date}
-POST /api/internal/personalization/generate-capsule           {user_id, subject, date}
-POST /api/internal/personalization/regenerate-weekly-summary  {user_id, subject}
-POST /api/internal/personalization/update-alltime-summary     {user_id, subject}
-POST /api/internal/personalization/review-consultant          {user_id}
-GET  /api/internal/student-level/{user_id}                    ?subject
-```
-
-
-
-
-### ai_service: student capsule endpoints
-```
-GET  /api/capsule/{subject}              JWT → today's capsule (or latest)
-GET  /api/capsule/{subject}/history      JWT → list of capsule dates
-GET  /api/capsule/{subject}/{date}       JWT → capsule for specific date
-POST /api/capsule/{subject}/chat         JWT, {message, session_id?} → SSE stream
-```
-
-
-
-
-### Worker: real implementations + updated Beat schedule
-- `summary_tasks.py`: GET active users → POST generate-daily-summary per user+subject
-- `capsule_tasks.py`: POST generate-capsule per user+subject with activity
-- `consultant_tasks.py` (renamed from planner_tasks.py): POST review-consultant per user
-- `weekly_summary_tasks.py` (new): POST regenerate-weekly-summary per user+subject
-- Add `AI_SERVICE_URL` to `worker/worker/config.py`
-
-
-
-
-**Beat schedule:**
-```
-16:15 UTC (22:00 NPT) daily    → end-of-day-summaries
-16:45 UTC (22:30 NPT) daily    → generate-capsules
-17:15 UTC (23:00 NPT) daily    → consultant-review
-00:15 UTC (06:00 NPT) daily    → regenerate-weekly-summaries
-00:15 UTC (06:00 NPT) Monday   → update-alltime-summaries
-```
-
-
-
-
-### main_backend capsule proxy
-```
-GET  /api/capsule/{subject}           → ai_service
-GET  /api/capsule/{subject}/history   → ai_service
-GET  /api/capsule/{subject}/{date}    → ai_service
-POST /api/capsule/{subject}/chat      → ai_service SSE passthrough
-```
-
-
-
-
-### Frontend: Daily Capsule tab
-- "Not yet generated" state (shown before day ends)
-- Capsule content rendered as markdown; PDF download button
-- History sidebar (past capsule dates)
-- Capsule chat below content (SSE streaming)
-
-
-
-
----
 ## Phase 10 — Level-Based Notes + Notes UI
-
-
-
 
 **Services:** `main_backend`, `ai_service` (level), `frontend`
 **Goal:** Students view their level-appropriate chapter notes via chapter sidebar.
-
-
-
 
 ### main_backend: notes delivery
 ```
@@ -990,22 +873,47 @@ GET /api/notes/{subject}/{chapter}     JWT(student) → {url, level, display_nam
 ```
 Logic: fetch level from `GET /api/internal/student-level/{user_id}?subject=...`; default to level 2 if no level assigned; query `LevelNote` table.
 
-
-
-
 ### ai_service: initial level assignment
 On first tutor chat for a subject with no existing level: async assess using SEE GPA + class scores from profile; default level 2 if no profile data.
-
-
-
 
 ### Frontend: Notes tab
 - Chapter sidebar (left): all chapters from subject structure; uploaded chapters show document icon; unuploaded greyed out with "Coming soon"
 - Note view (right): PDF inline via iframe; download button
 - Student level badge (e.g., "Level 2 — Average") with tooltip explaining automatic assessment
 
+---
+## Phase 11 — Mock Test System + Leaderboard
+
+**Services:** `ai_service`, `main_backend`, `frontend`
+**Goal:** College-format and customizable mock tests with leaderboard.
+
+### Migration 010
+`mock_sessions` table: `id`, `user_id`, `college_id` (nullable), `session_date`, `status` (active/submitted), `question_ids` (JSONB), `time_limit_minutes`, `score_data` (JSONB nullable), `created_at`
 
 
+### ai_service: mock test endpoints
+```
+POST /api/mock/start          JWT, {college_id? OR custom_distribution: {subject: count}, time_limit_minutes}
+                              → questions from main + extra pools per distribution; returns MockSession + questions
+POST /api/mock/submit         JWT, {session_id, answers} → scores, saves results
+GET  /api/mock/history        JWT
+GET  /api/mock/leaderboard    JWT, ?college_id&date → top 10 scores
+```
+
+### main_backend proxy
+```
+GET /api/colleges              JWT(student) (already in Phase 4)
+GET /api/colleges/{id}         JWT(student)
+POST /api/mock/start           → ai_service
+POST /api/mock/submit          → ai_service
+GET  /api/mock/history         → ai_service
+GET  /api/mock/leaderboard     → ai_service
+```
+### Frontend: Mock Tests page
+- **College Format tab**: college cards; click → timed MCQ interface (overall countdown timer, not per-question)
+- **Customizable tab**: subject checkboxes + question count sliders + time input
+- Results: score per subject breakdown
+- Leaderboard: today's + all-time top scores per college; student's own rank highlighted
 
 ---
 
@@ -1053,7 +961,7 @@ On first tutor chat for a subject with no existing level: async assess using SEE
 | 8 | Consultant agent (web search, timeline management, consultant UI) | [x] Complete 2026-05-08 |
 | 9 | Daily capsule + worker end-of-day processing | [x] Complete 2026-05-08 |
 | 10 | Level-based notes + notes UI | [x] Complete 2026-05-08 (notes delivered by level silently; level never shown to students) |
-| 11 | Mock test system + leaderboard | [ ] Pending |
+| 11 | Mock test system + leaderboard | [x] Complete 2026-05-08 |
 | 12 | Community + referral agent + progress tracking | [ ] Pending |
 | 13 | Subscription gating + affiliation interface + syllabus pages | [ ] Pending |
 | 14 | Hardening, analytics, mobile polish | [ ] Pending |
