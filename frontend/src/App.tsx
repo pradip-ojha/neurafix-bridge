@@ -17,6 +17,7 @@ import Colleges from './admin/pages/Colleges'
 import SubjectTiming from './admin/pages/SubjectTiming'
 import Config from './admin/pages/Config'
 import Notifications from './admin/pages/Notifications'
+import AdminCommunity from './admin/pages/Community'
 import Onboarding from './student/pages/Onboarding'
 import StudentLayout from './student/layout/StudentLayout'
 import SubjectGrid from './student/pages/SubjectGrid'
@@ -27,6 +28,11 @@ import Consultant from './student/pages/Consultant'
 import Community from './student/pages/Community'
 import Progress from './student/pages/Progress'
 import Settings from './student/pages/Settings'
+import AffiliationLayout from './affiliation/layout/AffiliationLayout'
+import AffiliateDashboard from './affiliation/pages/Dashboard'
+import ReferralTools from './affiliation/pages/ReferralTools'
+import PaymentDetails from './affiliation/pages/PaymentDetails'
+import Earnings from './affiliation/pages/Earnings'
 
 export default function App() {
   return (
@@ -65,6 +71,7 @@ export default function App() {
             <Route path="subject-timing" element={<SubjectTiming />} />
             <Route path="config" element={<Config />} />
             <Route path="notifications" element={<Notifications />} />
+            <Route path="community" element={<AdminCommunity />} />
           </Route>
 
           <Route
@@ -84,6 +91,20 @@ export default function App() {
             <Route path="community" element={<Community />} />
             <Route path="progress" element={<Progress />} />
             <Route path="settings" element={<Settings />} />
+          </Route>
+
+          <Route
+            path="/affiliation"
+            element={
+              <ProtectedRoute role="affiliation_partner">
+                <AffiliationLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<AffiliateDashboard />} />
+            <Route path="referral-tools" element={<ReferralTools />} />
+            <Route path="payment-details" element={<PaymentDetails />} />
+            <Route path="earnings" element={<Earnings />} />
           </Route>
 
           <Route path="/" element={<HealthCheck />} />

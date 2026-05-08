@@ -25,6 +25,11 @@ from app.api.capsule_proxy import router as capsule_proxy_router
 from app.api.config import router as config_router
 from app.api.notes import router as notes_router
 from app.api.mock_proxy import router as mock_proxy_router
+from app.api.community import router as community_router
+from app.api.progress_proxy import router as progress_proxy_router
+from app.api.college_content import router as college_content_router
+from app.api.referral_proxy import router as referral_proxy_router
+from app.api.referral import router as referral_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -67,3 +72,8 @@ app.include_router(capsule_proxy_router)
 app.include_router(config_router)
 app.include_router(notes_router)
 app.include_router(mock_proxy_router)
+app.include_router(community_router)
+app.include_router(progress_proxy_router)
+app.include_router(college_content_router)
+app.include_router(referral_proxy_router)
+app.include_router(referral_router)

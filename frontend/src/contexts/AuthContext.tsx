@@ -16,27 +16,27 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<AuthUser>
   register: (full_name: string, email: string, password: string) => Promise<void>
   logout: () => void
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'))
+  const [token, setToken] = useState<string | null>(sessionStorage.getItem('token'))
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     if (!token) { setIsLoading(false); return }
     api.get('/api/auth/me')
-      .then((res) => setUser(res.data))
-      .catch(() => { localStorage.removeItem('token'); setToken(null) })
-      .finally(() => setIsLoading(false))
+      .then((res) => { setUser(res.data); setIsLoading(false) })
+      .catch(() => { sessionStorage.removeItem('token'); setToken(null); setIsLoading(false) })
   }, [token])
 
   const login = async (email: string, password: string): Promise<AuthUser> => {
     const res = await api.post('/api/auth/login', { email, password })
     const { access_token, user: u } = res.data
-    localStorage.setItem('token', access_token)
+    sessionStorage.setItem('token', access_token)
     setToken(access_token)
     setUser(u)
     return u
@@ -45,19 +45,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (full_name: string, email: string, password: string): Promise<void> => {
     const res = await api.post('/api/auth/register', { full_name, email, password })
     const { access_token, user: u } = res.data
-    localStorage.setItem('token', access_token)
+    sessionStorage.setItem('token', access_token)
     setToken(access_token)
     setUser(u)
   }
 
   const logout = () => {
-    localStorage.removeItem('token')
+    sessionStorage.removeItem('token')
     setToken(null)
     setUser(null)
   }
 
+  const refreshUser = async (): Promise<void> => {
+    const stored = sessionStorage.getItem('token')
+    if (!stored) return
+    const res = await api.get('/api/auth/me')
+    setUser(res.data)
+  }
+
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )

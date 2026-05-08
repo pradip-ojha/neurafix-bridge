@@ -6,13 +6,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core import r2_client
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_role
 from app.database import get_db
+from app.models.affiliation_profile import AffiliationProfile
 from app.models.student_profile import StudentProfile
 from app.models.user import User
 from app.schemas.student_profile import ProfileOut, ProfileUpdate
 
 router = APIRouter(tags=["profile"])
+
+_affiliation_only = require_role("affiliation_partner")
 
 _TRACKED_FIELDS = [
     "stream", "school_name", "see_gpa",
@@ -94,4 +97,70 @@ async def get_referral_code(current_user: User = Depends(get_current_user)):
     return {
         "referral_code": current_user.referral_code,
         "referral_link": f"{base_url}/register?ref={current_user.referral_code}",
+    }
+
+
+@router.get("/api/profile/affiliation")
+async def get_affiliation_profile(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(_affiliation_only),
+):
+    result = await db.execute(select(AffiliationProfile).where(AffiliationProfile.user_id == current_user.id))
+    profile = result.scalar_one_or_none()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Affiliation profile not found")
+    return {
+        "id": profile.id,
+        "user_id": profile.user_id,
+        "bank_name": profile.bank_name,
+        "account_number": profile.account_number,
+        "account_name": profile.account_name,
+        "qr_image_url": profile.qr_image_url,
+        "total_referrals": profile.total_referrals,
+        "total_earnings": float(profile.total_earnings),
+        "created_at": profile.created_at,
+    }
+
+
+@router.patch("/api/profile/affiliation")
+async def update_affiliation_profile(
+    bank_name: str | None = Form(None),
+    account_number: str | None = Form(None),
+    account_name: str | None = Form(None),
+    qr_image: UploadFile | None = File(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(_affiliation_only),
+):
+    result = await db.execute(select(AffiliationProfile).where(AffiliationProfile.user_id == current_user.id))
+    profile = result.scalar_one_or_none()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Affiliation profile not found")
+
+    if bank_name is not None:
+        profile.bank_name = bank_name
+    if account_number is not None:
+        profile.account_number = account_number
+    if account_name is not None:
+        profile.account_name = account_name
+
+    if qr_image and qr_image.filename:
+        data = await qr_image.read()
+        if data:
+            ext = os.path.splitext(qr_image.filename)[1] or ".png"
+            key = f"affiliation-qr/{current_user.id}/qr{ext}"
+            url = r2_client.upload_bytes(key, data, qr_image.content_type or "image/png")
+            profile.qr_image_url = url
+
+    db.add(profile)
+    await db.commit()
+    await db.refresh(profile)
+
+    return {
+        "id": profile.id,
+        "bank_name": profile.bank_name,
+        "account_number": profile.account_number,
+        "account_name": profile.account_name,
+        "qr_image_url": profile.qr_image_url,
+        "total_referrals": profile.total_referrals,
+        "total_earnings": float(profile.total_earnings),
     }

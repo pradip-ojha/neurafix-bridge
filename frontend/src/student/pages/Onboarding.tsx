@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { GraduationCap, Users } from 'lucide-react'
+import { useAuth } from '../../contexts/AuthContext'
 import api from '../../lib/api'
 
 type Step = 'role' | 'stream'
 
 export default function Onboarding() {
   const navigate = useNavigate()
+  const { refreshUser } = useAuth()
   const [step, setStep] = useState<Step>('role')
   const [stream, setStream] = useState<'science' | 'management' | null>(null)
   const [schoolName, setSchoolName] = useState('')
@@ -19,6 +21,7 @@ export default function Onboarding() {
     try {
       await api.post('/api/onboarding/set-role', { role })
       if (role === 'affiliation_partner') {
+        await refreshUser()
         navigate('/affiliation', { replace: true })
       } else {
         setStep('stream')
@@ -39,6 +42,7 @@ export default function Onboarding() {
         stream,
         school_name: schoolName.trim(),
       })
+      await refreshUser()
       navigate('/student/tutor', { replace: true })
     } catch {
       setError('Something went wrong. Please try again.')

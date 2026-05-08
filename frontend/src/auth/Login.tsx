@@ -18,6 +18,8 @@ export default function Login() {
       const u = await login(email, password)
       if (u.role === 'admin') {
         navigate('/admin', { replace: true })
+      } else if (u.role === 'affiliation_partner' && u.onboarding_complete) {
+        navigate('/affiliation', { replace: true })
       } else if (u.onboarding_complete) {
         navigate('/student/tutor', { replace: true })
       } else {

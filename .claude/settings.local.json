@@ -99,7 +99,9 @@
       "Bash(findstr \"LISTEN\")",
       "Bash(findstr \":8001\\\\|:5173\")",
       "PowerShell(Get-CimInstance *)",
-      "PowerShell(Get-Process *)"
+      "PowerShell(Get-Process *)",
+      "Bash(Select-Object -First 50)",
+      "Bash(Format-Table FullName)"
     ]
   }
 }

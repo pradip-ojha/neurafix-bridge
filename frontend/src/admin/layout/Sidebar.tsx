@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, Users, CreditCard, Gift, BookOpen,
   HelpCircle, FileText, Plus, Building2, Clock, Settings,
-  Bell, LogOut,
+  Bell, LogOut, Megaphone,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -11,6 +11,7 @@ const nav = [
   { to: '/admin/users', label: 'Users', icon: Users },
   { to: '/admin/payments', label: 'Payments', icon: CreditCard },
   { to: '/admin/referrals', label: 'Referrals', icon: Gift },
+  { to: '/admin/community', label: 'Community', icon: Megaphone },
   { label: 'Content', type: 'group' },
   { to: '/admin/content/rag-notes', label: 'RAG Notes', icon: BookOpen },
   { to: '/admin/content/questions', label: 'Questions', icon: HelpCircle },
