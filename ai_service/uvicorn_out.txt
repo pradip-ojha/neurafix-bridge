@@ -1,0 +1,237 @@
+INFO:     Started server process [17068]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+2026-05-08 15:21:40,908 INFO sqlalchemy.engine.Engine select pg_catalog.version()
+2026-05-08 15:21:40,909 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-05-08 15:21:42,139 INFO sqlalchemy.engine.Engine select current_schema()
+2026-05-08 15:21:42,139 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-05-08 15:21:43,366 INFO sqlalchemy.engine.Engine show standard_conforming_strings
+2026-05-08 15:21:43,366 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-05-08 15:21:44,287 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:21:44,308 INFO sqlalchemy.engine.Engine SELECT overall_student_summaries.id, overall_student_summaries.user_id, overall_student_summaries.content, overall_student_summaries.generated_at, overall_student_summaries.covers_through 
+FROM overall_student_summaries 
+WHERE overall_student_summaries.user_id = $1::VARCHAR
+2026-05-08 15:21:44,308 INFO sqlalchemy.engine.Engine [generated in 0.00050s] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:21:45,212 INFO sqlalchemy.engine.Engine SELECT subject_summaries.id, subject_summaries.user_id, subject_summaries.subject, subject_summaries.summary_type, subject_summaries.content, subject_summaries.generated_at, subject_summaries.summary_date 
+FROM subject_summaries 
+WHERE subject_summaries.user_id = $1::VARCHAR AND subject_summaries.subject = $2::VARCHAR AND subject_summaries.summary_type = $3::summary_type_enum AND subject_summaries.summary_date IS NULL
+2026-05-08 15:21:45,213 INFO sqlalchemy.engine.Engine [generated in 0.00040s] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_math', 'all_time')
+2026-05-08 15:21:47,770 INFO sqlalchemy.engine.Engine SELECT subject_summaries.id, subject_summaries.user_id, subject_summaries.subject, subject_summaries.summary_type, subject_summaries.content, subject_summaries.generated_at, subject_summaries.summary_date 
+FROM subject_summaries 
+WHERE subject_summaries.user_id = $1::VARCHAR AND subject_summaries.subject = $2::VARCHAR AND subject_summaries.summary_type = $3::summary_type_enum AND subject_summaries.summary_date IS NULL
+2026-05-08 15:21:47,770 INFO sqlalchemy.engine.Engine [cached since 2.558s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_math', 'weekly')
+2026-05-08 15:21:48,078 INFO sqlalchemy.engine.Engine SELECT subject_summaries.id, subject_summaries.user_id, subject_summaries.subject, subject_summaries.summary_type, subject_summaries.content, subject_summaries.generated_at, subject_summaries.summary_date 
+FROM subject_summaries 
+WHERE subject_summaries.user_id = $1::VARCHAR AND subject_summaries.subject = $2::VARCHAR AND subject_summaries.summary_type = $3::summary_type_enum AND subject_summaries.summary_date = $4::DATE
+2026-05-08 15:21:48,078 INFO sqlalchemy.engine.Engine [generated in 0.00035s] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_math', 'daily', datetime.date(2026, 5, 7))
+2026-05-08 15:21:51,696 WARNING app.personalization.context_builder: Failed to fetch profile for user_id=4944b0e2-38e3-4ead-92b6-bc62308dfad8: All connection attempts failed
+2026-05-08 15:21:51,698 INFO sqlalchemy.engine.Engine SELECT subject_summaries.id, subject_summaries.user_id, subject_summaries.subject, subject_summaries.summary_type, subject_summaries.content, subject_summaries.generated_at, subject_summaries.summary_date 
+FROM subject_summaries 
+WHERE subject_summaries.user_id = $1::VARCHAR AND subject_summaries.subject = $2::VARCHAR AND subject_summaries.summary_type = $3::summary_type_enum AND subject_summaries.summary_date = $4::DATE
+2026-05-08 15:21:51,698 INFO sqlalchemy.engine.Engine [cached since 3.62s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_math', 'daily', datetime.date(2026, 5, 8))
+2026-05-08 15:21:52,071 INFO sqlalchemy.engine.Engine SELECT consultant_timelines.id, consultant_timelines.user_id, consultant_timelines.content, consultant_timelines.last_updated, consultant_timelines.version 
+FROM consultant_timelines 
+WHERE consultant_timelines.user_id = $1::VARCHAR
+2026-05-08 15:21:52,071 INFO sqlalchemy.engine.Engine [generated in 0.00040s] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:21:52,690 INFO sqlalchemy.engine.Engine SELECT practice_session_summaries.id, practice_session_summaries.user_id, practice_session_summaries.subject, practice_session_summaries.chapter, practice_session_summaries.session_date, practice_session_summaries.total_questions, practice_session_summaries.correct_count, practice_session_summaries.incorrect_count, practice_session_summaries.topic_breakdown, practice_session_summaries.summary_content, practice_session_summaries.created_at 
+FROM practice_session_summaries 
+WHERE practice_session_summaries.user_id = $1::VARCHAR AND practice_session_summaries.session_date = $2::DATE AND practice_session_summaries.subject = $3::VARCHAR ORDER BY practice_session_summaries.created_at ASC
+2026-05-08 15:21:52,690 INFO sqlalchemy.engine.Engine [generated in 0.00054s] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', datetime.date(2026, 5, 8), 'compulsory_math')
+2026-05-08 15:21:53,304 INFO sqlalchemy.engine.Engine SELECT session_memories.id, session_memories.session_id, session_memories.user_id, session_memories.subject, session_memories.content, session_memories.message_count_at_generation, session_memories.generated_at 
+FROM session_memories 
+WHERE session_memories.user_id = $1::VARCHAR AND session_memories.subject = $2::VARCHAR AND session_memories.generated_at >= $3::TIMESTAMP WITH TIME ZONE
+2026-05-08 15:21:53,304 INFO sqlalchemy.engine.Engine [generated in 0.00048s] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_math', datetime.datetime(2026, 5, 8, 0, 0, tzinfo=datetime.timezone.utc))
+2026-05-08 15:22:02,107 DEBUG app.rag.retriever: Pinecone returned 6 matches for subject=compulsory_math chapter=sets topic=None query='key concepts for sets'
+2026-05-08 15:22:09,323 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR AND daily_capsules.capsule_date = $3::DATE
+2026-05-08 15:22:09,323 INFO sqlalchemy.engine.Engine [generated in 0.00065s] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_math', datetime.date(2026, 5, 8))
+2026-05-08 15:22:09,992 INFO sqlalchemy.engine.Engine UPDATE daily_capsules SET content=$1::VARCHAR, created_at=$2::TIMESTAMP WITH TIME ZONE WHERE daily_capsules.id = $3::VARCHAR
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\madha\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1154, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\madha\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u03c6' in position 150: character maps to <undefined>
+Call stack:
+  File "C:\Users\madha\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\session.py", line 2028, in commit
+    trans.commit(_to_root=True)
+  File "<string>", line 2, in commit
+  File "C:\Users\madha\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\madha\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\session.py", line 1313, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\madha\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\madha\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\session.py", line 1288, in _prepare_impl
+    self.session.flush()
+  File "C:\Users\madha\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\session.py", line 4352, in flush
+    self._flush(objects)
+  File "C:\Users\madha\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\session.py", line 4448, in _flush
+    flush_context.execute()
+  File "C:\Users\madha\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\madha\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\madha\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\persistence.py", line 85, in save_obj
+    _emit_update_statements(
+  File "C:\Users\madha\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\orm\persistence.py", line 912, in _emit_update_statements
+    c = connection.execute(
+  File "C:\Users\madha\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\engine\base.py", line 1418, in execute
+    return meth(
+  File "C:\Users\madha\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\sql\elements.py", line 515, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "C:\Users\madha\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\engine\base.py", line 1640, in _execute_clauseelement
+    ret = self._execute_context(
+  File "C:\Users\madha\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "C:\Users\madha\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\engine\base.py", line 1904, in _exec_single_context
+    self._log_info(
+  File "C:\Users\madha\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\engine\base.py", line 190, in _log_info
+    self.engine.logger.info(message, *arg, **kw)
+  File "C:\Users\madha\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\log.py", line 159, in info
+    self.log(logging.INFO, msg, *args, **kwargs)
+  File "C:\Users\madha\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\log.py", line 210, in log
+    self.logger._log(level, msg, args, **kwargs)
+Message: '[%s] %r'
+Arguments: ('generated in 0.00053s', ('{"sections": [{"id": "key_concepts", "items": [{"text": "**Empty set (\u03c6)**: No elements; cardinality = 0", "sub": "Example: Set of students under 5 y ... (1278 characters truncated) ... orrect": false}, {"id": "D", "text": "0", "correct": false}], "explanation": "The correct answer is 4 because there are four elements in the set."}]}', datetime.datetime(2026, 5, 8, 9, 37, 9, 989891, tzinfo=datetime.timezone.utc), '134ff1dc-ff55-4568-8816-6a9ca032d2d2'))
+2026-05-08 15:22:10,707 INFO sqlalchemy.engine.Engine COMMIT
+2026-05-08 15:22:11,013 INFO app.agents.capsule.agent: Capsule saved for user=4944b0e2-38e3-4ead-92b6-bc62308dfad8 subject=compulsory_math date=2026-05-08
+INFO:     127.0.0.1:61943 - "POST /api/internal/personalization/generate-capsule HTTP/1.1" 200 OK
+2026-05-08 15:22:33,940 WARNING app.personalization.context_builder: Failed to fetch profile for user_id=4944b0e2-38e3-4ead-92b6-bc62308dfad8: All connection attempts failed
+2026-05-08 15:22:35,794 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:22:35,795 INFO sqlalchemy.engine.Engine SELECT subject_summaries.id, subject_summaries.user_id, subject_summaries.subject, subject_summaries.summary_type, subject_summaries.content, subject_summaries.generated_at, subject_summaries.summary_date 
+FROM subject_summaries 
+WHERE subject_summaries.user_id = $1::VARCHAR AND subject_summaries.subject = $2::VARCHAR AND subject_summaries.summary_type = $3::summary_type_enum AND subject_summaries.summary_date = $4::DATE
+2026-05-08 15:22:35,795 INFO sqlalchemy.engine.Engine [cached since 47.72s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_math', 'daily', datetime.date(2026, 5, 8))
+2026-05-08 15:22:36,410 INFO sqlalchemy.engine.Engine SELECT consultant_timelines.id, consultant_timelines.user_id, consultant_timelines.content, consultant_timelines.last_updated, consultant_timelines.version 
+FROM consultant_timelines 
+WHERE consultant_timelines.user_id = $1::VARCHAR
+2026-05-08 15:22:36,410 INFO sqlalchemy.engine.Engine [cached since 44.34s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:22:36,716 INFO sqlalchemy.engine.Engine SELECT practice_session_summaries.id, practice_session_summaries.user_id, practice_session_summaries.subject, practice_session_summaries.chapter, practice_session_summaries.session_date, practice_session_summaries.total_questions, practice_session_summaries.correct_count, practice_session_summaries.incorrect_count, practice_session_summaries.topic_breakdown, practice_session_summaries.summary_content, practice_session_summaries.created_at 
+FROM practice_session_summaries 
+WHERE practice_session_summaries.user_id = $1::VARCHAR AND practice_session_summaries.session_date = $2::DATE AND practice_session_summaries.subject = $3::VARCHAR ORDER BY practice_session_summaries.created_at ASC
+2026-05-08 15:22:36,716 INFO sqlalchemy.engine.Engine [cached since 44.03s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', datetime.date(2026, 5, 8), 'compulsory_math')
+2026-05-08 15:22:37,024 INFO sqlalchemy.engine.Engine SELECT session_memories.id, session_memories.session_id, session_memories.user_id, session_memories.subject, session_memories.content, session_memories.message_count_at_generation, session_memories.generated_at 
+FROM session_memories 
+WHERE session_memories.user_id = $1::VARCHAR AND session_memories.subject = $2::VARCHAR AND session_memories.generated_at >= $3::TIMESTAMP WITH TIME ZONE
+2026-05-08 15:22:37,024 INFO sqlalchemy.engine.Engine [cached since 43.72s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_math', datetime.datetime(2026, 5, 8, 0, 0, tzinfo=datetime.timezone.utc))
+2026-05-08 15:22:38,563 DEBUG app.rag.retriever: Pinecone returned 6 matches for subject=compulsory_math chapter=sets topic=None query='key concepts for sets'
+2026-05-08 15:22:45,759 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR AND daily_capsules.capsule_date = $3::DATE
+2026-05-08 15:22:45,760 INFO sqlalchemy.engine.Engine [cached since 36.44s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_math', datetime.date(2026, 5, 8))
+2026-05-08 15:22:46,138 INFO sqlalchemy.engine.Engine UPDATE daily_capsules SET content=$1::VARCHAR, created_at=$2::TIMESTAMP WITH TIME ZONE WHERE daily_capsules.id = $3::VARCHAR
+2026-05-08 15:22:46,138 INFO sqlalchemy.engine.Engine [cached since 36.15s ago] ('{"sections": [{"id": "key_concepts", "items": [{"text": "**Cardinality of an Empty Set**: The cardinality of an empty set is 0."}, {"text": "**Subset ... (1040 characters truncated) ... the context", "correct": false}, {"id": "D", "text": "Infinite", "correct": false}], "explanation": "The cardinality of an empty set is always 0."}]}', datetime.datetime(2026, 5, 8, 9, 37, 46, 137603, tzinfo=datetime.timezone.utc), '134ff1dc-ff55-4568-8816-6a9ca032d2d2')
+2026-05-08 15:22:46,415 INFO sqlalchemy.engine.Engine COMMIT
+2026-05-08 15:22:46,751 INFO app.agents.capsule.agent: Capsule saved for user=4944b0e2-38e3-4ead-92b6-bc62308dfad8 subject=compulsory_math date=2026-05-08
+INFO:     127.0.0.1:50400 - "POST /api/internal/personalization/generate-capsule HTTP/1.1" 200 OK
+2026-05-08 15:31:55,709 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:31:55,715 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 15:31:55,716 INFO sqlalchemy.engine.Engine [generated in 0.00107s] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_science')
+2026-05-08 15:31:58,784 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:64290 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 15:32:04,315 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:32:04,317 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR ORDER BY daily_capsules.capsule_date DESC
+2026-05-08 15:32:04,317 INFO sqlalchemy.engine.Engine [generated in 0.00039s] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science')
+2026-05-08 15:32:05,439 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:64240 - "GET /api/capsule/compulsory_science/history HTTP/1.1" 200 OK
+2026-05-08 15:32:06,870 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:32:06,871 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR AND daily_capsules.capsule_date = $3::DATE
+2026-05-08 15:32:06,871 INFO sqlalchemy.engine.Engine [cached since 597.5s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science', datetime.date(2026, 5, 8))
+2026-05-08 15:32:06,973 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:32:06,974 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 15:32:06,974 INFO sqlalchemy.engine.Engine [cached since 11.26s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_science')
+2026-05-08 15:32:08,103 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR ORDER BY daily_capsules.capsule_date DESC 
+ LIMIT $3::INTEGER
+2026-05-08 15:32:08,103 INFO sqlalchemy.engine.Engine [generated in 0.00077s] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science', 1)
+2026-05-08 15:32:08,715 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:64243 - "GET /api/capsule/compulsory_science HTTP/1.1" 200 OK
+2026-05-08 15:32:09,328 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:32:09,329 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR ORDER BY daily_capsules.capsule_date DESC
+2026-05-08 15:32:09,329 INFO sqlalchemy.engine.Engine [cached since 5.012s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science')
+2026-05-08 15:32:09,943 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-05-08 15:32:10,046 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:49698 - "GET /api/capsule/compulsory_science/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64242 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 15:32:12,912 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:32:12,913 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR AND daily_capsules.capsule_date = $3::DATE
+2026-05-08 15:32:12,913 INFO sqlalchemy.engine.Engine [cached since 603.6s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science', datetime.date(2026, 5, 8))
+2026-05-08 15:32:13,528 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR ORDER BY daily_capsules.capsule_date DESC 
+ LIMIT $3::INTEGER
+2026-05-08 15:32:13,528 INFO sqlalchemy.engine.Engine [cached since 5.426s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science', 1)
+2026-05-08 15:32:13,835 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:49384 - "GET /api/capsule/compulsory_science HTTP/1.1" 200 OK
+2026-05-08 15:35:01,239 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:35:01,240 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 15:35:01,240 INFO sqlalchemy.engine.Engine [cached since 185.5s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_science')
+2026-05-08 15:35:01,871 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:62894 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 15:35:04,020 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:35:04,021 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR AND daily_capsules.capsule_date = $3::DATE
+2026-05-08 15:35:04,021 INFO sqlalchemy.engine.Engine [cached since 774.7s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science', datetime.date(2026, 5, 8))
+2026-05-08 15:35:04,328 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:35:04,328 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR ORDER BY daily_capsules.capsule_date DESC
+2026-05-08 15:35:04,329 INFO sqlalchemy.engine.Engine [cached since 180s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science')
+2026-05-08 15:35:04,606 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR ORDER BY daily_capsules.capsule_date DESC 
+ LIMIT $3::INTEGER
+2026-05-08 15:35:04,606 INFO sqlalchemy.engine.Engine [cached since 176.5s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science', 1)
+2026-05-08 15:35:04,942 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-05-08 15:35:05,250 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:62898 - "GET /api/capsule/compulsory_science HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62897 - "GET /api/capsule/compulsory_science/history HTTP/1.1" 200 OK
+2026-05-08 15:35:06,580 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:35:06,581 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 15:35:06,581 INFO sqlalchemy.engine.Engine [cached since 190.9s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_science')
+2026-05-08 15:35:07,195 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:50135 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 15:35:09,959 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:35:09,960 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR AND daily_capsules.capsule_date = $3::DATE
+2026-05-08 15:35:09,960 INFO sqlalchemy.engine.Engine [cached since 780.6s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science', datetime.date(2026, 5, 8))
+2026-05-08 15:35:09,961 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:35:09,961 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR ORDER BY daily_capsules.capsule_date DESC
+2026-05-08 15:35:09,961 INFO sqlalchemy.engine.Engine [cached since 185.6s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science')
+2026-05-08 15:35:10,521 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR ORDER BY daily_capsules.capsule_date DESC 
+ LIMIT $3::INTEGER
+2026-05-08 15:35:10,521 INFO sqlalchemy.engine.Engine [cached since 182.4s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science', 1)
+2026-05-08 15:35:10,531 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-05-08 15:35:10,882 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:62996 - "GET /api/capsule/compulsory_science/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62995 - "GET /api/capsule/compulsory_science HTTP/1.1" 200 OK

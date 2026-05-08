@@ -861,58 +861,6 @@ Services communicate using `X-Internal-Secret` header. Value = `MAIN_BACKEND_INT
 
 ---
 
-
-## Phase 7 — Practice System
-
-
-**Services:** `ai_service`, `main_backend`, `frontend`
-**Goal:** Full chapter-practice with question delivery, scoring, session summaries, and practice history.
-
-
-### Migration 008
-`practice_sessions` table: `id`, `user_id`, `subject`, `chapter`, `session_date`, `status` (active/submitted/closed), `question_ids` (JSONB), `config` (JSONB), `score_data` (JSONB nullable), `created_at`
-
-
-### ai_service: `api/practice.py`
-```
-POST /api/practice/start      JWT, {subject, chapter, count, timer_enabled, optional_message}
-                              → selects questions from pool, creates session, returns questions (no correct_option_ids)
-POST /api/practice/submit     JWT, {session_id, answers: {question_id: option_id}}
-                              → scores, sets status=submitted, returns {score, results with explanations}
-POST /api/practice/close      JWT, {session_id}
-                              → status=closed; async: generate PracticeSessionSummary (gpt-4o-mini narrative)
-GET  /api/practice/history    JWT, ?subject&chapter → list PracticeSessionSummary rows
-POST /api/practice/followup   JWT, {session_id, message} → SSE stream from practice follow-up agent
-```
-
-
-**Practice follow-up agent** (`agents/practice/agent.py`): has session questions + results as context; answers follow-up questions; has RAG tool access.
-
-
-**Session summary narrative** generated on close: "Student attempted N questions on [chapter]. Score X/N. Most mistakes on [topic]. Performed well on [topic]."
-
-
-### main_backend proxy
-```
-POST /api/practice/start    → ai_service
-POST /api/practice/submit   → ai_service
-POST /api/practice/close    → ai_service
-GET  /api/practice/history  → ai_service
-POST /api/practice/followup → ai_service SSE passthrough
-```
-
-
-### Frontend: Practice tab (inside subject detail)
-- Chapter browser sidebar (left): chapters from subject structure; default = today's planned chapter from consultant timeline; click any chapter
-- Practice setup: question count selector, timer toggle, optional message field, Start button
-- Session view: MCQ interface, per-question timer if enabled (uses SubjectTimingConfig)
-- Results view: score card; each question expanded (student's answer + correct + explanation + common mistakes)
-- Follow-up panel: opens on "Follow Up" button; SSE chat about this session's questions
-- Practice history: past sessions per chapter with score summaries
-- Also: standalone **Practice** page in sidebar as independent entry point
-
-
----
 ## Phase 8 — Consultant Agent
 
 **Services:** `ai_service`, `main_backend`, `frontend`
@@ -1108,6 +1056,42 @@ POST /api/capsule/{subject}/chat      → ai_service SSE passthrough
 
 
 ---
+## Phase 10 — Level-Based Notes + Notes UI
+
+
+
+
+**Services:** `main_backend`, `ai_service` (level), `frontend`
+**Goal:** Students view their level-appropriate chapter notes via chapter sidebar.
+
+
+
+
+### main_backend: notes delivery
+```
+GET /api/notes/{subject}               JWT(student) → list chapters with notes for student's level
+GET /api/notes/{subject}/{chapter}     JWT(student) → {url, level, display_name} for student's level
+```
+Logic: fetch level from `GET /api/internal/student-level/{user_id}?subject=...`; default to level 2 if no level assigned; query `LevelNote` table.
+
+
+
+
+### ai_service: initial level assignment
+On first tutor chat for a subject with no existing level: async assess using SEE GPA + class scores from profile; default level 2 if no profile data.
+
+
+
+
+### Frontend: Notes tab
+- Chapter sidebar (left): all chapters from subject structure; uploaded chapters show document icon; unuploaded greyed out with "Coming soon"
+- Note view (right): PDF inline via iframe; download button
+- Student level badge (e.g., "Level 2 — Average") with tooltip explaining automatic assessment
+
+
+
+
+---
 
 ## Critical Files Reference
 
@@ -1150,8 +1134,8 @@ POST /api/capsule/{subject}/chat      → ai_service SSE passthrough
 | 5 | Personalization system redesign (new summary models + context builder) | [x] Complete 2026-05-07 |
 | 6 | Tutor agent redesign + student portal foundation + tutor chat UI | [ ] Pending |
 | 7 | Practice system (sessions, scoring, summaries, practice UI) | [x] Complete 2026-05-08 |
-| 8 | Consultant agent (web search, timeline management, consultant UI) | [ ] Pending |
-| 9 | Daily capsule + worker end-of-day processing | [ ] Pending |
+| 8 | Consultant agent (web search, timeline management, consultant UI) | [x] Complete 2026-05-08 |
+| 9 | Daily capsule + worker end-of-day processing | [x] Complete 2026-05-08 |
 | 10 | Level-based notes + notes UI | [ ] Pending |
 | 11 | Mock test system + leaderboard | [ ] Pending |
 | 12 | Community + referral agent + progress tracking | [ ] Pending |

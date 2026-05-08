@@ -21,6 +21,7 @@ from app.api.admin_proxy import router as admin_proxy_router
 from app.api.tutor_proxy import router as tutor_proxy_router
 from app.api.practice_proxy import router as practice_proxy_router
 from app.api.consultant_proxy import router as consultant_proxy_router
+from app.api.capsule_proxy import router as capsule_proxy_router
 from app.api.config import router as config_router
 
 @asynccontextmanager
@@ -60,4 +61,5 @@ app.include_router(admin_proxy_router)
 app.include_router(tutor_proxy_router)
 app.include_router(practice_proxy_router)
 app.include_router(consultant_proxy_router)
+app.include_router(capsule_proxy_router)
 app.include_router(config_router)

@@ -10,7 +10,9 @@ app = Celery(
     include=[
         "worker.tasks.capsule_tasks",
         "worker.tasks.summary_tasks",
-        "worker.tasks.planner_tasks",
+        "worker.tasks.consultant_tasks",
+        "worker.tasks.weekly_summary_tasks",
+        "worker.tasks.update_alltime_tasks",
     ],
 )
 
@@ -25,17 +27,25 @@ app.conf.update(
     # Beat schedule — all times in UTC
     # Nepal Time (NPT) = UTC + 5:45
     beat_schedule={
-        "generate-daily-capsules": {
-            "task": "worker.tasks.capsule_tasks.generate_daily_capsules",
-            "schedule": crontab(hour=0, minute=15),  # 00:15 UTC = 06:00 NPT
-        },
-        "end-of-day-summary-update": {
+        "end-of-day-summaries": {
             "task": "worker.tasks.summary_tasks.run_end_of_day_summary_update",
-            "schedule": crontab(hour=16, minute=15),  # 16:15 UTC = 22:00 NPT
+            "schedule": crontab(hour=16, minute=15),   # 22:00 NPT daily
         },
-        "daily-planner-review": {
-            "task": "worker.tasks.planner_tasks.run_daily_planner_review",
-            "schedule": crontab(hour=17, minute=15),  # 17:15 UTC = 23:00 NPT
+        "generate-capsules": {
+            "task": "worker.tasks.capsule_tasks.generate_daily_capsules",
+            "schedule": crontab(hour=16, minute=45),   # 22:30 NPT daily
+        },
+        "consultant-review": {
+            "task": "worker.tasks.consultant_tasks.run_consultant_review",
+            "schedule": crontab(hour=17, minute=15),   # 23:00 NPT daily
+        },
+        "regenerate-weekly-summaries": {
+            "task": "worker.tasks.weekly_summary_tasks.regenerate_weekly_summaries",
+            "schedule": crontab(hour=0, minute=15),    # 06:00 NPT daily
+        },
+        "update-alltime-summaries": {
+            "task": "worker.tasks.update_alltime_tasks.update_alltime_summaries",
+            "schedule": crontab(hour=0, minute=15, day_of_week=1),  # 06:00 NPT Monday
         },
     },
 )

@@ -1,0 +1,296 @@
+INFO:     Started server process [16240]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+2026-05-08 15:31:34,895 INFO sqlalchemy.engine.Engine select pg_catalog.version()
+2026-05-08 15:31:34,895 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-05-08 15:31:36,152 INFO sqlalchemy.engine.Engine select current_schema()
+2026-05-08 15:31:36,153 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-05-08 15:31:37,380 INFO sqlalchemy.engine.Engine show standard_conforming_strings
+2026-05-08 15:31:37,380 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-05-08 15:31:38,302 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:31:38,342 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.phone, users.full_name, users.hashed_password, users.role, users.is_active, users.onboarding_complete, users.referral_code, users.referred_by, users.created_at, users.updated_at 
+FROM users 
+WHERE users.email = $1::VARCHAR
+2026-05-08 15:31:38,343 INFO sqlalchemy.engine.Engine [generated in 0.00069s] ('pradipojha406@gmail.com',)
+2026-05-08 15:31:41,284 INFO sqlalchemy.engine.Engine SELECT affiliation_profiles.user_id AS affiliation_profiles_user_id, affiliation_profiles.id AS affiliation_profiles_id, affiliation_profiles.bank_name AS affiliation_profiles_bank_name, affiliation_profiles.account_number AS affiliation_profiles_account_number, affiliation_profiles.account_name AS affiliation_profiles_account_name, affiliation_profiles.qr_image_url AS affiliation_profiles_qr_image_url, affiliation_profiles.total_referrals AS affiliation_profiles_total_referrals, affiliation_profiles.total_earnings AS affiliation_profiles_total_earnings, affiliation_profiles.created_at AS affiliation_profiles_created_at 
+FROM affiliation_profiles 
+WHERE affiliation_profiles.user_id IN ($1::UUID)
+2026-05-08 15:31:41,284 INFO sqlalchemy.engine.Engine [generated in 0.00085s] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:31:41,995 INFO sqlalchemy.engine.Engine SELECT student_profiles.user_id AS student_profiles_user_id, student_profiles.id AS student_profiles_id, student_profiles.stream AS student_profiles_stream, student_profiles.school_name AS student_profiles_school_name, student_profiles.school_address AS student_profiles_school_address, student_profiles.class_8_scores AS student_profiles_class_8_scores, student_profiles.class_9_scores AS student_profiles_class_9_scores, student_profiles.class_10_scores AS student_profiles_class_10_scores, student_profiles.see_gpa AS student_profiles_see_gpa, student_profiles.marksheet_urls AS student_profiles_marksheet_urls, student_profiles.notes AS student_profiles_notes, student_profiles.profile_completion_pct AS student_profiles_profile_completion_pct, student_profiles.created_at AS student_profiles_created_at, student_profiles.updated_at AS student_profiles_updated_at 
+FROM student_profiles 
+WHERE student_profiles.user_id IN ($1::UUID)
+2026-05-08 15:31:41,996 INFO sqlalchemy.engine.Engine [generated in 0.00088s] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:31:45,472 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:61927 - "POST /api/auth/login HTTP/1.1" 200 OK
+2026-05-08 15:31:45,827 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:31:45,831 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.phone, users.full_name, users.hashed_password, users.role, users.is_active, users.onboarding_complete, users.referral_code, users.referred_by, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = $1::UUID
+2026-05-08 15:31:45,832 INFO sqlalchemy.engine.Engine [generated in 0.00060s] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:31:46,806 INFO sqlalchemy.engine.Engine SELECT affiliation_profiles.user_id AS affiliation_profiles_user_id, affiliation_profiles.id AS affiliation_profiles_id, affiliation_profiles.bank_name AS affiliation_profiles_bank_name, affiliation_profiles.account_number AS affiliation_profiles_account_number, affiliation_profiles.account_name AS affiliation_profiles_account_name, affiliation_profiles.qr_image_url AS affiliation_profiles_qr_image_url, affiliation_profiles.total_referrals AS affiliation_profiles_total_referrals, affiliation_profiles.total_earnings AS affiliation_profiles_total_earnings, affiliation_profiles.created_at AS affiliation_profiles_created_at 
+FROM affiliation_profiles 
+WHERE affiliation_profiles.user_id IN ($1::UUID)
+2026-05-08 15:31:46,806 INFO sqlalchemy.engine.Engine [cached since 5.523s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:31:47,110 INFO sqlalchemy.engine.Engine SELECT student_profiles.user_id AS student_profiles_user_id, student_profiles.id AS student_profiles_id, student_profiles.stream AS student_profiles_stream, student_profiles.school_name AS student_profiles_school_name, student_profiles.school_address AS student_profiles_school_address, student_profiles.class_8_scores AS student_profiles_class_8_scores, student_profiles.class_9_scores AS student_profiles_class_9_scores, student_profiles.class_10_scores AS student_profiles_class_10_scores, student_profiles.see_gpa AS student_profiles_see_gpa, student_profiles.marksheet_urls AS student_profiles_marksheet_urls, student_profiles.notes AS student_profiles_notes, student_profiles.profile_completion_pct AS student_profiles_profile_completion_pct, student_profiles.created_at AS student_profiles_created_at, student_profiles.updated_at AS student_profiles_updated_at 
+FROM student_profiles 
+WHERE student_profiles.user_id IN ($1::UUID)
+2026-05-08 15:31:47,111 INFO sqlalchemy.engine.Engine [cached since 5.116s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:31:47,504 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:49371 - "GET /api/auth/me HTTP/1.1" 200 OK
+2026-05-08 15:31:49,361 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:31:49,361 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.phone, users.full_name, users.hashed_password, users.role, users.is_active, users.onboarding_complete, users.referral_code, users.referred_by, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = $1::UUID
+2026-05-08 15:31:49,361 INFO sqlalchemy.engine.Engine [cached since 3.53s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:31:49,634 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:31:49,635 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.phone, users.full_name, users.hashed_password, users.role, users.is_active, users.onboarding_complete, users.referral_code, users.referred_by, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = $1::UUID
+2026-05-08 15:31:49,635 INFO sqlalchemy.engine.Engine [cached since 3.804s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:31:50,285 INFO sqlalchemy.engine.Engine SELECT affiliation_profiles.user_id AS affiliation_profiles_user_id, affiliation_profiles.id AS affiliation_profiles_id, affiliation_profiles.bank_name AS affiliation_profiles_bank_name, affiliation_profiles.account_number AS affiliation_profiles_account_number, affiliation_profiles.account_name AS affiliation_profiles_account_name, affiliation_profiles.qr_image_url AS affiliation_profiles_qr_image_url, affiliation_profiles.total_referrals AS affiliation_profiles_total_referrals, affiliation_profiles.total_earnings AS affiliation_profiles_total_earnings, affiliation_profiles.created_at AS affiliation_profiles_created_at 
+FROM affiliation_profiles 
+WHERE affiliation_profiles.user_id IN ($1::UUID)
+2026-05-08 15:31:50,286 INFO sqlalchemy.engine.Engine [cached since 9.003s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:31:50,592 INFO sqlalchemy.engine.Engine SELECT student_profiles.user_id AS student_profiles_user_id, student_profiles.id AS student_profiles_id, student_profiles.stream AS student_profiles_stream, student_profiles.school_name AS student_profiles_school_name, student_profiles.school_address AS student_profiles_school_address, student_profiles.class_8_scores AS student_profiles_class_8_scores, student_profiles.class_9_scores AS student_profiles_class_9_scores, student_profiles.class_10_scores AS student_profiles_class_10_scores, student_profiles.see_gpa AS student_profiles_see_gpa, student_profiles.marksheet_urls AS student_profiles_marksheet_urls, student_profiles.notes AS student_profiles_notes, student_profiles.profile_completion_pct AS student_profiles_profile_completion_pct, student_profiles.created_at AS student_profiles_created_at, student_profiles.updated_at AS student_profiles_updated_at 
+FROM student_profiles 
+WHERE student_profiles.user_id IN ($1::UUID)
+2026-05-08 15:31:50,592 INFO sqlalchemy.engine.Engine [cached since 8.597s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:31:53,788 INFO sqlalchemy.engine.Engine SELECT affiliation_profiles.user_id AS affiliation_profiles_user_id, affiliation_profiles.id AS affiliation_profiles_id, affiliation_profiles.bank_name AS affiliation_profiles_bank_name, affiliation_profiles.account_number AS affiliation_profiles_account_number, affiliation_profiles.account_name AS affiliation_profiles_account_name, affiliation_profiles.qr_image_url AS affiliation_profiles_qr_image_url, affiliation_profiles.total_referrals AS affiliation_profiles_total_referrals, affiliation_profiles.total_earnings AS affiliation_profiles_total_earnings, affiliation_profiles.created_at AS affiliation_profiles_created_at 
+FROM affiliation_profiles 
+WHERE affiliation_profiles.user_id IN ($1::UUID)
+2026-05-08 15:31:53,789 INFO sqlalchemy.engine.Engine [cached since 12.51s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:31:54,382 INFO sqlalchemy.engine.Engine SELECT student_profiles.user_id AS student_profiles_user_id, student_profiles.id AS student_profiles_id, student_profiles.stream AS student_profiles_stream, student_profiles.school_name AS student_profiles_school_name, student_profiles.school_address AS student_profiles_school_address, student_profiles.class_8_scores AS student_profiles_class_8_scores, student_profiles.class_9_scores AS student_profiles_class_9_scores, student_profiles.class_10_scores AS student_profiles_class_10_scores, student_profiles.see_gpa AS student_profiles_see_gpa, student_profiles.marksheet_urls AS student_profiles_marksheet_urls, student_profiles.notes AS student_profiles_notes, student_profiles.profile_completion_pct AS student_profiles_profile_completion_pct, student_profiles.created_at AS student_profiles_created_at, student_profiles.updated_at AS student_profiles_updated_at 
+FROM student_profiles 
+WHERE student_profiles.user_id IN ($1::UUID)
+2026-05-08 15:31:54,382 INFO sqlalchemy.engine.Engine [cached since 12.39s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:31:55,403 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:31:55,404 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.phone, users.full_name, users.hashed_password, users.role, users.is_active, users.onboarding_complete, users.referral_code, users.referred_by, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = $1::UUID
+2026-05-08 15:31:55,404 INFO sqlalchemy.engine.Engine [cached since 9.573s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:31:55,608 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:31:55,609 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.phone, users.full_name, users.hashed_password, users.role, users.is_active, users.onboarding_complete, users.referral_code, users.referred_by, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = $1::UUID
+2026-05-08 15:31:55,609 INFO sqlalchemy.engine.Engine [cached since 9.778s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:31:55,610 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:31:55,611 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.phone, users.full_name, users.hashed_password, users.role, users.is_active, users.onboarding_complete, users.referral_code, users.referred_by, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = $1::UUID
+2026-05-08 15:31:55,611 INFO sqlalchemy.engine.Engine [cached since 9.78s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:31:55,918 INFO sqlalchemy.engine.Engine SELECT student_profiles.id, student_profiles.user_id, student_profiles.stream, student_profiles.school_name, student_profiles.school_address, student_profiles.class_8_scores, student_profiles.class_9_scores, student_profiles.class_10_scores, student_profiles.see_gpa, student_profiles.marksheet_urls, student_profiles.notes, student_profiles.profile_completion_pct, student_profiles.created_at, student_profiles.updated_at 
+FROM student_profiles 
+WHERE student_profiles.user_id = $1::UUID
+2026-05-08 15:31:55,919 INFO sqlalchemy.engine.Engine [generated in 0.00054s] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:31:56,532 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:65474 - "GET /api/profile/student HTTP/1.1" 200 OK
+2026-05-08 15:31:56,858 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:31:56,859 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.phone, users.full_name, users.hashed_password, users.role, users.is_active, users.onboarding_complete, users.referral_code, users.referred_by, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = $1::UUID
+2026-05-08 15:31:56,859 INFO sqlalchemy.engine.Engine [cached since 11.03s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:31:57,454 INFO sqlalchemy.engine.Engine SELECT affiliation_profiles.user_id AS affiliation_profiles_user_id, affiliation_profiles.id AS affiliation_profiles_id, affiliation_profiles.bank_name AS affiliation_profiles_bank_name, affiliation_profiles.account_number AS affiliation_profiles_account_number, affiliation_profiles.account_name AS affiliation_profiles_account_name, affiliation_profiles.qr_image_url AS affiliation_profiles_qr_image_url, affiliation_profiles.total_referrals AS affiliation_profiles_total_referrals, affiliation_profiles.total_earnings AS affiliation_profiles_total_earnings, affiliation_profiles.created_at AS affiliation_profiles_created_at 
+FROM affiliation_profiles 
+WHERE affiliation_profiles.user_id IN ($1::UUID)
+2026-05-08 15:31:57,454 INFO sqlalchemy.engine.Engine [cached since 16.17s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:31:57,760 INFO sqlalchemy.engine.Engine SELECT student_profiles.user_id AS student_profiles_user_id, student_profiles.id AS student_profiles_id, student_profiles.stream AS student_profiles_stream, student_profiles.school_name AS student_profiles_school_name, student_profiles.school_address AS student_profiles_school_address, student_profiles.class_8_scores AS student_profiles_class_8_scores, student_profiles.class_9_scores AS student_profiles_class_9_scores, student_profiles.class_10_scores AS student_profiles_class_10_scores, student_profiles.see_gpa AS student_profiles_see_gpa, student_profiles.marksheet_urls AS student_profiles_marksheet_urls, student_profiles.notes AS student_profiles_notes, student_profiles.profile_completion_pct AS student_profiles_profile_completion_pct, student_profiles.created_at AS student_profiles_created_at, student_profiles.updated_at AS student_profiles_updated_at 
+FROM student_profiles 
+WHERE student_profiles.user_id IN ($1::UUID)
+2026-05-08 15:31:57,760 INFO sqlalchemy.engine.Engine [cached since 15.77s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:31:58,068 INFO sqlalchemy.engine.Engine SELECT student_profiles.id, student_profiles.user_id, student_profiles.stream, student_profiles.school_name, student_profiles.school_address, student_profiles.class_8_scores, student_profiles.class_9_scores, student_profiles.class_10_scores, student_profiles.see_gpa, student_profiles.marksheet_urls, student_profiles.notes, student_profiles.profile_completion_pct, student_profiles.created_at, student_profiles.updated_at 
+FROM student_profiles 
+WHERE student_profiles.user_id = $1::UUID
+2026-05-08 15:31:58,068 INFO sqlalchemy.engine.Engine [cached since 2.15s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:31:58,357 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-05-08 15:31:58,477 INFO sqlalchemy.engine.Engine SELECT affiliation_profiles.user_id AS affiliation_profiles_user_id, affiliation_profiles.id AS affiliation_profiles_id, affiliation_profiles.bank_name AS affiliation_profiles_bank_name, affiliation_profiles.account_number AS affiliation_profiles_account_number, affiliation_profiles.account_name AS affiliation_profiles_account_name, affiliation_profiles.qr_image_url AS affiliation_profiles_qr_image_url, affiliation_profiles.total_referrals AS affiliation_profiles_total_referrals, affiliation_profiles.total_earnings AS affiliation_profiles_total_earnings, affiliation_profiles.created_at AS affiliation_profiles_created_at 
+FROM affiliation_profiles 
+WHERE affiliation_profiles.user_id IN ($1::UUID)
+2026-05-08 15:31:58,478 INFO sqlalchemy.engine.Engine [cached since 17.19s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:31:58,638 INFO sqlalchemy.engine.Engine SELECT affiliation_profiles.user_id AS affiliation_profiles_user_id, affiliation_profiles.id AS affiliation_profiles_id, affiliation_profiles.bank_name AS affiliation_profiles_bank_name, affiliation_profiles.account_number AS affiliation_profiles_account_number, affiliation_profiles.account_name AS affiliation_profiles_account_name, affiliation_profiles.qr_image_url AS affiliation_profiles_qr_image_url, affiliation_profiles.total_referrals AS affiliation_profiles_total_referrals, affiliation_profiles.total_earnings AS affiliation_profiles_total_earnings, affiliation_profiles.created_at AS affiliation_profiles_created_at 
+FROM affiliation_profiles 
+WHERE affiliation_profiles.user_id IN ($1::UUID)
+2026-05-08 15:31:58,638 INFO sqlalchemy.engine.Engine [cached since 17.36s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:31:58,644 INFO sqlalchemy.engine.Engine SELECT affiliation_profiles.user_id AS affiliation_profiles_user_id, affiliation_profiles.id AS affiliation_profiles_id, affiliation_profiles.bank_name AS affiliation_profiles_bank_name, affiliation_profiles.account_number AS affiliation_profiles_account_number, affiliation_profiles.account_name AS affiliation_profiles_account_name, affiliation_profiles.qr_image_url AS affiliation_profiles_qr_image_url, affiliation_profiles.total_referrals AS affiliation_profiles_total_referrals, affiliation_profiles.total_earnings AS affiliation_profiles_total_earnings, affiliation_profiles.created_at AS affiliation_profiles_created_at 
+FROM affiliation_profiles 
+WHERE affiliation_profiles.user_id IN ($1::UUID)
+2026-05-08 15:31:58,644 INFO sqlalchemy.engine.Engine [cached since 17.36s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+INFO:     127.0.0.1:51054 - "GET /api/profile/student HTTP/1.1" 200 OK
+2026-05-08 15:31:59,058 INFO sqlalchemy.engine.Engine SELECT student_profiles.user_id AS student_profiles_user_id, student_profiles.id AS student_profiles_id, student_profiles.stream AS student_profiles_stream, student_profiles.school_name AS student_profiles_school_name, student_profiles.school_address AS student_profiles_school_address, student_profiles.class_8_scores AS student_profiles_class_8_scores, student_profiles.class_9_scores AS student_profiles_class_9_scores, student_profiles.class_10_scores AS student_profiles_class_10_scores, student_profiles.see_gpa AS student_profiles_see_gpa, student_profiles.marksheet_urls AS student_profiles_marksheet_urls, student_profiles.notes AS student_profiles_notes, student_profiles.profile_completion_pct AS student_profiles_profile_completion_pct, student_profiles.created_at AS student_profiles_created_at, student_profiles.updated_at AS student_profiles_updated_at 
+FROM student_profiles 
+WHERE student_profiles.user_id IN ($1::UUID)
+2026-05-08 15:31:59,058 INFO sqlalchemy.engine.Engine [cached since 17.06s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:31:59,068 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-05-08 15:31:59,269 INFO sqlalchemy.engine.Engine SELECT student_profiles.user_id AS student_profiles_user_id, student_profiles.id AS student_profiles_id, student_profiles.stream AS student_profiles_stream, student_profiles.school_name AS student_profiles_school_name, student_profiles.school_address AS student_profiles_school_address, student_profiles.class_8_scores AS student_profiles_class_8_scores, student_profiles.class_9_scores AS student_profiles_class_9_scores, student_profiles.class_10_scores AS student_profiles_class_10_scores, student_profiles.see_gpa AS student_profiles_see_gpa, student_profiles.marksheet_urls AS student_profiles_marksheet_urls, student_profiles.notes AS student_profiles_notes, student_profiles.profile_completion_pct AS student_profiles_profile_completion_pct, student_profiles.created_at AS student_profiles_created_at, student_profiles.updated_at AS student_profiles_updated_at 
+FROM student_profiles 
+WHERE student_profiles.user_id IN ($1::UUID)
+2026-05-08 15:31:59,270 INFO sqlalchemy.engine.Engine [cached since 17.27s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:31:59,275 INFO sqlalchemy.engine.Engine SELECT student_profiles.user_id AS student_profiles_user_id, student_profiles.id AS student_profiles_id, student_profiles.stream AS student_profiles_stream, student_profiles.school_name AS student_profiles_school_name, student_profiles.school_address AS student_profiles_school_address, student_profiles.class_8_scores AS student_profiles_class_8_scores, student_profiles.class_9_scores AS student_profiles_class_9_scores, student_profiles.class_10_scores AS student_profiles_class_10_scores, student_profiles.see_gpa AS student_profiles_see_gpa, student_profiles.marksheet_urls AS student_profiles_marksheet_urls, student_profiles.notes AS student_profiles_notes, student_profiles.profile_completion_pct AS student_profiles_profile_completion_pct, student_profiles.created_at AS student_profiles_created_at, student_profiles.updated_at AS student_profiles_updated_at 
+FROM student_profiles 
+WHERE student_profiles.user_id IN ($1::UUID)
+2026-05-08 15:31:59,275 INFO sqlalchemy.engine.Engine [cached since 17.28s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+INFO:     127.0.0.1:65477 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 15:31:59,374 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:31:59,375 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.phone, users.full_name, users.hashed_password, users.role, users.is_active, users.onboarding_complete, users.referral_code, users.referred_by, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = $1::UUID
+2026-05-08 15:31:59,376 INFO sqlalchemy.engine.Engine [cached since 13.55s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:32:00,012 INFO sqlalchemy.engine.Engine SELECT affiliation_profiles.user_id AS affiliation_profiles_user_id, affiliation_profiles.id AS affiliation_profiles_id, affiliation_profiles.bank_name AS affiliation_profiles_bank_name, affiliation_profiles.account_number AS affiliation_profiles_account_number, affiliation_profiles.account_name AS affiliation_profiles_account_name, affiliation_profiles.qr_image_url AS affiliation_profiles_qr_image_url, affiliation_profiles.total_referrals AS affiliation_profiles_total_referrals, affiliation_profiles.total_earnings AS affiliation_profiles_total_earnings, affiliation_profiles.created_at AS affiliation_profiles_created_at 
+FROM affiliation_profiles 
+WHERE affiliation_profiles.user_id IN ($1::UUID)
+2026-05-08 15:32:00,012 INFO sqlalchemy.engine.Engine [cached since 18.73s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:32:00,318 INFO sqlalchemy.engine.Engine SELECT student_profiles.user_id AS student_profiles_user_id, student_profiles.id AS student_profiles_id, student_profiles.stream AS student_profiles_stream, student_profiles.school_name AS student_profiles_school_name, student_profiles.school_address AS student_profiles_school_address, student_profiles.class_8_scores AS student_profiles_class_8_scores, student_profiles.class_9_scores AS student_profiles_class_9_scores, student_profiles.class_10_scores AS student_profiles_class_10_scores, student_profiles.see_gpa AS student_profiles_see_gpa, student_profiles.marksheet_urls AS student_profiles_marksheet_urls, student_profiles.notes AS student_profiles_notes, student_profiles.profile_completion_pct AS student_profiles_profile_completion_pct, student_profiles.created_at AS student_profiles_created_at, student_profiles.updated_at AS student_profiles_updated_at 
+FROM student_profiles 
+WHERE student_profiles.user_id IN ($1::UUID)
+2026-05-08 15:32:00,319 INFO sqlalchemy.engine.Engine [cached since 18.32s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:32:03,026 INFO sqlalchemy.engine.Engine SELECT subject_timing_config.id, subject_timing_config.subject, subject_timing_config.difficulty, subject_timing_config.seconds_per_question 
+FROM subject_timing_config 
+WHERE subject_timing_config.subject = $1::VARCHAR
+2026-05-08 15:32:03,026 INFO sqlalchemy.engine.Engine [generated in 0.00045s] ('compulsory_science',)
+2026-05-08 15:32:03,698 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:52270 - "GET /api/config/subject-timing?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 15:32:04,024 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:32:04,025 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.phone, users.full_name, users.hashed_password, users.role, users.is_active, users.onboarding_complete, users.referral_code, users.referred_by, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = $1::UUID
+2026-05-08 15:32:04,025 INFO sqlalchemy.engine.Engine [cached since 18.19s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:32:04,612 INFO sqlalchemy.engine.Engine SELECT affiliation_profiles.user_id AS affiliation_profiles_user_id, affiliation_profiles.id AS affiliation_profiles_id, affiliation_profiles.bank_name AS affiliation_profiles_bank_name, affiliation_profiles.account_number AS affiliation_profiles_account_number, affiliation_profiles.account_name AS affiliation_profiles_account_name, affiliation_profiles.qr_image_url AS affiliation_profiles_qr_image_url, affiliation_profiles.total_referrals AS affiliation_profiles_total_referrals, affiliation_profiles.total_earnings AS affiliation_profiles_total_earnings, affiliation_profiles.created_at AS affiliation_profiles_created_at 
+FROM affiliation_profiles 
+WHERE affiliation_profiles.user_id IN ($1::UUID)
+2026-05-08 15:32:04,613 INFO sqlalchemy.engine.Engine [cached since 23.33s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:32:04,926 INFO sqlalchemy.engine.Engine SELECT student_profiles.user_id AS student_profiles_user_id, student_profiles.id AS student_profiles_id, student_profiles.stream AS student_profiles_stream, student_profiles.school_name AS student_profiles_school_name, student_profiles.school_address AS student_profiles_school_address, student_profiles.class_8_scores AS student_profiles_class_8_scores, student_profiles.class_9_scores AS student_profiles_class_9_scores, student_profiles.class_10_scores AS student_profiles_class_10_scores, student_profiles.see_gpa AS student_profiles_see_gpa, student_profiles.marksheet_urls AS student_profiles_marksheet_urls, student_profiles.notes AS student_profiles_notes, student_profiles.profile_completion_pct AS student_profiles_profile_completion_pct, student_profiles.created_at AS student_profiles_created_at, student_profiles.updated_at AS student_profiles_updated_at 
+FROM student_profiles 
+WHERE student_profiles.user_id IN ($1::UUID)
+2026-05-08 15:32:04,927 INFO sqlalchemy.engine.Engine [cached since 22.93s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:32:05,215 INFO sqlalchemy.engine.Engine SELECT subject_timing_config.id, subject_timing_config.subject, subject_timing_config.difficulty, subject_timing_config.seconds_per_question 
+FROM subject_timing_config 
+WHERE subject_timing_config.subject = $1::VARCHAR
+2026-05-08 15:32:05,216 INFO sqlalchemy.engine.Engine [cached since 2.19s ago] ('compulsory_science',)
+2026-05-08 15:32:05,748 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-05-08 15:32:05,792 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:64284 - "GET /api/capsule/compulsory_science/history HTTP/1.1" 200 OK
+2026-05-08 15:32:06,065 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:32:06,065 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.phone, users.full_name, users.hashed_password, users.role, users.is_active, users.onboarding_complete, users.referral_code, users.referred_by, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = $1::UUID
+2026-05-08 15:32:06,066 INFO sqlalchemy.engine.Engine [cached since 20.23s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+INFO:     127.0.0.1:64492 - "GET /api/config/subject-timing?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 15:32:06,667 INFO sqlalchemy.engine.Engine SELECT affiliation_profiles.user_id AS affiliation_profiles_user_id, affiliation_profiles.id AS affiliation_profiles_id, affiliation_profiles.bank_name AS affiliation_profiles_bank_name, affiliation_profiles.account_number AS affiliation_profiles_account_number, affiliation_profiles.account_name AS affiliation_profiles_account_name, affiliation_profiles.qr_image_url AS affiliation_profiles_qr_image_url, affiliation_profiles.total_referrals AS affiliation_profiles_total_referrals, affiliation_profiles.total_earnings AS affiliation_profiles_total_earnings, affiliation_profiles.created_at AS affiliation_profiles_created_at 
+FROM affiliation_profiles 
+WHERE affiliation_profiles.user_id IN ($1::UUID)
+2026-05-08 15:32:06,668 INFO sqlalchemy.engine.Engine [cached since 25.38s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:32:06,974 INFO sqlalchemy.engine.Engine SELECT student_profiles.user_id AS student_profiles_user_id, student_profiles.id AS student_profiles_id, student_profiles.stream AS student_profiles_stream, student_profiles.school_name AS student_profiles_school_name, student_profiles.school_address AS student_profiles_school_address, student_profiles.class_8_scores AS student_profiles_class_8_scores, student_profiles.class_9_scores AS student_profiles_class_9_scores, student_profiles.class_10_scores AS student_profiles_class_10_scores, student_profiles.see_gpa AS student_profiles_see_gpa, student_profiles.marksheet_urls AS student_profiles_marksheet_urls, student_profiles.notes AS student_profiles_notes, student_profiles.profile_completion_pct AS student_profiles_profile_completion_pct, student_profiles.created_at AS student_profiles_created_at, student_profiles.updated_at AS student_profiles_updated_at 
+FROM student_profiles 
+WHERE student_profiles.user_id IN ($1::UUID)
+2026-05-08 15:32:06,975 INFO sqlalchemy.engine.Engine [cached since 24.98s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:32:09,026 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:64285 - "GET /api/capsule/compulsory_science HTTP/1.1" 200 OK
+2026-05-08 15:32:09,342 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:32:09,342 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.phone, users.full_name, users.hashed_password, users.role, users.is_active, users.onboarding_complete, users.referral_code, users.referred_by, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = $1::UUID
+2026-05-08 15:32:09,343 INFO sqlalchemy.engine.Engine [cached since 23.51s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:32:09,944 INFO sqlalchemy.engine.Engine SELECT affiliation_profiles.user_id AS affiliation_profiles_user_id, affiliation_profiles.id AS affiliation_profiles_id, affiliation_profiles.bank_name AS affiliation_profiles_bank_name, affiliation_profiles.account_number AS affiliation_profiles_account_number, affiliation_profiles.account_name AS affiliation_profiles_account_name, affiliation_profiles.qr_image_url AS affiliation_profiles_qr_image_url, affiliation_profiles.total_referrals AS affiliation_profiles_total_referrals, affiliation_profiles.total_earnings AS affiliation_profiles_total_earnings, affiliation_profiles.created_at AS affiliation_profiles_created_at 
+FROM affiliation_profiles 
+WHERE affiliation_profiles.user_id IN ($1::UUID)
+2026-05-08 15:32:09,945 INFO sqlalchemy.engine.Engine [cached since 28.66s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:32:10,251 INFO sqlalchemy.engine.Engine SELECT student_profiles.user_id AS student_profiles_user_id, student_profiles.id AS student_profiles_id, student_profiles.stream AS student_profiles_stream, student_profiles.school_name AS student_profiles_school_name, student_profiles.school_address AS student_profiles_school_address, student_profiles.class_8_scores AS student_profiles_class_8_scores, student_profiles.class_9_scores AS student_profiles_class_9_scores, student_profiles.class_10_scores AS student_profiles_class_10_scores, student_profiles.see_gpa AS student_profiles_see_gpa, student_profiles.marksheet_urls AS student_profiles_marksheet_urls, student_profiles.notes AS student_profiles_notes, student_profiles.profile_completion_pct AS student_profiles_profile_completion_pct, student_profiles.created_at AS student_profiles_created_at, student_profiles.updated_at AS student_profiles_updated_at 
+FROM student_profiles 
+WHERE student_profiles.user_id IN ($1::UUID)
+2026-05-08 15:32:10,252 INFO sqlalchemy.engine.Engine [cached since 28.26s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:32:10,255 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-05-08 15:32:10,356 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:49691 - "GET /api/capsule/compulsory_science/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64236 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 15:32:14,145 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:49382 - "GET /api/capsule/compulsory_science HTTP/1.1" 200 OK
+2026-05-08 15:34:57,931 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:34:57,932 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.phone, users.full_name, users.hashed_password, users.role, users.is_active, users.onboarding_complete, users.referral_code, users.referred_by, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = $1::UUID
+2026-05-08 15:34:57,932 INFO sqlalchemy.engine.Engine [cached since 192.1s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:34:58,594 INFO sqlalchemy.engine.Engine SELECT affiliation_profiles.user_id AS affiliation_profiles_user_id, affiliation_profiles.id AS affiliation_profiles_id, affiliation_profiles.bank_name AS affiliation_profiles_bank_name, affiliation_profiles.account_number AS affiliation_profiles_account_number, affiliation_profiles.account_name AS affiliation_profiles_account_name, affiliation_profiles.qr_image_url AS affiliation_profiles_qr_image_url, affiliation_profiles.total_referrals AS affiliation_profiles_total_referrals, affiliation_profiles.total_earnings AS affiliation_profiles_total_earnings, affiliation_profiles.created_at AS affiliation_profiles_created_at 
+FROM affiliation_profiles 
+WHERE affiliation_profiles.user_id IN ($1::UUID)
+2026-05-08 15:34:58,595 INFO sqlalchemy.engine.Engine [cached since 197.3s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:34:58,901 INFO sqlalchemy.engine.Engine SELECT student_profiles.user_id AS student_profiles_user_id, student_profiles.id AS student_profiles_id, student_profiles.stream AS student_profiles_stream, student_profiles.school_name AS student_profiles_school_name, student_profiles.school_address AS student_profiles_school_address, student_profiles.class_8_scores AS student_profiles_class_8_scores, student_profiles.class_9_scores AS student_profiles_class_9_scores, student_profiles.class_10_scores AS student_profiles_class_10_scores, student_profiles.see_gpa AS student_profiles_see_gpa, student_profiles.marksheet_urls AS student_profiles_marksheet_urls, student_profiles.notes AS student_profiles_notes, student_profiles.profile_completion_pct AS student_profiles_profile_completion_pct, student_profiles.created_at AS student_profiles_created_at, student_profiles.updated_at AS student_profiles_updated_at 
+FROM student_profiles 
+WHERE student_profiles.user_id IN ($1::UUID)
+2026-05-08 15:34:58,902 INFO sqlalchemy.engine.Engine [cached since 196.9s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:35:00,102 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:35:00,103 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.phone, users.full_name, users.hashed_password, users.role, users.is_active, users.onboarding_complete, users.referral_code, users.referred_by, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = $1::UUID
+2026-05-08 15:35:00,103 INFO sqlalchemy.engine.Engine [cached since 194.3s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:35:00,106 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:35:00,106 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.phone, users.full_name, users.hashed_password, users.role, users.is_active, users.onboarding_complete, users.referral_code, users.referred_by, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = $1::UUID
+2026-05-08 15:35:00,107 INFO sqlalchemy.engine.Engine [cached since 194.3s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:35:00,660 INFO sqlalchemy.engine.Engine SELECT affiliation_profiles.user_id AS affiliation_profiles_user_id, affiliation_profiles.id AS affiliation_profiles_id, affiliation_profiles.bank_name AS affiliation_profiles_bank_name, affiliation_profiles.account_number AS affiliation_profiles_account_number, affiliation_profiles.account_name AS affiliation_profiles_account_name, affiliation_profiles.qr_image_url AS affiliation_profiles_qr_image_url, affiliation_profiles.total_referrals AS affiliation_profiles_total_referrals, affiliation_profiles.total_earnings AS affiliation_profiles_total_earnings, affiliation_profiles.created_at AS affiliation_profiles_created_at 
+FROM affiliation_profiles 
+WHERE affiliation_profiles.user_id IN ($1::UUID)
+2026-05-08 15:35:00,660 INFO sqlalchemy.engine.Engine [cached since 199.4s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:35:00,670 INFO sqlalchemy.engine.Engine SELECT affiliation_profiles.user_id AS affiliation_profiles_user_id, affiliation_profiles.id AS affiliation_profiles_id, affiliation_profiles.bank_name AS affiliation_profiles_bank_name, affiliation_profiles.account_number AS affiliation_profiles_account_number, affiliation_profiles.account_name AS affiliation_profiles_account_name, affiliation_profiles.qr_image_url AS affiliation_profiles_qr_image_url, affiliation_profiles.total_referrals AS affiliation_profiles_total_referrals, affiliation_profiles.total_earnings AS affiliation_profiles_total_earnings, affiliation_profiles.created_at AS affiliation_profiles_created_at 
+FROM affiliation_profiles 
+WHERE affiliation_profiles.user_id IN ($1::UUID)
+2026-05-08 15:35:00,670 INFO sqlalchemy.engine.Engine [cached since 199.4s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:35:00,949 INFO sqlalchemy.engine.Engine SELECT student_profiles.user_id AS student_profiles_user_id, student_profiles.id AS student_profiles_id, student_profiles.stream AS student_profiles_stream, student_profiles.school_name AS student_profiles_school_name, student_profiles.school_address AS student_profiles_school_address, student_profiles.class_8_scores AS student_profiles_class_8_scores, student_profiles.class_9_scores AS student_profiles_class_9_scores, student_profiles.class_10_scores AS student_profiles_class_10_scores, student_profiles.see_gpa AS student_profiles_see_gpa, student_profiles.marksheet_urls AS student_profiles_marksheet_urls, student_profiles.notes AS student_profiles_notes, student_profiles.profile_completion_pct AS student_profiles_profile_completion_pct, student_profiles.created_at AS student_profiles_created_at, student_profiles.updated_at AS student_profiles_updated_at 
+FROM student_profiles 
+WHERE student_profiles.user_id IN ($1::UUID)
+2026-05-08 15:35:00,949 INFO sqlalchemy.engine.Engine [cached since 199s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:35:00,952 INFO sqlalchemy.engine.Engine SELECT student_profiles.user_id AS student_profiles_user_id, student_profiles.id AS student_profiles_id, student_profiles.stream AS student_profiles_stream, student_profiles.school_name AS student_profiles_school_name, student_profiles.school_address AS student_profiles_school_address, student_profiles.class_8_scores AS student_profiles_class_8_scores, student_profiles.class_9_scores AS student_profiles_class_9_scores, student_profiles.class_10_scores AS student_profiles_class_10_scores, student_profiles.see_gpa AS student_profiles_see_gpa, student_profiles.marksheet_urls AS student_profiles_marksheet_urls, student_profiles.notes AS student_profiles_notes, student_profiles.profile_completion_pct AS student_profiles_profile_completion_pct, student_profiles.created_at AS student_profiles_created_at, student_profiles.updated_at AS student_profiles_updated_at 
+FROM student_profiles 
+WHERE student_profiles.user_id IN ($1::UUID)
+2026-05-08 15:35:00,952 INFO sqlalchemy.engine.Engine [cached since 199s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:35:02,854 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:59826 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 15:35:03,213 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:35:03,213 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.phone, users.full_name, users.hashed_password, users.role, users.is_active, users.onboarding_complete, users.referral_code, users.referred_by, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = $1::UUID
+2026-05-08 15:35:03,214 INFO sqlalchemy.engine.Engine [cached since 197.4s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:35:03,919 INFO sqlalchemy.engine.Engine SELECT affiliation_profiles.user_id AS affiliation_profiles_user_id, affiliation_profiles.id AS affiliation_profiles_id, affiliation_profiles.bank_name AS affiliation_profiles_bank_name, affiliation_profiles.account_number AS affiliation_profiles_account_number, affiliation_profiles.account_name AS affiliation_profiles_account_name, affiliation_profiles.qr_image_url AS affiliation_profiles_qr_image_url, affiliation_profiles.total_referrals AS affiliation_profiles_total_referrals, affiliation_profiles.total_earnings AS affiliation_profiles_total_earnings, affiliation_profiles.created_at AS affiliation_profiles_created_at 
+FROM affiliation_profiles 
+WHERE affiliation_profiles.user_id IN ($1::UUID)
+2026-05-08 15:35:03,920 INFO sqlalchemy.engine.Engine [cached since 202.6s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:35:04,227 INFO sqlalchemy.engine.Engine SELECT student_profiles.user_id AS student_profiles_user_id, student_profiles.id AS student_profiles_id, student_profiles.stream AS student_profiles_stream, student_profiles.school_name AS student_profiles_school_name, student_profiles.school_address AS student_profiles_school_address, student_profiles.class_8_scores AS student_profiles_class_8_scores, student_profiles.class_9_scores AS student_profiles_class_9_scores, student_profiles.class_10_scores AS student_profiles_class_10_scores, student_profiles.see_gpa AS student_profiles_see_gpa, student_profiles.marksheet_urls AS student_profiles_marksheet_urls, student_profiles.notes AS student_profiles_notes, student_profiles.profile_completion_pct AS student_profiles_profile_completion_pct, student_profiles.created_at AS student_profiles_created_at, student_profiles.updated_at AS student_profiles_updated_at 
+FROM student_profiles 
+WHERE student_profiles.user_id IN ($1::UUID)
+2026-05-08 15:35:04,227 INFO sqlalchemy.engine.Engine [cached since 202.2s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:35:05,373 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-05-08 15:35:05,560 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:62892 - "GET /api/capsule/compulsory_science HTTP/1.1" 200 OK
+2026-05-08 15:35:05,774 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:35:05,775 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.phone, users.full_name, users.hashed_password, users.role, users.is_active, users.onboarding_complete, users.referral_code, users.referred_by, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = $1::UUID
+2026-05-08 15:35:05,775 INFO sqlalchemy.engine.Engine [cached since 199.9s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+INFO:     127.0.0.1:62891 - "GET /api/capsule/compulsory_science/history HTTP/1.1" 200 OK
+2026-05-08 15:35:05,874 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:35:05,875 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.phone, users.full_name, users.hashed_password, users.role, users.is_active, users.onboarding_complete, users.referral_code, users.referred_by, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = $1::UUID
+2026-05-08 15:35:05,875 INFO sqlalchemy.engine.Engine [cached since 200s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:35:06,377 INFO sqlalchemy.engine.Engine SELECT affiliation_profiles.user_id AS affiliation_profiles_user_id, affiliation_profiles.id AS affiliation_profiles_id, affiliation_profiles.bank_name AS affiliation_profiles_bank_name, affiliation_profiles.account_number AS affiliation_profiles_account_number, affiliation_profiles.account_name AS affiliation_profiles_account_name, affiliation_profiles.qr_image_url AS affiliation_profiles_qr_image_url, affiliation_profiles.total_referrals AS affiliation_profiles_total_referrals, affiliation_profiles.total_earnings AS affiliation_profiles_total_earnings, affiliation_profiles.created_at AS affiliation_profiles_created_at 
+FROM affiliation_profiles 
+WHERE affiliation_profiles.user_id IN ($1::UUID)
+2026-05-08 15:35:06,377 INFO sqlalchemy.engine.Engine [cached since 205.1s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:35:06,479 INFO sqlalchemy.engine.Engine SELECT affiliation_profiles.user_id AS affiliation_profiles_user_id, affiliation_profiles.id AS affiliation_profiles_id, affiliation_profiles.bank_name AS affiliation_profiles_bank_name, affiliation_profiles.account_number AS affiliation_profiles_account_number, affiliation_profiles.account_name AS affiliation_profiles_account_name, affiliation_profiles.qr_image_url AS affiliation_profiles_qr_image_url, affiliation_profiles.total_referrals AS affiliation_profiles_total_referrals, affiliation_profiles.total_earnings AS affiliation_profiles_total_earnings, affiliation_profiles.created_at AS affiliation_profiles_created_at 
+FROM affiliation_profiles 
+WHERE affiliation_profiles.user_id IN ($1::UUID)
+2026-05-08 15:35:06,479 INFO sqlalchemy.engine.Engine [cached since 205.2s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:35:06,707 INFO sqlalchemy.engine.Engine SELECT student_profiles.user_id AS student_profiles_user_id, student_profiles.id AS student_profiles_id, student_profiles.stream AS student_profiles_stream, student_profiles.school_name AS student_profiles_school_name, student_profiles.school_address AS student_profiles_school_address, student_profiles.class_8_scores AS student_profiles_class_8_scores, student_profiles.class_9_scores AS student_profiles_class_9_scores, student_profiles.class_10_scores AS student_profiles_class_10_scores, student_profiles.see_gpa AS student_profiles_see_gpa, student_profiles.marksheet_urls AS student_profiles_marksheet_urls, student_profiles.notes AS student_profiles_notes, student_profiles.profile_completion_pct AS student_profiles_profile_completion_pct, student_profiles.created_at AS student_profiles_created_at, student_profiles.updated_at AS student_profiles_updated_at 
+FROM student_profiles 
+WHERE student_profiles.user_id IN ($1::UUID)
+2026-05-08 15:35:06,708 INFO sqlalchemy.engine.Engine [cached since 204.7s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:35:06,787 INFO sqlalchemy.engine.Engine SELECT student_profiles.user_id AS student_profiles_user_id, student_profiles.id AS student_profiles_id, student_profiles.stream AS student_profiles_stream, student_profiles.school_name AS student_profiles_school_name, student_profiles.school_address AS student_profiles_school_address, student_profiles.class_8_scores AS student_profiles_class_8_scores, student_profiles.class_9_scores AS student_profiles_class_9_scores, student_profiles.class_10_scores AS student_profiles_class_10_scores, student_profiles.see_gpa AS student_profiles_see_gpa, student_profiles.marksheet_urls AS student_profiles_marksheet_urls, student_profiles.notes AS student_profiles_notes, student_profiles.profile_completion_pct AS student_profiles_profile_completion_pct, student_profiles.created_at AS student_profiles_created_at, student_profiles.updated_at AS student_profiles_updated_at 
+FROM student_profiles 
+WHERE student_profiles.user_id IN ($1::UUID)
+2026-05-08 15:35:06,787 INFO sqlalchemy.engine.Engine [cached since 204.8s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 15:35:08,788 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:50133 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 15:35:10,885 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:62992 - "GET /api/capsule/compulsory_science/history HTTP/1.1" 200 OK
+2026-05-08 15:35:11,192 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:64348 - "GET /api/capsule/compulsory_science HTTP/1.1" 200 OK
