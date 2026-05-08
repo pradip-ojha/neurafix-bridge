@@ -93,7 +93,12 @@
       "Bash(xargs ls -1)",
       "Bash(grep -E \"\\\\.py$\")",
       "Bash(xargs grep -l \"zustand\\\\|useState\\\\|useContext\\\\|redux\")",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(xargs grep -l \"student_level\")",
+      "Bash(grep -E \"\\\\.\\(py\\)$\")",
+      "Bash(findstr \"LISTEN\")",
+      "Bash(findstr \":8001\\\\|:5173\")",
+      "PowerShell(Get-CimInstance *)"
     ]
   }
 }

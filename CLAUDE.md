@@ -861,90 +861,6 @@ Services communicate using `X-Internal-Secret` header. Value = `MAIN_BACKEND_INT
 
 ---
 
-## Phase 8 — Consultant Agent
-
-**Services:** `ai_service`, `main_backend`, `frontend`
-**Goal:** Advanced consultant with web search, timeline management, career guidance, and guardrails.
-
-### ai_service: Context Classifier for Consultant (`personalization/context_classifier.py`)
-Before building consultant context, run a fast gpt-4o-mini call on the student's message:
-```python
-async def classify_consultant_query(message: str) -> dict
-# Returns: {"query_type": "career_college" | "learning_performance" | "general"}
-```
-- `career_college`: asking about which college, stream choice, future career, admission criteria
-- `learning_performance`: asking about study methods, subject weakness, how to improve, performance review
-- `general`: motivation, anything else → same as learning_performance
-
-
-**Updated `build_consultant_context` signature:**
-```python
-async def build_consultant_context(db, user_id, message: str) -> str
-```
-Takes the student's message, runs classifier, then assembles context based on query type.
-
-
-**Context for `career_college` queries (lean — don't waste tokens):**
-```
-Overall Student Summary
-Preparation Timeline
-```
-Overall summary contains stream, school, and goal info — sufficient for career/college guidance. Weekly summaries, practice data, and session memories add no value here.
-
-
-**Context for `learning_performance` and `general` queries (full):**
-```
-Overall Student Summary
-All-Subject All-Time Summaries
-All-Subject Weekly Summaries
-Today's Practice Sessions (all subjects)
-Today's Tutor Session Memories
-Preparation Timeline
-```
-
-
-### ai_service: `agents/consultant/agent.py` (OpenAI Agents SDK)
-**Tools:**
-1. `search_web(query)` — web search for college/career research
-2. `update_timeline(content)` — writes directly to `consultant_timelines`; called immediately on explicit student request
-3. `get_subject_progress(subject)` — reads all_time + weekly summaries; returns formatted string
-
-
-
-
-**System prompt key elements:**
-- Role: consultant + advisor + motivator + career guide
-- Context from `build_consultant_context(db, user_id, message)` — dynamic based on query type
-- Guardrails: never use "you must/should/have to"; always frame as "one option is...", "many students find..."
-- Stream neutrality: no stream is inherently hard; goals > difficulty when advising
-- Web search instruction: use for any college-specific or career-specific questions
-- Timeline update instruction: call `update_timeline` immediately if student explicitly requests plan change
-
-
-### ai_service: `api/consultant.py`
-```
-POST /api/consultant/chat                     JWT, {message, session_id?} → SSE stream
-GET  /api/consultant/sessions                 JWT
-GET  /api/consultant/sessions/{id}/messages   JWT
-GET  /api/consultant/timeline                 JWT
-```
-
-### main_backend proxy
-```
-POST /api/consultant/chat                   → ai_service SSE passthrough
-GET  /api/consultant/sessions               → ai_service
-GET  /api/consultant/sessions/{id}/messages → ai_service
-GET  /api/consultant/timeline               → ai_service
-```
-
-
-### Frontend: Consultant page
-- Full-page chat (no subject scope)
-- Left sidebar: past sessions by date
-- Collapsible "Preparation Plan" panel below input — shows ConsultantTimeline content; auto-refreshes on SSE "done" event
-
-
----
 ## Phase 9 — Daily Capsule + Worker Jobs (End-of-Day Processing)
 
 
@@ -1136,7 +1052,7 @@ On first tutor chat for a subject with no existing level: async assess using SEE
 | 7 | Practice system (sessions, scoring, summaries, practice UI) | [x] Complete 2026-05-08 |
 | 8 | Consultant agent (web search, timeline management, consultant UI) | [x] Complete 2026-05-08 |
 | 9 | Daily capsule + worker end-of-day processing | [x] Complete 2026-05-08 |
-| 10 | Level-based notes + notes UI | [ ] Pending |
+| 10 | Level-based notes + notes UI | [x] Complete 2026-05-08 (notes delivered by level silently; level never shown to students) |
 | 11 | Mock test system + leaderboard | [ ] Pending |
 | 12 | Community + referral agent + progress tracking | [ ] Pending |
 | 13 | Subscription gating + affiliation interface + syllabus pages | [ ] Pending |

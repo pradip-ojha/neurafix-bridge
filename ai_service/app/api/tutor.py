@@ -8,6 +8,7 @@ GET  /api/tutor/history                      → session history filtered by sub
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import date as date_type
 
@@ -19,8 +20,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.auth import get_current_user_id
-from app.database import get_db
+from app.database import AsyncSessionLocal, get_db
 from app.models.chat_session import ChatSession, ChatMessage
+from app.models.personalization import StudentLevel
 from app.personalization import context_builder
 from app.schemas.chat import ChatRequest, MessageOut, SessionOut
 from app.sessions import manager as session_manager
@@ -52,6 +54,23 @@ async def _get_student_stream(user_id: str) -> str:
     return "both"
 
 
+async def _maybe_assign_level(user_id: str, subject: str) -> None:
+    """Fire-and-forget: assign level if not yet set for this student+subject."""
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(StudentLevel).where(
+                    StudentLevel.user_id == user_id,
+                    StudentLevel.subject == subject,
+                )
+            )
+            if result.scalar_one_or_none() is None:
+                from app.agents.personalization.agent import assign_level
+                await assign_level(db, user_id, subject)
+    except Exception:
+        logger.exception("Background level assignment failed: user=%s subject=%s", user_id, subject)
+
+
 @router.post("/chat")
 async def chat(
     req: ChatRequest,
@@ -67,6 +86,8 @@ async def chat(
             status_code=400,
             detail=f"Subject '{req.subject}' is not available for stream '{student_stream}'.",
         )
+
+    asyncio.create_task(_maybe_assign_level(user_id, req.subject))
 
     if req.session_id:
         session = await db.get(ChatSession, req.session_id)

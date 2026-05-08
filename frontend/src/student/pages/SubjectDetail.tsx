@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import TutorChat from '../components/TutorChat'
 import PracticeTab from '../components/PracticeTab'
 import CapsuleTab from '../components/CapsuleTab'
+import NotesTab from '../components/NotesTab'
 
 type Tab = 'tutor' | 'notes' | 'capsule' | 'practice'
 
@@ -72,7 +73,7 @@ export default function SubjectDetail() {
       {/* Tab content */}
       <div className="flex-1 overflow-hidden">
         {activeTab === 'tutor' && <TutorChat subject={subject} />}
-        {activeTab === 'notes' && <Placeholder label="Notes — Coming in Phase 10" />}
+        {activeTab === 'notes' && <NotesTab subject={subject} />}
         {activeTab === 'capsule' && <CapsuleTab subject={subject} />}
         {activeTab === 'practice' && <PracticeTab subject={subject} />}
       </div>

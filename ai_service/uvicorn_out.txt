@@ -235,3 +235,360 @@ WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARC
 2026-05-08 15:35:10,882 INFO sqlalchemy.engine.Engine ROLLBACK
 INFO:     127.0.0.1:62996 - "GET /api/capsule/compulsory_science/history HTTP/1.1" 200 OK
 INFO:     127.0.0.1:62995 - "GET /api/capsule/compulsory_science HTTP/1.1" 200 OK
+2026-05-08 15:56:33,627 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:56:33,628 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 15:56:33,628 INFO sqlalchemy.engine.Engine [cached since 1478s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_science')
+2026-05-08 15:56:36,803 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:50626 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 15:59:01,286 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:59:01,286 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 15:59:01,287 INFO sqlalchemy.engine.Engine [cached since 1626s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_english')
+2026-05-08 15:59:04,358 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:49738 - "GET /api/tutor/sessions?subject=compulsory_english HTTP/1.1" 200 OK
+2026-05-08 15:59:11,116 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 15:59:11,116 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 15:59:11,117 INFO sqlalchemy.engine.Engine [cached since 1635s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_english')
+2026-05-08 15:59:14,189 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:53956 - "GET /api/tutor/sessions?subject=compulsory_english HTTP/1.1" 200 OK
+2026-05-08 16:08:27,610 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 16:08:27,610 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 16:08:27,610 INFO sqlalchemy.engine.Engine [cached since 2192s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_science')
+2026-05-08 16:08:30,726 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:61738 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 16:08:31,543 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 16:08:31,545 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 16:08:31,545 INFO sqlalchemy.engine.Engine [generated in 0.00021s] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'consultant')
+2026-05-08 16:08:34,665 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 16:08:34,666 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 16:08:34,666 INFO sqlalchemy.engine.Engine [cached since 2199s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_science')
+2026-05-08 16:08:34,667 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:63033 - "GET /api/consultant/sessions HTTP/1.1" 200 OK
+2026-05-08 16:08:35,247 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:61324 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 16:08:37,585 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 16:08:37,586 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR ORDER BY daily_capsules.capsule_date DESC
+2026-05-08 16:08:37,586 INFO sqlalchemy.engine.Engine [cached since 2193s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science')
+2026-05-08 16:08:38,200 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 16:08:38,200 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR AND daily_capsules.capsule_date = $3::DATE
+2026-05-08 16:08:38,200 INFO sqlalchemy.engine.Engine [cached since 2789s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science', datetime.date(2026, 5, 8))
+2026-05-08 16:08:38,507 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:59812 - "GET /api/capsule/compulsory_science/history HTTP/1.1" 200 OK
+2026-05-08 16:08:39,123 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR ORDER BY daily_capsules.capsule_date DESC 
+ LIMIT $3::INTEGER
+2026-05-08 16:08:39,123 INFO sqlalchemy.engine.Engine [cached since 2191s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science', 1)
+2026-05-08 16:08:39,737 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:59814 - "GET /api/capsule/compulsory_science HTTP/1.1" 200 OK
+2026-05-08 16:08:41,678 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 16:08:41,678 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 16:08:41,678 INFO sqlalchemy.engine.Engine [cached since 10.13s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'consultant')
+2026-05-08 16:08:42,201 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 16:08:42,202 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 16:08:42,202 INFO sqlalchemy.engine.Engine [cached since 2206s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_science')
+2026-05-08 16:08:42,910 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 16:08:42,911 INFO sqlalchemy.engine.Engine SELECT consultant_timelines.id, consultant_timelines.user_id, consultant_timelines.content, consultant_timelines.last_updated, consultant_timelines.version 
+FROM consultant_timelines 
+WHERE consultant_timelines.user_id = $1::VARCHAR
+2026-05-08 16:08:42,911 INFO sqlalchemy.engine.Engine [cached since 2811s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 16:08:43,116 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:61171 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 16:08:43,833 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:61173 - "GET /api/consultant/timeline HTTP/1.1" 200 OK
+2026-05-08 16:08:44,700 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:59816 - "GET /api/consultant/sessions HTTP/1.1" 200 OK
+2026-05-08 16:08:48,133 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 16:08:48,134 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR ORDER BY daily_capsules.capsule_date DESC
+2026-05-08 16:08:48,134 INFO sqlalchemy.engine.Engine [cached since 2204s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science')
+2026-05-08 16:08:48,135 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 16:08:48,135 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR AND daily_capsules.capsule_date = $3::DATE
+2026-05-08 16:08:48,136 INFO sqlalchemy.engine.Engine [cached since 2799s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science', datetime.date(2026, 5, 8))
+2026-05-08 16:08:49,362 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-05-08 16:08:49,364 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR ORDER BY daily_capsules.capsule_date DESC 
+ LIMIT $3::INTEGER
+2026-05-08 16:08:49,365 INFO sqlalchemy.engine.Engine [cached since 2201s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science', 1)
+2026-05-08 16:08:49,671 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 16:08:49,673 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 16:08:49,674 INFO sqlalchemy.engine.Engine [cached since 2214s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_science')
+2026-05-08 16:08:49,985 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-05-08 16:08:51,102 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 16:08:51,102 INFO sqlalchemy.engine.Engine SELECT consultant_timelines.id, consultant_timelines.user_id, consultant_timelines.content, consultant_timelines.last_updated, consultant_timelines.version 
+FROM consultant_timelines 
+WHERE consultant_timelines.user_id = $1::VARCHAR
+2026-05-08 16:08:51,102 INFO sqlalchemy.engine.Engine [cached since 2819s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 16:08:52,331 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-05-08 16:08:52,700 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:58892 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 16:09:11,752 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 16:09:11,753 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 16:09:11,753 INFO sqlalchemy.engine.Engine [cached since 2236s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_science')
+2026-05-08 16:09:14,530 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:65062 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 16:09:20,993 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 16:09:20,993 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 16:09:20,993 INFO sqlalchemy.engine.Engine [cached since 2245s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_science')
+2026-05-08 16:09:23,972 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:53683 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 16:10:06,479 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 16:10:06,479 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 16:10:06,479 INFO sqlalchemy.engine.Engine [cached since 2291s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_science')
+2026-05-08 16:10:09,232 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:61705 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 16:10:13,224 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 16:10:13,225 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 16:10:13,225 INFO sqlalchemy.engine.Engine [cached since 2298s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_science')
+2026-05-08 16:10:16,094 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:57942 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 17:37:10,659 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:37:10,660 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 17:37:10,660 INFO sqlalchemy.engine.Engine [cached since 7515s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_english')
+2026-05-08 17:37:14,142 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:60514 - "GET /api/tutor/sessions?subject=compulsory_english HTTP/1.1" 200 OK
+2026-05-08 17:37:14,663 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:37:14,664 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 17:37:14,664 INFO sqlalchemy.engine.Engine [cached since 7519s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_science')
+2026-05-08 17:37:17,725 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:50679 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 17:37:20,869 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:37:20,869 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 17:37:20,870 INFO sqlalchemy.engine.Engine [cached since 7525s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_english')
+2026-05-08 17:37:24,076 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:60631 - "GET /api/tutor/sessions?subject=compulsory_english HTTP/1.1" 200 OK
+2026-05-08 17:37:24,385 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:37:24,386 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 17:37:24,386 INFO sqlalchemy.engine.Engine [cached since 7529s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_science')
+2026-05-08 17:37:26,595 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:37:26,602 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id AS chat_sessions_id, chat_sessions.user_id AS chat_sessions_user_id, chat_sessions.agent_type AS chat_sessions_agent_type, chat_sessions.subject AS chat_sessions_subject, chat_sessions.session_date AS chat_sessions_session_date, chat_sessions.title AS chat_sessions_title, chat_sessions.created_at AS chat_sessions_created_at 
+FROM chat_sessions 
+WHERE chat_sessions.id = $1::VARCHAR
+2026-05-08 17:37:26,603 INFO sqlalchemy.engine.Engine [generated in 0.00074s] ('f75f7b21-9dce-42f5-9089-294cd557e8d3',)
+2026-05-08 17:37:27,865 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:56081 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 17:37:29,709 INFO sqlalchemy.engine.Engine SELECT chat_messages.id, chat_messages.session_id, chat_messages.role, chat_messages.content, chat_messages.metadata, chat_messages.created_at 
+FROM chat_messages 
+WHERE chat_messages.session_id = $1::VARCHAR ORDER BY chat_messages.created_at ASC
+2026-05-08 17:37:29,709 INFO sqlalchemy.engine.Engine [generated in 0.00032s] ('f75f7b21-9dce-42f5-9089-294cd557e8d3',)
+2026-05-08 17:37:31,143 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:65333 - "GET /api/tutor/sessions/f75f7b21-9dce-42f5-9089-294cd557e8d3/messages HTTP/1.1" 200 OK
+2026-05-08 17:39:49,172 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:39:49,174 INFO sqlalchemy.engine.Engine SELECT practice_session_summaries.id, practice_session_summaries.user_id, practice_session_summaries.subject, practice_session_summaries.chapter, practice_session_summaries.session_date, practice_session_summaries.total_questions, practice_session_summaries.correct_count, practice_session_summaries.incorrect_count, practice_session_summaries.topic_breakdown, practice_session_summaries.summary_content, practice_session_summaries.created_at 
+FROM practice_session_summaries 
+WHERE practice_session_summaries.user_id = $1::VARCHAR AND practice_session_summaries.subject = $2::VARCHAR AND practice_session_summaries.chapter = $3::VARCHAR ORDER BY practice_session_summaries.created_at DESC
+2026-05-08 17:39:49,175 INFO sqlalchemy.engine.Engine [generated in 0.00034s] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_math', 'sets')
+2026-05-08 17:39:50,299 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:55061 - "GET /api/practice/history?subject=compulsory_math&chapter=sets HTTP/1.1" 200 OK
+2026-05-08 17:41:39,967 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:41:39,968 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 17:41:39,969 INFO sqlalchemy.engine.Engine [cached since 7784s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_science')
+2026-05-08 17:41:40,585 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:59084 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 17:41:45,907 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:41:45,908 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 17:41:45,908 INFO sqlalchemy.engine.Engine [cached since 7790s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_science')
+2026-05-08 17:41:46,521 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:49889 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 17:42:16,380 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:42:16,381 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR AND daily_capsules.capsule_date = $3::DATE
+2026-05-08 17:42:16,382 INFO sqlalchemy.engine.Engine [cached since 8407s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science', datetime.date(2026, 5, 8))
+2026-05-08 17:42:16,429 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:42:16,430 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR ORDER BY daily_capsules.capsule_date DESC
+2026-05-08 17:42:16,430 INFO sqlalchemy.engine.Engine [cached since 7812s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science')
+2026-05-08 17:42:17,305 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR ORDER BY daily_capsules.capsule_date DESC 
+ LIMIT $3::INTEGER
+2026-05-08 17:42:17,305 INFO sqlalchemy.engine.Engine [cached since 7809s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science', 1)
+2026-05-08 17:42:17,357 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:51645 - "GET /api/capsule/compulsory_science/history HTTP/1.1" 200 OK
+2026-05-08 17:42:17,928 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:51646 - "GET /api/capsule/compulsory_science HTTP/1.1" 200 OK
+2026-05-08 17:42:21,249 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:42:21,250 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR ORDER BY daily_capsules.capsule_date DESC
+2026-05-08 17:42:21,250 INFO sqlalchemy.engine.Engine [cached since 7817s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science')
+2026-05-08 17:42:22,667 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:42:22,667 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR AND daily_capsules.capsule_date = $3::DATE
+2026-05-08 17:42:22,668 INFO sqlalchemy.engine.Engine [cached since 8413s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science', datetime.date(2026, 5, 8))
+2026-05-08 17:42:23,305 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:58858 - "GET /api/capsule/compulsory_science/history HTTP/1.1" 200 OK
+2026-05-08 17:42:24,510 INFO sqlalchemy.engine.Engine SELECT daily_capsules.id, daily_capsules.user_id, daily_capsules.subject, daily_capsules.capsule_date, daily_capsules.content, daily_capsules.created_at 
+FROM daily_capsules 
+WHERE daily_capsules.user_id = $1::VARCHAR AND daily_capsules.subject = $2::VARCHAR ORDER BY daily_capsules.capsule_date DESC 
+ LIMIT $3::INTEGER
+2026-05-08 17:42:24,511 INFO sqlalchemy.engine.Engine [cached since 7816s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science', 1)
+2026-05-08 17:42:25,125 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:50140 - "GET /api/capsule/compulsory_science HTTP/1.1" 200 OK
+2026-05-08 17:42:26,660 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:42:26,661 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 17:42:26,661 INFO sqlalchemy.engine.Engine [cached since 5635s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'consultant')
+2026-05-08 17:42:26,662 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:42:26,662 INFO sqlalchemy.engine.Engine SELECT consultant_timelines.id, consultant_timelines.user_id, consultant_timelines.content, consultant_timelines.last_updated, consultant_timelines.version 
+FROM consultant_timelines 
+WHERE consultant_timelines.user_id = $1::VARCHAR
+2026-05-08 17:42:26,662 INFO sqlalchemy.engine.Engine [cached since 8435s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 17:42:28,505 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:62587 - "GET /api/consultant/sessions HTTP/1.1" 200 OK
+2026-05-08 17:42:28,825 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:62588 - "GET /api/consultant/timeline HTTP/1.1" 200 OK
+2026-05-08 17:42:33,316 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:42:33,317 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 17:42:33,317 INFO sqlalchemy.engine.Engine [cached since 5642s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'consultant')
+2026-05-08 17:42:33,332 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:42:33,332 INFO sqlalchemy.engine.Engine SELECT consultant_timelines.id, consultant_timelines.user_id, consultant_timelines.content, consultant_timelines.last_updated, consultant_timelines.version 
+FROM consultant_timelines 
+WHERE consultant_timelines.user_id = $1::VARCHAR
+2026-05-08 17:42:33,332 INFO sqlalchemy.engine.Engine [cached since 8441s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8',)
+2026-05-08 17:42:34,347 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:59359 - "GET /api/consultant/timeline HTTP/1.1" 200 OK
+2026-05-08 17:42:35,160 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:59358 - "GET /api/consultant/sessions HTTP/1.1" 200 OK
+2026-05-08 17:44:28,617 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:44:28,618 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 17:44:28,618 INFO sqlalchemy.engine.Engine [cached since 7953s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_science')
+2026-05-08 17:44:29,215 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:58763 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 17:44:33,123 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:44:33,124 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 17:44:33,124 INFO sqlalchemy.engine.Engine [cached since 7957s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_science')
+2026-05-08 17:44:33,738 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:62567 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 17:53:32,047 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:53:32,047 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 17:53:32,047 INFO sqlalchemy.engine.Engine [cached since 8496s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_science')
+2026-05-08 17:53:35,836 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:55793 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 17:53:41,230 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:53:41,231 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 17:53:41,231 INFO sqlalchemy.engine.Engine [cached since 8506s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_math')
+2026-05-08 17:53:43,106 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:53:43,106 INFO sqlalchemy.engine.Engine SELECT practice_session_summaries.id, practice_session_summaries.user_id, practice_session_summaries.subject, practice_session_summaries.chapter, practice_session_summaries.session_date, practice_session_summaries.total_questions, practice_session_summaries.correct_count, practice_session_summaries.incorrect_count, practice_session_summaries.topic_breakdown, practice_session_summaries.summary_content, practice_session_summaries.created_at 
+FROM practice_session_summaries 
+WHERE practice_session_summaries.user_id = $1::VARCHAR AND practice_session_summaries.subject = $2::VARCHAR AND practice_session_summaries.chapter = $3::VARCHAR ORDER BY practice_session_summaries.created_at DESC
+2026-05-08 17:53:43,106 INFO sqlalchemy.engine.Engine [cached since 833.9s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_math', 'sets')
+2026-05-08 17:53:44,334 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-05-08 17:53:44,335 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:63699 - "GET /api/practice/history?subject=compulsory_math&chapter=sets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54608 - "GET /api/tutor/sessions?subject=compulsory_math HTTP/1.1" 200 OK
+2026-05-08 17:53:50,887 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:53:50,888 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 17:53:50,888 INFO sqlalchemy.engine.Engine [cached since 8515s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_math')
+2026-05-08 17:53:52,424 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:53:52,424 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 17:53:52,424 INFO sqlalchemy.engine.Engine [cached since 8517s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_science')
+2026-05-08 17:53:53,960 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:62201 - "GET /api/tutor/sessions?subject=compulsory_math HTTP/1.1" 200 OK
+2026-05-08 17:53:55,496 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:62102 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 17:54:13,312 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:54:13,314 INFO sqlalchemy.engine.Engine SELECT student_levels.id, student_levels.user_id, student_levels.subject, student_levels.level, student_levels.assigned_at 
+FROM student_levels 
+WHERE student_levels.user_id = $1::VARCHAR AND student_levels.subject = $2::VARCHAR
+2026-05-08 17:54:13,314 INFO sqlalchemy.engine.Engine [generated in 0.00026s] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_math')
+2026-05-08 17:54:14,542 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:58118 - "GET /api/internal/student-level/4944b0e2-38e3-4ead-92b6-bc62308dfad8?subject=compulsory_math HTTP/1.1" 200 OK
+2026-05-08 17:54:19,866 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:54:19,867 INFO sqlalchemy.engine.Engine SELECT student_levels.id, student_levels.user_id, student_levels.subject, student_levels.level, student_levels.assigned_at 
+FROM student_levels 
+WHERE student_levels.user_id = $1::VARCHAR AND student_levels.subject = $2::VARCHAR
+2026-05-08 17:54:19,868 INFO sqlalchemy.engine.Engine [cached since 6.554s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_math')
+2026-05-08 17:54:20,789 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:60269 - "GET /api/internal/student-level/4944b0e2-38e3-4ead-92b6-bc62308dfad8?subject=compulsory_math HTTP/1.1" 200 OK
+2026-05-08 17:54:36,762 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:54:36,762 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 17:54:36,762 INFO sqlalchemy.engine.Engine [cached since 8561s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_science')
+2026-05-08 17:54:37,377 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:63108 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 17:54:41,170 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:54:41,172 INFO sqlalchemy.engine.Engine SELECT chat_sessions.id, chat_sessions.user_id, chat_sessions.agent_type, chat_sessions.subject, chat_sessions.session_date, chat_sessions.title, chat_sessions.created_at 
+FROM chat_sessions 
+WHERE chat_sessions.user_id = $1::VARCHAR AND chat_sessions.agent_type = $2::agent_type_enum AND chat_sessions.subject = $3::VARCHAR ORDER BY chat_sessions.session_date DESC, chat_sessions.created_at DESC
+2026-05-08 17:54:41,172 INFO sqlalchemy.engine.Engine [cached since 8565s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'tutor', 'compulsory_science')
+2026-05-08 17:54:41,780 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:63115 - "GET /api/tutor/sessions?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 17:56:06,975 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:56:06,976 INFO sqlalchemy.engine.Engine SELECT student_levels.id, student_levels.user_id, student_levels.subject, student_levels.level, student_levels.assigned_at 
+FROM student_levels 
+WHERE student_levels.user_id = $1::VARCHAR AND student_levels.subject = $2::VARCHAR
+2026-05-08 17:56:06,976 INFO sqlalchemy.engine.Engine [cached since 113.7s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science')
+2026-05-08 17:56:07,897 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:61832 - "GET /api/internal/student-level/4944b0e2-38e3-4ead-92b6-bc62308dfad8?subject=compulsory_science HTTP/1.1" 200 OK
+2026-05-08 17:56:12,575 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-05-08 17:56:12,576 INFO sqlalchemy.engine.Engine SELECT student_levels.id, student_levels.user_id, student_levels.subject, student_levels.level, student_levels.assigned_at 
+FROM student_levels 
+WHERE student_levels.user_id = $1::VARCHAR AND student_levels.subject = $2::VARCHAR
+2026-05-08 17:56:12,576 INFO sqlalchemy.engine.Engine [cached since 119.3s ago] ('4944b0e2-38e3-4ead-92b6-bc62308dfad8', 'compulsory_science')
+2026-05-08 17:56:13,325 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:62966 - "GET /api/internal/student-level/4944b0e2-38e3-4ead-92b6-bc62308dfad8?subject=compulsory_science HTTP/1.1" 200 OK
