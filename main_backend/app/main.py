@@ -1,10 +1,18 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import settings
 from app.core import redis_client
+from app.core.exceptions import (
+    AppError,
+    app_error_handler,
+    http_exception_handler,
+    validation_error_handler,
+)
 from app.api.health import router as health_router
 from app.api.auth import router as auth_router
 from app.api.onboarding import router as onboarding_router
@@ -51,6 +59,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_exception_handler(AppError, app_error_handler)
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_error_handler)
 
 app.include_router(health_router)
 app.include_router(auth_router)

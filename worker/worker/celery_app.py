@@ -24,6 +24,8 @@ app.conf.update(
     enable_utc=True,
     broker_use_ssl={"ssl_cert_reqs": "CERT_NONE"},
     redis_backend_use_ssl={"ssl_cert_reqs": "CERT_NONE"},
+    task_acks_late=True,
+    task_reject_on_worker_lost=True,
     # Beat schedule — all times in UTC
     # Nepal Time (NPT) = UTC + 5:45
     beat_schedule={

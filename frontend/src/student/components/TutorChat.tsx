@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, KeyboardEvent } from 'react'
-import { Send, Plus, ChevronDown } from 'lucide-react'
+import { Send, Plus, ChevronDown, PanelLeftOpen, PanelLeftClose } from 'lucide-react'
 import { SUBJECT_CHAPTERS, Chapter } from '../constants/subjectStructure'
+import Skeleton from '../../components/Skeleton'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -46,12 +47,15 @@ export default function TutorChat({ subject }: Props) {
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingText, setStreamingText] = useState('')
   const [loadingMessages, setLoadingMessages] = useState(false)
+  const [loadingSessions, setLoadingSessions] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const chapters: Chapter[] = SUBJECT_CHAPTERS[subject] || []
 
   const fetchSessions = async () => {
+    setLoadingSessions(true)
     try {
       const res = await fetch(`/api/tutor/sessions?subject=${subject}`, {
         headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
@@ -60,7 +64,9 @@ export default function TutorChat({ subject }: Props) {
         const data = await res.json()
         setSessions(data)
       }
-    } catch {}
+    } catch {} finally {
+      setLoadingSessions(false)
+    }
   }
 
   useEffect(() => {
@@ -200,12 +206,29 @@ export default function TutorChat({ subject }: Props) {
   const sessionGroups = groupSessionsByDate(sessions)
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full relative">
+      {/* Mobile backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/30 z-10 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Session history sidebar */}
-      <div className="w-64 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
-        <div className="p-3 border-b border-gray-100">
+      <div
+        className={`
+          flex-shrink-0 bg-white border-r border-gray-200 flex flex-col overflow-hidden
+          transition-all duration-200
+          md:relative md:translate-x-0
+          ${sidebarOpen
+            ? 'w-64 fixed md:relative inset-y-0 left-0 z-20 md:z-auto translate-x-0'
+            : 'w-0 md:w-0'}
+        `}
+      >
+        <div className="w-64 p-3 border-b border-gray-100">
           <button
-            onClick={startNewChat}
+            onClick={() => { startNewChat(); if (window.innerWidth < 768) setSidebarOpen(false) }}
             className="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
           >
             <Plus size={16} />
@@ -213,8 +236,14 @@ export default function TutorChat({ subject }: Props) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto py-2">
-          {sessions.length === 0 ? (
+        <div className="w-64 flex-1 overflow-y-auto py-2">
+          {loadingSessions ? (
+            <div className="px-3 py-2 space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-8 w-full" variant="block" />
+              ))}
+            </div>
+          ) : sessions.length === 0 ? (
             <p className="text-xs text-gray-400 px-4 py-3">No sessions yet. Start chatting!</p>
           ) : (
             Object.entries(sessionGroups).map(([date, dateSessions]) => (
@@ -223,7 +252,7 @@ export default function TutorChat({ subject }: Props) {
                 {dateSessions.map((s) => (
                   <button
                     key={s.id}
-                    onClick={() => loadSession(s.id)}
+                    onClick={() => { loadSession(s.id); if (window.innerWidth < 768) setSidebarOpen(false) }}
                     className={`w-full text-left px-4 py-2 text-sm truncate transition-colors ${
                       s.id === activeSessionId
                         ? 'bg-indigo-50 text-indigo-700 font-medium'
@@ -242,7 +271,14 @@ export default function TutorChat({ subject }: Props) {
       {/* Main chat area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Chapter selector */}
-        <div className="bg-white border-b border-gray-100 px-4 py-2 flex items-center gap-2 flex-shrink-0">
+        <div className="bg-white border-b border-gray-100 px-3 py-2 flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 flex-shrink-0"
+            title={sidebarOpen ? 'Hide history' : 'Show history'}
+          >
+            {sidebarOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+          </button>
           <span className="text-xs text-gray-500 whitespace-nowrap">Chapter:</span>
           <div className="relative">
             <select

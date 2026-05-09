@@ -17,12 +17,15 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import redis_client
 from app.config import settings
 from app.models.personalization import SessionMemory
 from app.personalization import summary_manager
 from app.personalization.context_classifier import classify_tutor_query, classify_consultant_query
 from app.rag import retriever
 from app.subject_structure.loader import get_structure
+
+_PROFILE_TTL = 300  # 5 min
 
 logger = logging.getLogger(__name__)
 
@@ -41,15 +44,39 @@ _NO_SUMMARY = "[No summary yet]"
 # ---------------------------------------------------------------------------
 
 async def _fetch_profile(user_id: str) -> dict:
+    cache_key = f"profile:{user_id}"
+
+    # Try Redis cache first
+    try:
+        cached = await redis_client.get_json(cache_key)
+        if cached is not None:
+            return cached
+    except Exception:
+        pass
+
     url = f"{settings.MAIN_BACKEND_URL}/api/internal/profile/{user_id}"
     headers = {"X-Internal-Secret": settings.MAIN_BACKEND_INTERNAL_SECRET}
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             resp = await client.get(url, headers=headers)
             if resp.status_code == 200:
-                return resp.json()
+                data = resp.json()
+                try:
+                    await redis_client.set_json(cache_key, data, ex=_PROFILE_TTL)
+                except Exception:
+                    pass
+                return data
     except Exception as exc:
         logger.warning("Failed to fetch profile for user_id=%s: %s", user_id, exc)
+
+    # Fall back to stale cache if main_backend unreachable
+    try:
+        stale = await redis_client.get_json(cache_key)
+        if stale is not None:
+            return stale
+    except Exception:
+        pass
+
     return {}
 
 

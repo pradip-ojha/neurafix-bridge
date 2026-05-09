@@ -7,12 +7,15 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import r2_client
+from app.core import r2_client, redis_client
 from app.core.dependencies import get_current_user, require_role
 from app.database import get_db
 from app.models.level_note import LevelNote
 from app.models.subject_timing import SubjectTimingConfig
 from app.models.user import User
+
+_TIMING_CACHE_KEY = "timing_config:all"
+_TIMING_TTL = 3600  # 1 hour
 
 router = APIRouter(prefix="/api/admin", tags=["admin-content"])
 
@@ -136,10 +139,14 @@ async def list_subject_timing(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(_admin_only),
 ):
+    cached = await redis_client.get_json(_TIMING_CACHE_KEY)
+    if cached is not None:
+        return cached
+
     result = await db.execute(
         select(SubjectTimingConfig).order_by(SubjectTimingConfig.subject, SubjectTimingConfig.difficulty)
     )
-    return [
+    rows = [
         {
             "id": r.id,
             "subject": r.subject,
@@ -148,6 +155,8 @@ async def list_subject_timing(
         }
         for r in result.scalars().all()
     ]
+    await redis_client.set_json(_TIMING_CACHE_KEY, rows, ex=_TIMING_TTL)
+    return rows
 
 
 @router.patch("/subject-timing/{timing_id}")
@@ -165,6 +174,7 @@ async def update_subject_timing(
     row.seconds_per_question = body.seconds_per_question
     await db.commit()
     await db.refresh(row)
+    await redis_client.delete(_TIMING_CACHE_KEY)
     return {
         "id": row.id,
         "subject": row.subject,

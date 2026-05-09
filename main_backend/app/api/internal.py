@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import verify_internal_secret
 from app.database import get_db
+from app.models.admin_notification import AdminNotification
 from app.models.college import College
 from app.models.student_profile import StudentProfile
 from app.models.subscription import Subscription
@@ -41,6 +43,20 @@ async def get_internal_subscription(user_id: str, db: AsyncSession = Depends(get
         "trial_ends_at": sub.trial_ends_at,
         "subscription_ends_at": sub.subscription_ends_at,
     }
+
+
+class AdminNotifyBody(BaseModel):
+    type: str
+    payload: dict = {}
+
+
+@router.post("/admin-notify", dependencies=[Depends(verify_internal_secret)])
+async def admin_notify(body: AdminNotifyBody, db: AsyncSession = Depends(get_db)):
+    """Worker calls this to log batch failure alerts visible to admin."""
+    notif = AdminNotification(type=body.type, payload=body.payload)
+    db.add(notif)
+    await db.commit()
+    return {"status": "ok"}
 
 
 @router.get("/colleges/{college_id}", dependencies=[Depends(verify_internal_secret)])

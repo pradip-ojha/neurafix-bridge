@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, KeyboardEvent } from 'react'
-import { ChevronRight, Clock, Send, RotateCcw, MessageSquare, X, CheckCircle, XCircle, BookOpen, Layers } from 'lucide-react'
+import { ChevronRight, Clock, Send, RotateCcw, MessageSquare, X, CheckCircle, XCircle, BookOpen, Layers, PanelLeftOpen, PanelLeftClose } from 'lucide-react'
 import { SUBJECT_CHAPTERS } from '../constants/subjectStructure'
 
 interface Question {
@@ -67,6 +67,7 @@ export default function PracticeTab({ subject }: Props) {
   const [mode, setMode] = useState<PracticeMode>('chapter')
   const [selectedChapter, setSelectedChapter] = useState<string | null>(null)
   const [view, setView] = useState<View>('setup')
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768)
 
   // Setup config
   const [count, setCount] = useState(10)
@@ -338,11 +339,28 @@ export default function PracticeTab({ subject }: Props) {
   const pct = scoreData ? Math.round((scoreData.score / scoreData.total) * 100) : 0
 
   return (
-    <div className="flex h-full overflow-hidden">
+    <div className="flex h-full overflow-hidden relative">
+      {/* Mobile backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/30 z-10 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <div className="w-56 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
+      <div
+        className={`
+          flex-shrink-0 bg-white border-r border-gray-200 flex flex-col overflow-hidden
+          transition-all duration-200
+          md:relative md:translate-x-0
+          ${sidebarOpen
+            ? 'w-56 fixed md:relative inset-y-0 left-0 z-20 md:z-auto translate-x-0'
+            : 'w-0 md:w-0'}
+        `}
+      >
         {/* Mode toggles */}
-        <div className="p-3 border-b border-gray-100 space-y-1">
+        <div className="w-56 p-3 border-b border-gray-100 space-y-1">
           <button
             onClick={() => selectMode('subject')}
             className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors ${
@@ -370,7 +388,7 @@ export default function PracticeTab({ subject }: Props) {
         </div>
 
         {/* Chapter list — shown when By Chapter mode */}
-        <div className="flex-1 overflow-y-auto py-2">
+        <div className="w-56 flex-1 overflow-y-auto py-2">
           {mode === 'chapter' && (
             <>
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-4 pb-2">Chapters</p>
@@ -405,7 +423,18 @@ export default function PracticeTab({ subject }: Props) {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 overflow-y-auto bg-gray-50">
+      <div className="flex-1 overflow-y-auto bg-gray-50 min-w-0">
+        {/* Sidebar toggle button */}
+        <div className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200 px-3 py-1.5 flex items-center gap-2">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-200 flex-shrink-0"
+            title={sidebarOpen ? 'Hide chapters' : 'Show chapters'}
+          >
+            {sidebarOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+          </button>
+          <span className="text-xs text-gray-400">{sidebarOpen ? 'Hide chapters' : 'Show chapters'}</span>
+        </div>
         {/* Prompt to select chapter when in chapter mode with nothing selected */}
         {mode === 'chapter' && !selectedChapter && view === 'setup' && (
           <div className="flex items-center justify-center h-full">

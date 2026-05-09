@@ -861,28 +861,35 @@ Services communicate using `X-Internal-Secret` header. Value = `MAIN_BACKEND_INT
 
 ---
 
+## Phase 14 — Hardening, Analytics, Mobile Polish
 
-## Phase 13 — Subscription Gating + Affiliation Interface + Syllabus Pages
+**Services:** All four
+**Goal:** Production readiness — error handling, resilience, analytics, responsive UI, PWA.
 
-**Services:** `main_backend`, `ai_service`, `frontend`
-**Goal:** Enforce subscription access, complete affiliation interface, student settings, syllabus & past questions.
+### Error handling
+- `ai_service`: timeouts + fallbacks for OpenAI/Pinecone/main_backend; tutor degrades gracefully without RAG ("Knowledge base temporarily unavailable")
+- `worker`: `max_retries=3`, exponential backoff; error logging to admin notification endpoint
+- `main_backend`: standardize error format `{error: {code, message, field?}}`
 
-### Subscription gating
-- `main_backend`: `require_active_subscription` FastAPI dependency on paid-feature routes
-- `ai_service`: check `GET /api/internal/subscription/{user_id}` at start of tutor/practice/consultant/capsule endpoints; return 402 if inactive
-- `frontend`: paywall screen on 402 response; show QR payment instructions; link to payment submission form
+### Admin analytics (new endpoints)
+```
+GET /api/admin/analytics/daily-active-users   ?days=30
+GET /api/admin/analytics/subject-usage
+GET /api/admin/analytics/mock-test-scores     ?college_id
+GET /api/admin/analytics/retention
+```
 
-### main_backend: rate limiting
-Redis counter `ratelimit:{user_id}:{date}:messages`; daily limit per plan tier (configurable in PlatformConfig)
+### Performance
+- Cache profile fetches in ai_service: Redis `profile:{user_id}` TTL=5min
+- Cache `SubjectTimingConfig` in main_backend
+- DB connection pool tuning in all services
+- Pinecone query result cache: Redis `pinecone:{hash(query+subject+chapter)}` TTL=10min
 
-### Student Settings page
-- Profile edit wizard (name, school, class 8/9/10 scores, SEE GPA, marksheet uploads)
-- Gradual profile completion prompts after login if completion < 60%
-- Initial mock test prompt if no practice data yet
-
-### Syllabus & Past Questions page
-- Per-college syllabus PDF viewer
-- Past question papers list per college + year
+### Frontend polish
+- Fully responsive for mobile viewports (primary device = mobile in Nepal)
+- Loading skeletons on chat, practice, and notes pages
+- Offline error handling ("No internet connection")
+- PWA manifest for "Add to home screen"
 
 ---
 
@@ -933,4 +940,4 @@ Redis counter `ratelimit:{user_id}:{date}:messages`; daily limit per plan tier (
 | 11 | Mock test system + leaderboard | [x] Complete 2026-05-08 |
 | 12 | Community + referral agent + progress tracking | [x] Complete 2026-05-08 |
 | 13 | Subscription gating + affiliation interface + syllabus pages | [x] Complete 2026-05-09 |
-| 14 | Hardening, analytics, mobile polish | [ ] Pending |
+| 14 | Hardening, analytics, mobile polish | [x] Complete 2026-05-09 |

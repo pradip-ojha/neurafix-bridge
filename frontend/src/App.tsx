@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import HealthCheck from './components/HealthCheck'
+import OfflineBanner from './components/OfflineBanner'
 import Login from './auth/Login'
 import Register from './auth/Register'
 import AdminLayout from './admin/layout/AdminLayout'
@@ -40,6 +41,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <OfflineBanner />
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
