@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, KeyboardEvent } from 'react'
+import { useNavigate, useOutletContext } from 'react-router-dom'
 import { Send, Plus, ChevronDown, ChevronUp, CalendarDays } from 'lucide-react'
 
 interface Message {
@@ -39,6 +40,15 @@ function groupSessionsByDate(sessions: Session[]) {
 }
 
 export default function Consultant() {
+  const navigate = useNavigate()
+  const { subscriptionStatus } = useOutletContext<{ stream: string; subscriptionStatus: string | null }>()
+
+  useEffect(() => {
+    if (subscriptionStatus !== null && subscriptionStatus !== 'active') {
+      navigate('/student/payment', { replace: true })
+    }
+  }, [subscriptionStatus, navigate])
+
   const [sessions, setSessions] = useState<Session[]>([])
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])

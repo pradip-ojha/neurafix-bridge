@@ -23,9 +23,17 @@ const MANAGEMENT_SUBJECTS: SubjectCard[] = [
 
 export default function SubjectGrid() {
   const navigate = useNavigate()
-  const { stream } = useOutletContext<{ stream: string }>()
+  const { stream, subscriptionStatus } = useOutletContext<{ stream: string; subscriptionStatus: string | null }>()
 
   const subjects = stream === 'management' ? MANAGEMENT_SUBJECTS : SCIENCE_SUBJECTS
+
+  const handleSubjectClick = (key: string) => {
+    if (subscriptionStatus !== null && subscriptionStatus !== 'active') {
+      navigate('/student/payment')
+      return
+    }
+    navigate(`/student/tutor/${key}`)
+  }
 
   return (
     <div className="p-8">
@@ -35,20 +43,21 @@ export default function SubjectGrid() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {subjects.map((subject) => {
           const Icon = subject.icon
+          const locked = subscriptionStatus !== null && subscriptionStatus !== 'active'
           return (
             <button
               key={subject.key}
-              onClick={() => navigate(`/student/tutor/${subject.key}`)}
+              onClick={() => handleSubjectClick(subject.key)}
               className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden text-left hover:shadow-md transition-shadow group"
             >
-              <div className={`${subject.color} h-24 flex items-center justify-center`}>
+              <div className={`${locked ? 'bg-gray-300' : subject.color} h-24 flex items-center justify-center`}>
                 <Icon size={40} className="text-white" />
               </div>
               <div className="p-4">
-                <p className="font-semibold text-gray-800 text-sm leading-snug group-hover:text-indigo-700 transition-colors">
+                <p className={`font-semibold text-sm leading-snug transition-colors ${locked ? 'text-gray-400' : 'text-gray-800 group-hover:text-indigo-700'}`}>
                   {subject.display}
                 </p>
-                <p className="text-xs text-gray-400 mt-1">Tutor · Notes · Practice</p>
+                <p className="text-xs text-gray-400 mt-1">{locked ? 'Subscription required' : 'Tutor · Notes · Practice'}</p>
               </div>
             </button>
           )
