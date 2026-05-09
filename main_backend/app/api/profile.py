@@ -116,7 +116,17 @@ async def get_affiliation_profile(
     result = await db.execute(select(AffiliationProfile).where(AffiliationProfile.user_id == current_user.id))
     profile = result.scalar_one_or_none()
     if not profile:
-        raise HTTPException(status_code=404, detail="Affiliation profile not found")
+        return {
+            "id": None,
+            "user_id": current_user.id,
+            "bank_name": None,
+            "account_number": None,
+            "account_name": None,
+            "qr_image_url": None,
+            "total_referrals": 0,
+            "total_earnings": 0.0,
+            "created_at": None,
+        }
     return {
         "id": profile.id,
         "user_id": profile.user_id,
@@ -142,7 +152,8 @@ async def update_affiliation_profile(
     result = await db.execute(select(AffiliationProfile).where(AffiliationProfile.user_id == current_user.id))
     profile = result.scalar_one_or_none()
     if not profile:
-        raise HTTPException(status_code=404, detail="Affiliation profile not found")
+        profile = AffiliationProfile(user_id=current_user.id)
+        db.add(profile)
 
     if bank_name is not None:
         profile.bank_name = bank_name

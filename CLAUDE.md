@@ -861,46 +861,7 @@ Services communicate using `X-Internal-Secret` header. Value = `MAIN_BACKEND_INT
 
 ---
 
-## Phase 12 — Community + Referral Agent + Progress Tracking
 
-**Services:** `main_backend`, `ai_service`, `frontend`
-**Goal:** Community posts, referral content generation, student progress page.
-
-### main_backend Migration 003
-New tables:
-- `community_posts`: author_id, author_role, content, image_url (nullable), link_url (nullable), post_type (post/announcement/notice), is_active, created_at
-- `post_likes`: user_id + post_id (composite PK)
-- `college_syllabi`: college_id, year, file_url, display_name
-- `past_question_papers`: college_id, year, file_url
-
-### main_backend new endpoints
-```
-GET    /api/community/posts              ?type=post|announcement|notice&page
-POST   /api/community/posts             JWT(student|admin), {content, image_url?, link_url?, post_type}
-DELETE /api/community/posts/{id}        JWT (own or admin)
-POST   /api/community/posts/{id}/like   JWT(student)
-GET    /api/progress/overview           JWT(student) → aggregated practice + mock stats
-GET    /api/colleges/{id}/syllabus      JWT(student)
-GET    /api/colleges/{id}/past-questions JWT(student)
-POST   /api/admin/colleges/{id}/syllabus         JWT(admin), multipart
-POST   /api/admin/colleges/{id}/past-questions   JWT(admin), multipart
-```
-
-### ai_service: Referral content agent (`agents/referral/agent.py`)
-Input: referral_link, platform_url, optional message, recent post history → generates social media post with referral link
-```
-POST /api/referral/generate-post   JWT, {platform_url, user_message?} → {post_text}
-```
-### main_backend proxy
-```
-POST /api/referral/generate-post   → ai_service
-```
-### Frontend
-- **Community page**: 3 tabs (Community, Announcements, Notices); Facebook-style feed; post creation modal; like button
-- **Progress page**: stat cards; practice sessions/week bar chart; mock test score trend line chart; avg score by subject radar chart; level badges per subject
-- **Affiliation interface** (`frontend/src/affiliation/`): dashboard (referral stats + earnings); referral link copy button; post generator form; payment details form; earnings history table
-
----
 ## Phase 13 — Subscription Gating + Affiliation Interface + Syllabus Pages
 
 **Services:** `main_backend`, `ai_service`, `frontend`

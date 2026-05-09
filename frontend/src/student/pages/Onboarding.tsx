@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { GraduationCap, Users } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
@@ -8,12 +8,22 @@ type Step = 'role' | 'stream'
 
 export default function Onboarding() {
   const navigate = useNavigate()
-  const { refreshUser } = useAuth()
+  const { user, refreshUser } = useAuth()
   const [step, setStep] = useState<Step>('role')
+
   const [stream, setStream] = useState<'science' | 'management' | null>(null)
   const [schoolName, setSchoolName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!user) return
+    if (user.role === 'affiliation_partner') {
+      navigate('/affiliation', { replace: true })
+    } else if (user.role === 'student' && user.onboarding_complete) {
+      navigate('/student/tutor', { replace: true })
+    }
+  }, [user, navigate])
 
   const handleRoleSelect = async (role: 'student' | 'affiliation_partner') => {
     setLoading(true)

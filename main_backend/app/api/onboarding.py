@@ -51,10 +51,23 @@ async def set_role(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid role")
 
     current_user.role = UserRole(body.role)
-    db.add(current_user)
+
+    if body.role == "affiliation_partner":
+        current_user.onboarding_complete = True
+        db.add(current_user)
+        await db.flush()
+
+        existing_aff = await db.execute(
+            select(AffiliationProfile).where(AffiliationProfile.user_id == current_user.id)
+        )
+        if not existing_aff.scalar_one_or_none():
+            db.add(AffiliationProfile(user_id=current_user.id))
+    else:
+        db.add(current_user)
+
     await db.commit()
 
-    redirect_to = "/onboarding/student" if body.role == "student" else "/onboarding/affiliation"
+    redirect_to = "/onboarding/student" if body.role == "student" else "/affiliation"
     return {"message": "Role updated", "redirect_to": redirect_to}
 
 
