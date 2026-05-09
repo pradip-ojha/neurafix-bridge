@@ -17,4 +17,8 @@ class PlatformConfig(Base):
     trial_duration_days: Mapped[int] = mapped_column(Integer, nullable=False, default=7)
     referral_commission_pct: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False, default=10)
     referral_discount_pct: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False, default=5)
+    trial_daily_message_limit: Mapped[int] = mapped_column(Integer, nullable=False, default=20)
+    paid_daily_message_limit: Mapped[int] = mapped_column(Integer, nullable=False, default=50)
+    payment_qr_url: Mapped[str | None] = mapped_column(nullable=True)
+    payment_instructions: Mapped[str | None] = mapped_column(nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))

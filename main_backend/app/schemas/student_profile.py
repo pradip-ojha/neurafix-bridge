@@ -11,6 +11,7 @@ class MarksheetEntry(BaseModel):
 class ProfileOut(BaseModel):
     id: str
     user_id: str
+    full_name: str | None = None
     stream: str | None
     school_name: str | None
     school_address: str | None
@@ -28,6 +29,7 @@ class ProfileOut(BaseModel):
 
 
 class ProfileUpdate(BaseModel):
+    full_name: str | None = None
     school_name: str | None = None
     school_address: str | None = None
     see_gpa: float | None = None

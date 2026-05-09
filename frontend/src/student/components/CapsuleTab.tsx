@@ -277,7 +277,7 @@ export default function CapsuleTab({ subject }: Props) {
   const fetchHistory = async () => {
     try {
       const res = await fetch(`/api/capsule/${subject}/history`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
       })
       if (res.ok) setHistory(await res.json())
     } catch {}
@@ -287,7 +287,7 @@ export default function CapsuleTab({ subject }: Props) {
     setCapsuleStatus('loading')
     try {
       const res = await fetch(`/api/capsule/${subject}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
       })
       if (res.ok) {
         const data = await res.json()
@@ -310,7 +310,7 @@ export default function CapsuleTab({ subject }: Props) {
     setCapsuleStatus('loading')
     try {
       const res = await fetch(`/api/capsule/${subject}/${dateStr}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
       })
       if (res.ok) {
         const data = await res.json()
@@ -364,11 +364,25 @@ export default function CapsuleTab({ subject }: Props) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${sessionStorage.getItem('token')}`,
         },
         body: JSON.stringify({ message: text, capsule_date: selectedDate }),
       })
 
+      if (response.status === 402) {
+        window.location.href = '/student/payment'
+        return
+      }
+      if (response.status === 429) {
+        setMessages((prev) => [...prev, { role: 'assistant', content: 'You have reached your daily message limit. It resets tomorrow.' }])
+        setStreamingText('')
+        return
+      }
+      if (!response.ok) {
+        setMessages((prev) => [...prev, { role: 'assistant', content: 'Something went wrong. Please try again.' }])
+        setStreamingText('')
+        return
+      }
       if (!response.body) throw new Error('No response body')
 
       const reader = response.body.getReader()

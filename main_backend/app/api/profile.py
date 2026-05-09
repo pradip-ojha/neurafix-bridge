@@ -38,7 +38,9 @@ async def get_student_profile(
     profile = result.scalar_one_or_none()
     if not profile:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
-    return ProfileOut.model_validate(profile)
+    out = ProfileOut.model_validate(profile)
+    out.full_name = current_user.full_name
+    return out
 
 
 @router.patch("/api/profile/student", response_model=ProfileOut)
@@ -52,7 +54,13 @@ async def update_student_profile(
     if not profile:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
 
-    for field, value in body.model_dump(exclude_unset=True).items():
+    data = body.model_dump(exclude_unset=True)
+
+    if "full_name" in data:
+        current_user.full_name = data.pop("full_name")
+        db.add(current_user)
+
+    for field, value in data.items():
         setattr(profile, field, value)
 
     profile.profile_completion_pct = _compute_completion(profile)

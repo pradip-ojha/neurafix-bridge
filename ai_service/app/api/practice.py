@@ -41,6 +41,21 @@ _STREAM_SUBJECTS: dict[str, list[str]] = {
 }
 
 
+async def _check_subscription(user_id: str) -> None:
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(
+                f"{settings.MAIN_BACKEND_URL}/api/internal/subscription/{user_id}",
+                headers={"X-Internal-Secret": settings.MAIN_BACKEND_INTERNAL_SECRET},
+            )
+        if resp.status_code != 200 or resp.json().get("status") == "expired":
+            raise HTTPException(status_code=402, detail="Subscription required")
+    except HTTPException:
+        raise
+    except Exception:
+        pass
+
+
 async def _get_student_stream(user_id: str) -> str:
     url = f"{settings.MAIN_BACKEND_URL}/api/internal/profile/{user_id}"
     headers = {"X-Internal-Secret": settings.MAIN_BACKEND_INTERNAL_SECRET}
@@ -112,6 +127,7 @@ async def start_practice(
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
+    await _check_subscription(user_id)
     student_stream = await _get_student_stream(user_id)
     valid_subjects = _STREAM_SUBJECTS.get(student_stream, _STREAM_SUBJECTS["both"])
     if req.subject not in valid_subjects:

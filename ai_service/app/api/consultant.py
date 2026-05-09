@@ -18,6 +18,9 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import httpx
+
+from app.config import settings
 from app.core.auth import get_current_user_id
 from app.database import get_db
 from app.models.chat_session import ChatMessage, ChatSession
@@ -32,6 +35,21 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/consultant", tags=["consultant"])
 
 
+async def _check_subscription(user_id: str) -> None:
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(
+                f"{settings.MAIN_BACKEND_URL}/api/internal/subscription/{user_id}",
+                headers={"X-Internal-Secret": settings.MAIN_BACKEND_INTERNAL_SECRET},
+            )
+        if resp.status_code != 200 or resp.json().get("status") == "expired":
+            raise HTTPException(status_code=402, detail="Subscription required")
+    except HTTPException:
+        raise
+    except Exception:
+        pass
+
+
 class ConsultantChatRequest(BaseModel):
     message: str
     session_id: str | None = None
@@ -44,6 +62,7 @@ async def chat(
     db: AsyncSession = Depends(get_db),
 ):
     """Stream a consultant response as SSE."""
+    await _check_subscription(user_id)
     if req.session_id:
         session = await db.get(ChatSession, req.session_id)
         if not session or session.user_id != user_id:

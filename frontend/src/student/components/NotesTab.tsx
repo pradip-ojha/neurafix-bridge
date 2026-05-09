@@ -22,7 +22,7 @@ export default function NotesTab({ subject }: { subject: string }) {
   const [selectedChapter, setSelectedChapter] = useState<ChapterNote | null>(null)
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     fetch(`/api/notes/${subject}`, {
       headers: { Authorization: `Bearer ${token}` },
     })

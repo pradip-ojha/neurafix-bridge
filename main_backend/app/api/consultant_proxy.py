@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.config import settings
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, get_rate_limited_user
 from app.models.user import User
 
 router = APIRouter(prefix="/api/consultant", tags=["consultant-proxy"])
@@ -36,7 +36,7 @@ async def _forward_ai_get(path: str, auth_header: str, params: dict | None = Non
 @router.post("/chat")
 async def proxy_consultant_chat(
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_rate_limited_user),
 ):
     """SSE-stream consultant response by forwarding to ai_service."""
     body = await request.body()

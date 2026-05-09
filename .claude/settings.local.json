@@ -101,7 +101,8 @@
       "PowerShell(Get-CimInstance *)",
       "PowerShell(Get-Process *)",
       "Bash(Select-Object -First 50)",
-      "Bash(Format-Table FullName)"
+      "Bash(Format-Table FullName)",
+      "Bash(Sort-Object)"
     ]
   }
 }

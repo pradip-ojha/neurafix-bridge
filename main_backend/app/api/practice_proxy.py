@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.config import settings
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, get_subscribed_user
 from app.models.user import User
 
 router = APIRouter(prefix="/api/practice", tags=["practice-proxy"])
@@ -48,7 +48,7 @@ async def _forward_ai_get(path: str, auth_header: str, params: dict | None = Non
 @router.post("/start")
 async def proxy_start(
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_subscribed_user),
 ):
     body = await request.body()
     auth_header = request.headers.get("Authorization", "")

@@ -18,6 +18,9 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import httpx
+
+from app.config import settings
 from app.core.auth import get_current_user_id
 from app.database import get_db
 from app.models.chat_session import ChatSession
@@ -29,6 +32,21 @@ from app.agents.capsule.agent import CapsuleAgent
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/capsule", tags=["capsule"])
+
+
+async def _check_subscription(user_id: str) -> None:
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(
+                f"{settings.MAIN_BACKEND_URL}/api/internal/subscription/{user_id}",
+                headers={"X-Internal-Secret": settings.MAIN_BACKEND_INTERNAL_SECRET},
+            )
+        if resp.status_code != 200 or resp.json().get("status") == "expired":
+            raise HTTPException(status_code=402, detail="Subscription required")
+    except HTTPException:
+        raise
+    except Exception:
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -159,6 +177,7 @@ async def capsule_chat(
     db: AsyncSession = Depends(get_db),
 ):
     """Stream a capsule chat response as SSE."""
+    await _check_subscription(user_id)
     from datetime import date as date_type
 
     # Resolve capsule date

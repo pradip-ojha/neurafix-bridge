@@ -861,40 +861,6 @@ Services communicate using `X-Internal-Secret` header. Value = `MAIN_BACKEND_INT
 
 ---
 
-## Phase 11 — Mock Test System + Leaderboard
-
-**Services:** `ai_service`, `main_backend`, `frontend`
-**Goal:** College-format and customizable mock tests with leaderboard.
-
-### Migration 010
-`mock_sessions` table: `id`, `user_id`, `college_id` (nullable), `session_date`, `status` (active/submitted), `question_ids` (JSONB), `time_limit_minutes`, `score_data` (JSONB nullable), `created_at`
-
-
-### ai_service: mock test endpoints
-```
-POST /api/mock/start          JWT, {college_id? OR custom_distribution: {subject: count}, time_limit_minutes}
-                              → questions from main + extra pools per distribution; returns MockSession + questions
-POST /api/mock/submit         JWT, {session_id, answers} → scores, saves results
-GET  /api/mock/history        JWT
-GET  /api/mock/leaderboard    JWT, ?college_id&date → top 10 scores
-```
-
-### main_backend proxy
-```
-GET /api/colleges              JWT(student) (already in Phase 4)
-GET /api/colleges/{id}         JWT(student)
-POST /api/mock/start           → ai_service
-POST /api/mock/submit          → ai_service
-GET  /api/mock/history         → ai_service
-GET  /api/mock/leaderboard     → ai_service
-```
-### Frontend: Mock Tests page
-- **College Format tab**: college cards; click → timed MCQ interface (overall countdown timer, not per-question)
-- **Customizable tab**: subject checkboxes + question count sliders + time input
-- Results: score per subject breakdown
-- Leaderboard: today's + all-time top scores per college; student's own rank highlighted
-
----
 ## Phase 12 — Community + Referral Agent + Progress Tracking
 
 **Services:** `main_backend`, `ai_service`, `frontend`
@@ -933,6 +899,29 @@ POST /api/referral/generate-post   → ai_service
 - **Community page**: 3 tabs (Community, Announcements, Notices); Facebook-style feed; post creation modal; like button
 - **Progress page**: stat cards; practice sessions/week bar chart; mock test score trend line chart; avg score by subject radar chart; level badges per subject
 - **Affiliation interface** (`frontend/src/affiliation/`): dashboard (referral stats + earnings); referral link copy button; post generator form; payment details form; earnings history table
+
+---
+## Phase 13 — Subscription Gating + Affiliation Interface + Syllabus Pages
+
+**Services:** `main_backend`, `ai_service`, `frontend`
+**Goal:** Enforce subscription access, complete affiliation interface, student settings, syllabus & past questions.
+
+### Subscription gating
+- `main_backend`: `require_active_subscription` FastAPI dependency on paid-feature routes
+- `ai_service`: check `GET /api/internal/subscription/{user_id}` at start of tutor/practice/consultant/capsule endpoints; return 402 if inactive
+- `frontend`: paywall screen on 402 response; show QR payment instructions; link to payment submission form
+
+### main_backend: rate limiting
+Redis counter `ratelimit:{user_id}:{date}:messages`; daily limit per plan tier (configurable in PlatformConfig)
+
+### Student Settings page
+- Profile edit wizard (name, school, class 8/9/10 scores, SEE GPA, marksheet uploads)
+- Gradual profile completion prompts after login if completion < 60%
+- Initial mock test prompt if no practice data yet
+
+### Syllabus & Past Questions page
+- Per-college syllabus PDF viewer
+- Past question papers list per college + year
 
 ---
 
@@ -982,5 +971,5 @@ POST /api/referral/generate-post   → ai_service
 | 10 | Level-based notes + notes UI | [x] Complete 2026-05-08 (notes delivered by level silently; level never shown to students) |
 | 11 | Mock test system + leaderboard | [x] Complete 2026-05-08 |
 | 12 | Community + referral agent + progress tracking | [x] Complete 2026-05-08 |
-| 13 | Subscription gating + affiliation interface + syllabus pages | [ ] Pending |
+| 13 | Subscription gating + affiliation interface + syllabus pages | [x] Complete 2026-05-09 |
 | 14 | Hardening, analytics, mobile polish | [ ] Pending |

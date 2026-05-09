@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
@@ -6,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.core.security import decode_token
 from app.database import get_db
+from app.models.subscription import Subscription, SubscriptionStatus
 from app.models.user import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
@@ -45,3 +48,41 @@ async def verify_internal_secret(request: Request) -> None:
     secret = request.headers.get("X-Internal-Secret")
     if not secret or secret != settings.MAIN_BACKEND_INTERNAL_SECRET:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+
+async def get_subscribed_user(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """Like get_current_user but also enforces active/trial subscription."""
+    result = await db.execute(select(Subscription).where(Subscription.user_id == current_user.id))
+    sub = result.scalar_one_or_none()
+    now = datetime.now(UTC)
+
+    if not sub:
+        raise HTTPException(status_code=402, detail="No active subscription")
+
+    if sub.status == SubscriptionStatus.trial and sub.trial_ends_at < now:
+        sub.status = SubscriptionStatus.expired
+        await db.commit()
+        raise HTTPException(status_code=402, detail="Trial period has ended")
+
+    if sub.status == SubscriptionStatus.active and sub.subscription_ends_at and sub.subscription_ends_at < now:
+        sub.status = SubscriptionStatus.expired
+        await db.commit()
+        raise HTTPException(status_code=402, detail="Subscription has expired")
+
+    if sub.status == SubscriptionStatus.expired:
+        raise HTTPException(status_code=402, detail="Subscription has expired")
+
+    return current_user
+
+
+async def get_rate_limited_user(
+    current_user: User = Depends(get_subscribed_user),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """Subscription-gated user with daily message rate limiting."""
+    from app.core.rate_limiter import check_rate_limit
+    await check_rate_limit(current_user.id, db)
+    return current_user

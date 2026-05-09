@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.config import settings
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, get_rate_limited_user, get_subscribed_user
 from app.models.user import User
 
 router = APIRouter(prefix="/api/capsule", tags=["capsule-proxy"])
@@ -57,7 +57,7 @@ async def proxy_capsule_by_date(
 async def proxy_capsule_chat(
     subject: str,
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_rate_limited_user),
 ):
     """SSE-stream capsule chat response by forwarding to ai_service."""
     body = await request.body()

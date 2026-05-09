@@ -56,7 +56,7 @@ interface Props {
   subject: string
 }
 
-const authHeader = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` })
+const authHeader = () => ({ Authorization: `Bearer ${sessionStorage.getItem('token')}` })
 
 function chapterLabel(chapter: string, chapters: { id: string; display_name: string }[]) {
   if (chapter === WHOLE_SUBJECT) return 'Whole Subject'
@@ -284,6 +284,20 @@ export default function PracticeTab({ subject }: Props) {
         headers: { 'Content-Type': 'application/json', ...authHeader() },
         body: JSON.stringify({ session_id: sessionId, message: text, session_history: followupMessages }),
       })
+      if (res.status === 402) {
+        window.location.href = '/student/payment'
+        return
+      }
+      if (res.status === 429) {
+        setFollowupMessages((prev) => [...prev, { role: 'assistant', content: 'You have reached your daily message limit. It resets tomorrow.' }])
+        setStreamingText('')
+        return
+      }
+      if (!res.ok) {
+        setFollowupMessages((prev) => [...prev, { role: 'assistant', content: 'Something went wrong. Please try again.' }])
+        setStreamingText('')
+        return
+      }
       if (!res.body) throw new Error('No body')
 
       const reader = res.body.getReader()

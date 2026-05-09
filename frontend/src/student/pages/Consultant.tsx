@@ -54,7 +54,7 @@ export default function Consultant() {
   const fetchSessions = async () => {
     try {
       const res = await fetch('/api/consultant/sessions', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
       })
       if (res.ok) setSessions(await res.json())
     } catch {}
@@ -63,7 +63,7 @@ export default function Consultant() {
   const fetchTimeline = async () => {
     try {
       const res = await fetch('/api/consultant/timeline', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
       })
       if (res.ok) setTimeline(await res.json())
     } catch {}
@@ -85,7 +85,7 @@ export default function Consultant() {
     setStreamingText('')
     try {
       const res = await fetch(`/api/consultant/sessions/${sessionId}/messages`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
       })
       if (res.ok) {
         const data: { role: string; content: string }[] = await res.json()
@@ -120,7 +120,7 @@ export default function Consultant() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${sessionStorage.getItem('token')}`,
         },
         body: JSON.stringify({
           message: text,
@@ -128,6 +128,20 @@ export default function Consultant() {
         }),
       })
 
+      if (response.status === 402) {
+        window.location.href = '/student/payment'
+        return
+      }
+      if (response.status === 429) {
+        setMessages((prev) => [...prev, { role: 'assistant', content: 'You have reached your daily message limit. It resets tomorrow.' }])
+        setStreamingText('')
+        return
+      }
+      if (!response.ok) {
+        setMessages((prev) => [...prev, { role: 'assistant', content: 'Something went wrong. Please try again.' }])
+        setStreamingText('')
+        return
+      }
       if (!response.body) throw new Error('No response body')
 
       const reader = response.body.getReader()

@@ -7,6 +7,8 @@ import {
   Users,
   TrendingUp,
   Settings,
+  Library,
+  CreditCard,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -16,6 +18,8 @@ const NAV_ITEMS = [
   { to: '/student/consultant', icon: MessageSquare, label: 'Consultant' },
   { to: '/student/community', icon: Users, label: 'Community' },
   { to: '/student/progress', icon: TrendingUp, label: 'Progress' },
+  { to: '/student/syllabus', icon: Library, label: 'Syllabus' },
+  { to: '/student/payment', icon: CreditCard, label: 'Subscription' },
   { to: '/student/settings', icon: Settings, label: 'Settings' },
 ]
 
