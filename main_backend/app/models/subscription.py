@@ -11,9 +11,10 @@ from app.database import Base
 
 
 class SubscriptionStatus(str, PyEnum):
+    free = "free"
     trial = "trial"
     active = "active"
-    expired = "expired"
+    expired = "expired"  # legacy — treated same as free
 
 
 class Subscription(Base):

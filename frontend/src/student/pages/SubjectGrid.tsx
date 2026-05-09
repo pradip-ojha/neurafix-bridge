@@ -27,8 +27,10 @@ export default function SubjectGrid() {
 
   const subjects = stream === 'management' ? MANAGEMENT_SUBJECTS : SCIENCE_SUBJECTS
 
+  const isBlocked = subscriptionStatus !== null && subscriptionStatus !== 'trial' && subscriptionStatus !== 'active'
+
   const handleSubjectClick = (key: string) => {
-    if (subscriptionStatus !== null && subscriptionStatus !== 'active') {
+    if (isBlocked) {
       navigate('/student/payment')
       return
     }
@@ -43,7 +45,7 @@ export default function SubjectGrid() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {subjects.map((subject) => {
           const Icon = subject.icon
-          const locked = subscriptionStatus !== null && subscriptionStatus !== 'active'
+          const locked = isBlocked
           return (
             <button
               key={subject.key}

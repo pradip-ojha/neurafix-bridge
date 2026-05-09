@@ -29,11 +29,11 @@ export default function StudentLayout() {
   const showSubBanner = subscriptionStatus !== null && subscriptionStatus !== 'active'
 
   const subBannerMessage =
-    subscriptionStatus === 'expired'
+    subscriptionStatus === 'trial'
+      ? "You're on your free trial — subscribe to keep full access after it ends."
+      : subscriptionStatus === 'expired'
       ? 'Your subscription has expired. Subscribe to continue using tutors, consultant, and practice.'
-      : subscriptionStatus === 'trial'
-      ? "You're on the free trial. Subscribe to unlock tutors, consultant, and practice sessions."
-      : 'Subscribe to a paid plan to access tutors, consultant, and practice sessions.'
+      : 'Subscribe to a paid plan to unlock tutors, consultant, and practice sessions.'
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">

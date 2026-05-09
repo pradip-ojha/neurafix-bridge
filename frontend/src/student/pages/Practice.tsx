@@ -15,7 +15,7 @@ export default function Practice() {
   const { subscriptionStatus } = useOutletContext<{ stream: string; subscriptionStatus: string | null }>()
 
   useEffect(() => {
-    if (subscriptionStatus !== null && subscriptionStatus !== 'active') {
+    if (subscriptionStatus !== null && subscriptionStatus !== 'trial' && subscriptionStatus !== 'active') {
       navigate('/student/payment', { replace: true })
     }
   }, [subscriptionStatus, navigate])

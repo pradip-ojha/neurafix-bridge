@@ -98,12 +98,20 @@ async def student_set_stream(
         ).scalar_one_or_none()
         trial_days = config.trial_duration_days if config else 7
         now = datetime.now(UTC)
-        db.add(Subscription(
-            user_id=current_user.id,
-            status=SubscriptionStatus.trial,
-            trial_ends_at=now + timedelta(days=trial_days),
-            updated_at=now,
-        ))
+        if trial_days > 0:
+            db.add(Subscription(
+                user_id=current_user.id,
+                status=SubscriptionStatus.trial,
+                trial_ends_at=now + timedelta(days=trial_days),
+                updated_at=now,
+            ))
+        else:
+            db.add(Subscription(
+                user_id=current_user.id,
+                status=SubscriptionStatus.free,
+                trial_ends_at=now,
+                updated_at=now,
+            ))
 
     await db.commit()
     await db.refresh(profile)

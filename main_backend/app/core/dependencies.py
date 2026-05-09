@@ -62,22 +62,25 @@ async def get_subscribed_user(
     if not sub:
         raise HTTPException(status_code=402, detail="No active subscription")
 
+    now = datetime.now(UTC)
+
+    # Trial period ended → downgrade to free
     if sub.status == SubscriptionStatus.trial and sub.trial_ends_at and sub.trial_ends_at < now:
-        sub.status = SubscriptionStatus.expired
+        sub.status = SubscriptionStatus.free
         await db.commit()
-        raise HTTPException(status_code=402, detail="Trial period has ended")
+        raise HTTPException(status_code=402, detail="Your trial has ended. Please subscribe.")
 
+    # Paid subscription ended → downgrade to free
     if sub.status == SubscriptionStatus.active and sub.subscription_ends_at and sub.subscription_ends_at < now:
-        sub.status = SubscriptionStatus.expired
+        sub.status = SubscriptionStatus.free
         await db.commit()
-        raise HTTPException(status_code=402, detail="Subscription has expired")
+        raise HTTPException(status_code=402, detail="Your subscription has expired. Please renew.")
 
-    if sub.status == SubscriptionStatus.expired:
-        raise HTTPException(status_code=402, detail="Subscription has expired")
+    # Free tier and legacy expired → blocked
+    if sub.status in (SubscriptionStatus.free, SubscriptionStatus.expired):
+        raise HTTPException(status_code=402, detail="Please subscribe to access this feature.")
 
-    if sub.status == SubscriptionStatus.trial:
-        raise HTTPException(status_code=402, detail="Please subscribe to access this feature")
-
+    # trial (active) and active → allowed
     return current_user
 
 
