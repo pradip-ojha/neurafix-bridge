@@ -72,5 +72,6 @@ async def get_internal_college(college_id: str, db: AsyncSession = Depends(get_d
         "total_questions": college.total_questions,
         "total_time_minutes": college.total_time_minutes,
         "question_distribution": college.question_distribution,
+        "class_level_distribution": college.class_level_distribution,
         "is_active": college.is_active,
     }

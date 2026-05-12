@@ -17,7 +17,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, UploadFile
 from pydantic import ValidationError
-from sqlalchemy import delete, func, select, text, update
+from sqlalchemy import delete, func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -140,6 +140,7 @@ async def upload_main_questions(
             row.chapter = q.chapter
             row.topic = q.topic
             row.subtopic = q.subtopic
+            row.class_level = q.class_level
             row.is_active = q.is_active
         else:
             db.add(MainQuestion(
@@ -149,6 +150,7 @@ async def upload_main_questions(
                 topic=q.topic,
                 subtopic=q.subtopic,
                 difficulty=q.difficulty,
+                class_level=q.class_level,
                 is_active=q.is_active,
                 version=q.version,
                 data=data,
@@ -363,6 +365,7 @@ async def get_question_pool(
     subject: str = Query(...),
     chapter: str | None = Query(default=None),
     difficulty: str | None = Query(default=None),
+    class_level: int | None = Query(default=None),
     count: int = Query(default=10, ge=1, le=200),
     mode: str = Query(default="practice"),
     db: AsyncSession = Depends(get_db),
@@ -372,9 +375,15 @@ async def get_question_pool(
     Serve questions without correct_option_ids.
     mode=practice: chapter required, 40/40/20 difficulty split.
     mode=mock: distributes across all chapters for the subject.
+    class_level: if provided, only return questions matching that class level or with no class level set.
     """
     if mode not in ("practice", "mock"):
         raise HTTPException(status_code=400, detail="mode must be 'practice' or 'mock'")
+
+    def _class_filter():
+        if class_level is None:
+            return []
+        return [or_(MainQuestion.class_level == class_level, MainQuestion.class_level.is_(None))]
 
     questions: list[dict[str, Any]] = []
 
@@ -390,6 +399,7 @@ async def get_question_pool(
                     MainQuestion.chapter == chapter,
                     MainQuestion.difficulty == difficulty,
                     MainQuestion.is_active == True,
+                    *_class_filter(),
                 )
                 .order_by(text("RANDOM()"))
                 .limit(count)
@@ -409,6 +419,7 @@ async def get_question_pool(
                         MainQuestion.chapter == chapter,
                         MainQuestion.difficulty == diff,
                         MainQuestion.is_active == True,
+                        *_class_filter(),
                     )
                     .order_by(text("RANDOM()"))
                     .limit(target)
@@ -425,6 +436,7 @@ async def get_question_pool(
                         MainQuestion.chapter == chapter,
                         MainQuestion.is_active == True,
                         MainQuestion.question_id.notin_(existing_ids),
+                        *_class_filter(),
                     )
                     .order_by(text("RANDOM()"))
                     .limit(extra_needed)
@@ -436,7 +448,7 @@ async def get_question_pool(
     else:  # mode=mock
         chapter_rows = (await db.execute(
             select(MainQuestion.chapter)
-            .where(MainQuestion.subject == subject, MainQuestion.is_active == True)
+            .where(MainQuestion.subject == subject, MainQuestion.is_active == True, *_class_filter())
             .distinct()
         )).scalars().all()
 
@@ -457,6 +469,7 @@ async def get_question_pool(
                     MainQuestion.subject == subject,
                     MainQuestion.chapter == ch,
                     MainQuestion.is_active == True,
+                    *_class_filter(),
                 )
                 .order_by(text("RANDOM()"))
                 .limit(ch_count)

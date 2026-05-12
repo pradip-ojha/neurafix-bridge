@@ -21,6 +21,7 @@ class CollegeIn(BaseModel):
     total_questions: int
     total_time_minutes: int
     question_distribution: dict[str, int] = {}
+    class_level_distribution: dict[str, int] | None = None
 
 
 class CollegeUpdate(BaseModel):
@@ -29,6 +30,7 @@ class CollegeUpdate(BaseModel):
     total_questions: int | None = None
     total_time_minutes: int | None = None
     question_distribution: dict[str, int] | None = None
+    class_level_distribution: dict[str, int] | None = None
     is_active: bool | None = None
 
 
@@ -40,6 +42,7 @@ def _serialize(c: College) -> dict:
         "total_questions": c.total_questions,
         "total_time_minutes": c.total_time_minutes,
         "question_distribution": c.question_distribution,
+        "class_level_distribution": c.class_level_distribution,
         "is_active": c.is_active,
         "created_at": c.created_at,
     }

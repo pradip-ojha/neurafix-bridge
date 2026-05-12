@@ -22,6 +22,7 @@ class QuestionIn(BaseModel):
     chapter: str
     topic: str
     subtopic: str | None = None
+    class_level: int | None = None
     tags: list[str] = []
     skill: str | None = None
     learning_objective: str | None = None

@@ -14,7 +14,7 @@ from datetime import datetime, date, UTC
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import select, text
+from sqlalchemy import or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -64,12 +64,42 @@ async def _resolve_names(user_ids: list[str]) -> dict[str, str]:
     return dict(results)
 
 
-async def _select_main_questions(
-    db: AsyncSession, subject: str, count: int
+def _compute_class_splits(count: int, dist: dict[str, int]) -> list[tuple[int, int]]:
+    """Proportionally split `count` across class levels in `dist`. Returns [(class_level, n), ...]."""
+    grand = sum(dist.values())
+    if grand == 0:
+        return []
+    result: list[tuple[int, int]] = []
+    allocated = 0
+    levels = list(dist.keys())
+    for i, lk in enumerate(levels):
+        lvl = int(lk)
+        if i == len(levels) - 1:
+            n = count - allocated
+        else:
+            n = round(count * dist[lk] / grand)
+        if n > 0:
+            result.append((lvl, n))
+        allocated += n
+    return result
+
+
+async def _fetch_questions_for_class(
+    db: AsyncSession,
+    subject: str,
+    count: int,
+    class_lvl: int | None,
+    exclude_ids: set[str],
 ) -> list[MainQuestion]:
+    """Select `count` questions for one class level, distributing evenly across chapters."""
+    if class_lvl is not None:
+        cls_filter = [or_(MainQuestion.class_level == class_lvl, MainQuestion.class_level.is_(None))]
+    else:
+        cls_filter = []
+
     chapter_rows = (await db.execute(
         select(MainQuestion.chapter)
-        .where(MainQuestion.subject == subject, MainQuestion.is_active == True)
+        .where(MainQuestion.subject == subject, MainQuestion.is_active == True, *cls_filter)
         .distinct()
     )).scalars().all()
 
@@ -85,16 +115,40 @@ async def _select_main_questions(
         ch_count = per_chapter + (1 if i < remainder else 0)
         if ch_count == 0:
             continue
+        filters = [
+            MainQuestion.subject == subject,
+            MainQuestion.chapter == ch,
+            MainQuestion.is_active == True,
+            *cls_filter,
+        ]
+        if exclude_ids:
+            filters.append(MainQuestion.question_id.notin_(exclude_ids))
         rows = (await db.execute(
-            select(MainQuestion)
-            .where(
-                MainQuestion.subject == subject,
-                MainQuestion.chapter == ch,
-                MainQuestion.is_active == True,
-            )
-            .order_by(text("RANDOM()"))
-            .limit(ch_count)
+            select(MainQuestion).where(*filters).order_by(text("RANDOM()")).limit(ch_count)
         )).scalars().all()
+        selected.extend(rows)
+
+    return selected
+
+
+async def _select_main_questions(
+    db: AsyncSession,
+    subject: str,
+    count: int,
+    class_level_distribution: dict[str, int] | None = None,
+) -> list[MainQuestion]:
+    selected: list[MainQuestion] = []
+    used_ids: set[str] = set()
+
+    if class_level_distribution:
+        splits = _compute_class_splits(count, class_level_distribution)
+        for class_lvl, cls_count in splits:
+            rows = await _fetch_questions_for_class(db, subject, cls_count, class_lvl, used_ids)
+            for r in rows:
+                used_ids.add(r.question_id)
+            selected.extend(rows)
+    else:
+        rows = await _fetch_questions_for_class(db, subject, count, None, used_ids)
         selected.extend(rows)
 
     return selected
@@ -143,10 +197,13 @@ async def start_mock(
             detail="Provide either college_id or custom_distribution.",
         )
 
+    class_level_distribution: dict[str, int] | None = None
+
     if req.college_id:
         college = await _get_college(req.college_id)
         distribution: dict[str, int] = college.get("question_distribution") or {}
         time_limit = college.get("total_time_minutes", 60)
+        class_level_distribution = college.get("class_level_distribution") or None
         if not distribution:
             raise HTTPException(
                 status_code=400,
@@ -165,7 +222,7 @@ async def start_mock(
             continue
 
         if subject in _MAIN_SUBJECTS:
-            rows = await _select_main_questions(db, subject, count)
+            rows = await _select_main_questions(db, subject, count, class_level_distribution)
             if not rows:
                 raise HTTPException(
                     status_code=404,

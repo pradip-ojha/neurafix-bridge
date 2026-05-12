@@ -45,6 +45,7 @@ class MainQuestion(Base):
         Enum(DifficultyEnum, name="difficulty_enum"),
         nullable=False,
     )
+    class_level: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     data: Mapped[dict] = mapped_column(JSONB, nullable=False)

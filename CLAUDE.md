@@ -466,6 +466,7 @@ All MCQ questions are **pre-generated and uploaded** by admin as JSON files — 
   "correct_option_ids": ["B"],
   "explanation": "Diamond represents a decision symbol in a flowchart.",
   "difficulty": "easy",
+  "class_level": 10,
   "subject": "computer_science",
   "chapter": "flowchart",
   "topic": "flowchart_symbols",
@@ -484,6 +485,8 @@ All MCQ questions are **pre-generated and uploaded** by admin as JSON files — 
 
 All questions are MCQ (1 mark, no negative marking). Image fields are null in Phase 1.
 
+**`class_level` field:** Optional integer (9 or 10). Indicates which class's curriculum the question belongs to. Omit or set to `null` for questions that apply to all classes. Used to filter questions per college — some colleges ask only from class 10, others from both class 9 and 10. See `class_level_distribution` on the college model.
+
 ### Question Generation Phases
 
 **Phase 1 (current):**
@@ -498,7 +501,7 @@ All questions are MCQ (1 mark, no negative marking). Image fields are null in Ph
 ### Database Storage
 
 Hybrid design per question:
-- **Important filtering fields as columns:** `question_id`, `subject`, `chapter`, `topic`, `subtopic`, `difficulty`, `is_active`, `version`
+- **Important filtering fields as columns:** `question_id`, `subject`, `chapter`, `topic`, `subtopic`, `difficulty`, `class_level`, `is_active`, `version`
 - **Full question data as JSONB column:** everything else
 
 1 question = 1 row.
@@ -509,7 +512,7 @@ Extra subjects (GK, IQ, and any subject added by admin later) are stored in a **
 
 ### Timing
 
-- **Mock tests:** Admin sets total questions, questions per subject, and total time when adding a new college.
+- **Mock tests:** Admin sets total questions, questions per subject, total time, and optionally `class_level_distribution` when adding a new college. `class_level_distribution` is a dict like `{"9": 15, "10": 35}` specifying how many questions to pull from each class. Questions with no `class_level` are universal and can fill any class's quota. If omitted, no class filter is applied.
 - **Subject practice:** Per-question time is set by admin per subject and difficulty level (easy/medium/hard). Default: 72 seconds average per question.
 
 ---
