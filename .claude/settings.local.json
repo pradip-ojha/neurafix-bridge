@@ -103,7 +103,13 @@
       "Bash(Select-Object -First 50)",
       "Bash(Format-Table FullName)",
       "Bash(Sort-Object)",
-      "Bash(Select-Object -Property FullName, PSIsContainer)"
+      "Bash(Select-Object -Property FullName, PSIsContainer)",
+      "PowerShell(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\frontend\\\\src\" -Recurse -Directory | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Substring\\(\"D:\\\\hamroguru\\\\hamroguru-platform\\\\frontend\\\\src\".Length\\).TrimStart\\('\\\\'\\) } | Sort-Object)",
+      "PowerShell(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\frontend\\\\src\" -Recurse -File | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Substring\\(\"D:\\\\hamroguru\\\\hamroguru-platform\\\\frontend\".Length\\) } | Sort-Object)",
+      "PowerShell(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\frontend\\\\src\" -Recurse -File | Where-Object {$_.FullName -match \"\\(admin|affiliation\\)\"} | Select-Object FullName | Sort-Object FullName)",
+      "PowerShell(head *)",
+      "Bash(npx eslint *)",
+      "Bash(npx vite *)"
     ]
   }
 }

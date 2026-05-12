@@ -1,11 +1,11 @@
 {
-  "name": "HamroGuru",
-  "short_name": "HamroGuru",
-  "description": "Personalized tutoring for SEE graduates preparing for class 11 entrance exams",
+  "name": "NeuraFix Bridge",
+  "short_name": "NeuraFix",
+  "description": "AI-powered entrance exam preparation and personalised tutoring by NeuraFix AI",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#4F46E5",
+  "background_color": "#0b1120",
+  "theme_color": "#6366f1",
   "icons": [
     {
       "src": "/icon-192.png",

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { BookOpen, ExternalLink, ChevronRight } from 'lucide-react'
+import { BookOpen, ExternalLink, ChevronRight, FileText } from 'lucide-react'
 import api from '../../lib/api'
+import DarkSkeleton from '../components/DarkSkeleton'
 
 interface College {
   id: string
@@ -48,7 +49,6 @@ export default function Syllabus() {
     ]).finally(() => setLoadingContent(false))
   }, [selected])
 
-  // Group past questions by year
   const pqByYear = pastQuestions.reduce<Record<number, PastQuestionEntry[]>>((acc, pq) => {
     acc[pq.year] = acc[pq.year] ?? []
     acc[pq.year].push(pq)
@@ -56,36 +56,38 @@ export default function Syllabus() {
   }, {})
 
   return (
-    <div className="flex h-full overflow-hidden">
+    <div className="flex h-full overflow-hidden bg-study-bg">
       {/* College list */}
-      <aside className="w-60 flex-shrink-0 border-r border-gray-200 flex flex-col overflow-hidden">
-        <div className="px-4 py-4 border-b border-gray-100">
+      <aside className="w-60 flex-shrink-0 bg-study-surface border-r border-white/[0.06] flex flex-col overflow-hidden">
+        <div className="px-4 py-4 border-b border-white/[0.05]">
           <div className="flex items-center gap-2">
-            <BookOpen size={16} className="text-indigo-600" />
-            <span className="text-sm font-semibold text-gray-900">Colleges</span>
+            <BookOpen size={15} className="text-indigo-400" />
+            <span className="text-sm font-semibold text-slate-300">Colleges</span>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto py-2">
+        <div className="flex-1 overflow-y-auto py-2 dark-scrollbar">
           {loadingColleges ? (
-            <p className="px-4 py-3 text-sm text-gray-400">Loading...</p>
+            <div className="px-3 py-2 space-y-2">
+              {[1, 2, 3, 4].map(i => <DarkSkeleton key={i} className="h-10 w-full" variant="block" />)}
+            </div>
           ) : colleges.length === 0 ? (
-            <p className="px-4 py-3 text-sm text-gray-400 italic">No colleges added yet.</p>
+            <p className="px-4 py-3 text-sm text-slate-500 italic">No colleges added yet.</p>
           ) : (
             colleges.map(col => (
               <button
                 key={col.id}
                 onClick={() => { setSelected(col); setActiveTab('syllabus') }}
-                className={`w-full text-left px-4 py-3 text-sm transition-colors flex items-center justify-between ${
+                className={`w-full text-left px-4 py-3 text-sm transition-colors flex items-center justify-between border-l-2 ${
                   selected?.id === col.id
-                    ? 'bg-indigo-50 text-indigo-700 font-medium'
-                    : 'text-gray-700 hover:bg-gray-50'
+                    ? 'bg-indigo-600/15 text-indigo-400 border-indigo-500 pl-[14px]'
+                    : 'text-slate-400 hover:bg-study-hover hover:text-slate-200 border-transparent pl-[14px]'
                 }`}
               >
                 <div>
-                  <p className="font-medium">{col.name}</p>
-                  {col.location && <p className="text-xs text-gray-400 mt-0.5">{col.location}</p>}
+                  <p className="font-medium text-xs">{col.name}</p>
+                  {col.location && <p className="text-[10px] text-slate-600 mt-0.5">{col.location}</p>}
                 </div>
-                {selected?.id === col.id && <ChevronRight size={14} />}
+                {selected?.id === col.id && <ChevronRight size={13} className="flex-shrink-0" />}
               </button>
             ))
           )}
@@ -95,26 +97,28 @@ export default function Syllabus() {
       {/* Content area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {!selected ? (
-          <div className="flex items-center justify-center h-full text-gray-400 text-sm">
-            Select a college to view syllabus and past questions.
+          <div className="flex flex-col items-center justify-center h-full gap-3">
+            <div className="w-14 h-14 rounded-2xl bg-study-elevated flex items-center justify-center">
+              <BookOpen size={26} className="text-slate-600" />
+            </div>
+            <p className="text-sm text-slate-500">Select a college to view syllabus and past questions.</p>
           </div>
         ) : (
           <>
             {/* Header */}
-            <div className="px-6 py-4 border-b border-gray-200 bg-white">
-              <h2 className="text-base font-semibold text-gray-900">{selected.name}</h2>
-              {selected.location && <p className="text-xs text-gray-400 mt-0.5">{selected.location}</p>}
+            <div className="px-6 py-4 border-b border-white/[0.06] bg-study-surface flex-shrink-0">
+              <h2 className="text-sm font-semibold text-slate-200">{selected.name}</h2>
+              {selected.location && <p className="text-xs text-slate-500 mt-0.5">{selected.location}</p>}
 
-              {/* Tabs */}
               <div className="flex gap-1 mt-3">
                 {(['syllabus', 'past-questions'] as const).map(tab => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                       activeTab === tab
                         ? 'bg-indigo-600 text-white'
-                        : 'text-gray-600 hover:bg-gray-100'
+                        : 'text-slate-500 hover:text-slate-300 hover:bg-study-hover'
                     }`}
                   >
                     {tab === 'syllabus' ? 'Syllabus' : 'Past Questions'}
@@ -124,27 +128,35 @@ export default function Syllabus() {
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto px-6 py-5">
+            <div className="flex-1 overflow-y-auto px-6 py-5 dark-scrollbar">
               {loadingContent ? (
-                <p className="text-sm text-gray-400">Loading...</p>
+                <div className="space-y-2">
+                  {[1, 2, 3].map(i => <DarkSkeleton key={i} className="h-14 w-full" variant="block" />)}
+                </div>
               ) : activeTab === 'syllabus' ? (
                 syllabi.length === 0 ? (
-                  <p className="text-sm text-gray-400 italic">No syllabus uploaded yet for this college.</p>
+                  <div className="flex flex-col items-center justify-center py-16 gap-3">
+                    <FileText size={28} className="text-slate-700" />
+                    <p className="text-sm text-slate-500 italic">No syllabus uploaded yet for this college.</p>
+                  </div>
                 ) : (
                   <div className="space-y-2">
                     {syllabi.map(s => (
-                      <div key={s.id} className="flex items-center justify-between py-3 px-4 bg-white border border-gray-200 rounded-lg hover:border-indigo-200 transition-colors">
+                      <div
+                        key={s.id}
+                        className="flex items-center justify-between py-3 px-4 bg-study-card border border-white/[0.07] rounded-xl hover:border-indigo-500/20 transition-colors"
+                      >
                         <div>
-                          <p className="text-sm font-medium text-gray-800">{s.display_name}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">Year {s.year}</p>
+                          <p className="text-sm font-medium text-slate-300">{s.display_name}</p>
+                          <p className="text-xs text-slate-600 mt-0.5">Year {s.year}</p>
                         </div>
                         <a
                           href={s.file_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                          className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
                         >
-                          View / Download <ExternalLink size={12} />
+                          View / Download <ExternalLink size={11} />
                         </a>
                       </div>
                     ))}
@@ -152,25 +164,33 @@ export default function Syllabus() {
                 )
               ) : (
                 Object.keys(pqByYear).length === 0 ? (
-                  <p className="text-sm text-gray-400 italic">No past question papers uploaded yet for this college.</p>
+                  <div className="flex flex-col items-center justify-center py-16 gap-3">
+                    <FileText size={28} className="text-slate-700" />
+                    <p className="text-sm text-slate-500 italic">No past question papers uploaded yet for this college.</p>
+                  </div>
                 ) : (
-                  <div className="space-y-5">
+                  <div className="space-y-6">
                     {Object.entries(pqByYear)
                       .sort(([a], [b]) => Number(b) - Number(a))
                       .map(([year, papers]) => (
                         <div key={year}>
-                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{year}</p>
+                          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2">{year}</p>
                           <div className="space-y-2">
                             {papers.map((pq, i) => (
-                              <div key={pq.id} className="flex items-center justify-between py-3 px-4 bg-white border border-gray-200 rounded-lg hover:border-indigo-200 transition-colors">
-                                <p className="text-sm text-gray-800">Question Paper {papers.length > 1 ? i + 1 : ''}</p>
+                              <div
+                                key={pq.id}
+                                className="flex items-center justify-between py-3 px-4 bg-study-card border border-white/[0.07] rounded-xl hover:border-indigo-500/20 transition-colors"
+                              >
+                                <p className="text-sm text-slate-300">
+                                  Question Paper {papers.length > 1 ? i + 1 : ''}
+                                </p>
                                 <a
                                   href={pq.file_url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                                  className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
                                 >
-                                  Download <ExternalLink size={12} />
+                                  Download <ExternalLink size={11} />
                                 </a>
                               </div>
                             ))}

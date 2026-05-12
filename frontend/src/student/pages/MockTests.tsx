@@ -8,6 +8,7 @@ import {
   Trophy,
   XCircle,
 } from 'lucide-react'
+import DarkSkeleton from '../components/DarkSkeleton'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -82,16 +83,16 @@ interface LeaderboardData {
 // ---------------------------------------------------------------------------
 
 const SUBJECT_DISPLAY: Record<string, string> = {
-  compulsory_math: 'Compulsory Math',
-  optional_math: 'Optional Math',
+  compulsory_math:    'Compulsory Math',
+  optional_math:      'Optional Math',
   compulsory_english: 'Compulsory English',
   compulsory_science: 'Compulsory Science',
-  gk: 'General Knowledge',
-  iq: 'IQ',
-  computer_science: 'Computer Science',
+  gk:                 'General Knowledge',
+  iq:                 'IQ',
+  computer_science:   'Computer Science',
 }
 
-const SCIENCE_SUBJECTS = ['compulsory_math', 'optional_math', 'compulsory_english', 'compulsory_science']
+const SCIENCE_SUBJECTS    = ['compulsory_math', 'optional_math', 'compulsory_english', 'compulsory_science']
 const MANAGEMENT_SUBJECTS = ['compulsory_math', 'compulsory_english']
 
 function subjectLabel(s: string): string {
@@ -103,15 +104,15 @@ function pct(correct: number, total: number): number {
   return Math.round((correct / total) * 100)
 }
 
-function scoreColor(p: number): string {
-  if (p >= 70) return 'text-green-600'
-  if (p >= 50) return 'text-yellow-600'
-  return 'text-red-600'
+function scoreColorClass(p: number): string {
+  if (p >= 70) return 'text-green-400'
+  if (p >= 50) return 'text-amber-400'
+  return 'text-red-400'
 }
 
-function barColor(p: number): string {
+function barColorClass(p: number): string {
   if (p >= 70) return 'bg-green-500'
-  if (p >= 50) return 'bg-yellow-500'
+  if (p >= 50) return 'bg-amber-500'
   return 'bg-red-500'
 }
 
@@ -136,19 +137,16 @@ export default function MockTests() {
   const [view, setView] = useState<View>('idle')
   const [idleTab, setIdleTab] = useState<IdleTab>('college')
 
-  // Colleges
   const [colleges, setColleges] = useState<College[]>([])
   const [collegesLoading, setCollegesLoading] = useState(true)
   const [selectedCollege, setSelectedCollege] = useState<College | null>(null)
   const [showStartModal, setShowStartModal] = useState(false)
 
-  // Customizable
   const [stream, setStream] = useState<string>('both')
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([])
   const [subjectCounts, setSubjectCounts] = useState<Record<string, number>>({})
   const [customTime, setCustomTime] = useState(30)
 
-  // Exam
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [examCollegeId, setExamCollegeId] = useState<string | null>(null)
   const [examSubjects, setExamSubjects] = useState<string[]>([])
@@ -161,13 +159,11 @@ export default function MockTests() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const autoSubmittedRef = useRef(false)
 
-  // Results
   const [scoreData, setScoreData] = useState<ScoreData | null>(null)
   const [expandedSubject, setExpandedSubject] = useState<string | null>(null)
   const [expandedQuestion, setExpandedQuestion] = useState<string | null>(null)
   const [postExamCollegeId, setPostExamCollegeId] = useState<string | null>(null)
 
-  // Leaderboard
   const [lbCollegeId, setLbCollegeId] = useState<string>('')
   const [lbAllTime, setLbAllTime] = useState(false)
   const [lbData, setLbData] = useState<LeaderboardData | null>(null)
@@ -277,10 +273,7 @@ export default function MockTests() {
         body: JSON.stringify({ college_id: college.id }),
       })
       const data = await resp.json()
-      if (!resp.ok) {
-        alert(data.detail ?? 'Failed to start exam.')
-        return
-      }
+      if (!resp.ok) { alert(data.detail ?? 'Failed to start exam.'); return }
       initExam(data, college.id)
     } catch {
       alert('Failed to start exam. Please try again.')
@@ -294,10 +287,7 @@ export default function MockTests() {
   // Start exam (customizable)
   // ---------------------------------------------------------------------------
   async function startCustomExam() {
-    if (selectedSubjects.length === 0) {
-      alert('Select at least one subject.')
-      return
-    }
+    if (selectedSubjects.length === 0) { alert('Select at least one subject.'); return }
     const distribution: Record<string, number> = {}
     for (const s of selectedSubjects) {
       distribution[s] = subjectCounts[s] ?? 10
@@ -310,10 +300,7 @@ export default function MockTests() {
         body: JSON.stringify({ custom_distribution: distribution, time_limit_minutes: customTime }),
       })
       const data = await resp.json()
-      if (!resp.ok) {
-        alert(data.detail ?? 'Failed to start exam.')
-        return
-      }
+      if (!resp.ok) { alert(data.detail ?? 'Failed to start exam.'); return }
       initExam(data, null)
     } catch {
       alert('Failed to start exam. Please try again.')
@@ -337,9 +324,6 @@ export default function MockTests() {
     setView('exam')
   }
 
-  // ---------------------------------------------------------------------------
-  // Helpers for available subjects
-  // ---------------------------------------------------------------------------
   const availableSubjects =
     stream === 'science'
       ? SCIENCE_SUBJECTS
@@ -354,9 +338,6 @@ export default function MockTests() {
     setSubjectCounts(prev => ({ ...prev, [s]: prev[s] ?? 10 }))
   }
 
-  // ---------------------------------------------------------------------------
-  // Answered counts
-  // ---------------------------------------------------------------------------
   function answeredInSubject(s: string): number {
     return (questions[s] ?? []).filter(q => answers[q.question_id] != null).length
   }
@@ -369,61 +350,63 @@ export default function MockTests() {
   // ---------------------------------------------------------------------------
   if (view === 'exam') {
     const currentQuestions = questions[activeExamSubject] ?? []
-    const isLow = timeRemaining <= 300 // ≤5 min
+    const isLow = timeRemaining <= 300
 
     return (
-      <div className="flex flex-col h-full bg-gray-50">
+      <div className="flex flex-col h-full bg-study-bg">
         {/* Header bar */}
-        <div className="bg-white border-b px-6 py-3 flex items-center justify-between sticky top-0 z-10 shadow-sm">
-          <div className="text-sm text-gray-500">
-            Answered: <span className="font-semibold text-gray-800">{totalAnswered}/{totalQuestions}</span>
+        <div className="bg-study-surface border-b border-white/[0.06] px-6 py-3 flex items-center justify-between sticky top-0 z-10">
+          <div className="text-sm text-slate-500">
+            Answered: <span className="font-semibold text-slate-300">{totalAnswered}/{totalQuestions}</span>
           </div>
-          <div className={`flex items-center gap-2 text-2xl font-mono font-bold ${isLow ? 'text-red-600 animate-pulse' : 'text-gray-800'}`}>
+          <div className={`flex items-center gap-2 text-2xl font-mono font-bold ${isLow ? 'text-red-400 animate-pulse' : 'text-slate-200'}`}>
             <Clock className="w-5 h-5" />
             {formatTime(timeRemaining)}
           </div>
           <button
             onClick={() => setShowConfirm(true)}
             disabled={examLoading}
-            className="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+            className="bg-indigo-600 text-white px-5 py-2 rounded-xl text-sm font-medium hover:bg-indigo-500 disabled:opacity-50 transition-colors"
           >
             Submit Exam
           </button>
         </div>
 
         {/* Subject tabs */}
-        <div className="bg-white border-b px-4 flex gap-1 overflow-x-auto">
-          {examSubjects.map(s => {
-            const ans = answeredInSubject(s)
-            const tot = (questions[s] ?? []).length
-            const active = s === activeExamSubject
-            return (
-              <button
-                key={s}
-                onClick={() => setActiveExamSubject(s)}
-                className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                  active
-                    ? 'border-indigo-600 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {subjectLabel(s)}{' '}
-                <span className={`text-xs ${ans === tot ? 'text-green-600' : 'text-gray-400'}`}>
-                  {ans}/{tot}
-                </span>
-              </button>
-            )
-          })}
+        <div className="bg-study-surface border-b border-white/[0.06] px-4 py-2 flex items-center">
+          <div className="flex gap-1 bg-study-card rounded-xl p-1 overflow-x-auto dark-scrollbar">
+            {examSubjects.map(s => {
+              const ans = answeredInSubject(s)
+              const tot = (questions[s] ?? []).length
+              const active = s === activeExamSubject
+              return (
+                <button
+                  key={s}
+                  onClick={() => setActiveExamSubject(s)}
+                  className={`px-4 py-2 text-sm font-medium whitespace-nowrap rounded-xl transition-colors flex-shrink-0 ${
+                    active
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-slate-500 hover:text-slate-300 hover:bg-study-elevated'
+                  }`}
+                >
+                  {subjectLabel(s)}{' '}
+                  <span className={`text-xs ml-1 ${ans === tot ? (active ? 'text-green-300' : 'text-green-400') : (active ? 'text-indigo-200' : 'text-slate-600')}`}>
+                    {ans}/{tot}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         {/* Questions */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 max-w-3xl mx-auto w-full">
+        <div className="flex-1 overflow-y-auto p-6 space-y-5 max-w-3xl mx-auto w-full dark-scrollbar">
           {currentQuestions.map((q, idx) => {
             const selected = answers[q.question_id]
             return (
-              <div key={q.question_id} className="bg-white rounded-xl border p-5 shadow-sm">
-                <p className="text-sm text-gray-400 mb-1">Q{idx + 1} · {q.difficulty}</p>
-                <p className="text-gray-900 font-medium mb-4 leading-relaxed">{q.question_text}</p>
+              <div key={q.question_id} className="bg-study-card border border-white/[0.07] rounded-2xl p-5">
+                <p className="text-xs text-slate-600 mb-1.5">Q{idx + 1} · <span className="capitalize">{q.difficulty}</span></p>
+                <p className="text-slate-200 font-medium mb-4 leading-relaxed text-sm">{q.question_text}</p>
                 <div className="space-y-2">
                   {q.options.map(opt => {
                     const isSelected = selected === opt.id
@@ -431,13 +414,13 @@ export default function MockTests() {
                       <button
                         key={opt.id}
                         onClick={() => setAnswers(prev => ({ ...prev, [q.question_id]: opt.id }))}
-                        className={`w-full text-left px-4 py-3 rounded-lg border text-sm transition-all ${
+                        className={`w-full text-left px-4 py-3 rounded-xl border text-sm transition-all ${
                           isSelected
-                            ? 'border-indigo-500 bg-indigo-50 text-indigo-800 font-medium'
-                            : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-300 hover:bg-gray-100'
+                            ? 'border-indigo-500/50 bg-indigo-600/10 text-slate-200 font-medium'
+                            : 'border-white/[0.07] bg-study-elevated text-slate-400 hover:border-indigo-500/20 hover:text-slate-200'
                         }`}
                       >
-                        <span className="font-semibold mr-2">{opt.id}.</span>
+                        <span className="font-semibold mr-2 text-slate-500">{opt.id}.</span>
                         {opt.text}
                       </button>
                     )
@@ -450,27 +433,27 @@ export default function MockTests() {
 
         {/* Confirm modal */}
         {showConfirm && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl p-6 max-w-sm w-full shadow-xl">
-              <h3 className="font-semibold text-lg mb-2">Submit Exam?</h3>
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+            <div className="bg-study-card border border-white/[0.1] rounded-2xl p-6 max-w-sm w-full shadow-[0_8px_40px_rgba(0,0,0,0.5)]">
+              <h3 className="font-semibold text-base text-slate-100 mb-2">Submit Exam?</h3>
               {totalAnswered < totalQuestions && (
-                <p className="text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm mb-4">
-                  <AlertCircle className="inline w-4 h-4 mr-1" />
+                <p className="text-amber-400 bg-amber-600/10 border border-amber-500/20 rounded-xl p-3 text-sm mb-4 flex items-center gap-2">
+                  <AlertCircle className="inline w-4 h-4 flex-shrink-0" />
                   {totalQuestions - totalAnswered} question{totalQuestions - totalAnswered !== 1 ? 's' : ''} unanswered.
                 </p>
               )}
-              <p className="text-gray-600 text-sm mb-5">You cannot change answers after submitting.</p>
+              <p className="text-slate-400 text-sm mb-5">You cannot change answers after submitting.</p>
               <div className="flex gap-3 justify-end">
                 <button
                   onClick={() => setShowConfirm(false)}
-                  className="px-4 py-2 text-sm rounded-lg border border-gray-200 hover:bg-gray-50"
+                  className="px-4 py-2 text-sm rounded-xl border border-white/[0.1] text-slate-400 hover:text-slate-200 hover:bg-study-elevated transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => handleSubmit(false)}
                   disabled={examLoading}
-                  className="px-5 py-2 text-sm rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50"
+                  className="px-5 py-2 text-sm rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-500 disabled:opacity-50 transition-colors"
                 >
                   {examLoading ? 'Submitting...' : 'Submit'}
                 </button>
@@ -498,13 +481,13 @@ export default function MockTests() {
     }
 
     return (
-      <div className="flex flex-col h-full overflow-y-auto bg-gray-50">
+      <div className="flex flex-col h-full overflow-y-auto bg-study-bg dark-scrollbar">
         <div className="max-w-3xl mx-auto w-full p-6 space-y-6">
           {/* Overall score */}
-          <div className="bg-white rounded-xl border p-8 text-center shadow-sm">
-            <p className="text-gray-500 text-sm mb-2">Overall Score</p>
-            <p className={`text-6xl font-bold mb-1 ${scoreColor(p)}`}>{p}%</p>
-            <p className="text-gray-500">{scoreData.correct} / {scoreData.total} correct</p>
+          <div className="bg-study-card border border-white/[0.07] rounded-2xl p-8 text-center">
+            <p className="text-slate-500 text-xs uppercase tracking-widest mb-3">Overall Score</p>
+            <p className={`text-6xl font-bold mb-1 ${scoreColorClass(p)}`}>{p}%</p>
+            <p className="text-slate-500 text-sm">{scoreData.correct} / {scoreData.total} correct</p>
           </div>
 
           {/* Per-subject breakdown */}
@@ -512,90 +495,88 @@ export default function MockTests() {
             {Object.entries(scoreData.per_subject).map(([subj, ss]) => {
               const sp = pct(ss.correct, ss.total)
               return (
-                <div key={subj} className="bg-white rounded-xl border p-4 shadow-sm">
-                  <p className="font-medium text-gray-800 mb-1">{subjectLabel(subj)}</p>
-                  <p className={`text-2xl font-bold mb-2 ${scoreColor(sp)}`}>{sp}%</p>
-                  <div className="w-full bg-gray-100 rounded-full h-2 mb-1">
+                <div key={subj} className="bg-study-card border border-white/[0.07] rounded-2xl p-4">
+                  <p className="font-medium text-slate-300 text-sm mb-1">{subjectLabel(subj)}</p>
+                  <p className={`text-2xl font-bold mb-2 ${scoreColorClass(sp)}`}>{sp}%</p>
+                  <div className="w-full bg-study-elevated rounded-full h-1.5 mb-1">
                     <div
-                      className={`h-2 rounded-full ${barColor(sp)}`}
+                      className={`h-1.5 rounded-full transition-all duration-500 ${barColorClass(sp)}`}
                       style={{ width: `${sp}%` }}
                     />
                   </div>
-                  <p className="text-sm text-gray-500">{ss.correct}/{ss.total} correct</p>
+                  <p className="text-xs text-slate-500 mt-1">{ss.correct}/{ss.total} correct</p>
                 </div>
               )
             })}
           </div>
 
           {/* Per-question review */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-gray-800">Question Review</h3>
+          <div className="space-y-3">
+            <h3 className="font-semibold text-slate-300 text-sm uppercase tracking-wide">Question Review</h3>
             {Object.entries(scoreData.per_subject).map(([subj, ss]) => (
-              <div key={subj} className="bg-white rounded-xl border shadow-sm overflow-hidden">
+              <div key={subj} className="bg-study-card border border-white/[0.07] rounded-2xl overflow-hidden">
                 <button
                   onClick={() => setExpandedSubject(expandedSubject === subj ? null : subj)}
-                  className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50"
+                  className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-study-elevated transition-colors"
                 >
-                  <span className="font-medium text-gray-800">{subjectLabel(subj)}</span>
+                  <span className="font-medium text-slate-300 text-sm">{subjectLabel(subj)}</span>
                   <div className="flex items-center gap-3">
-                    <span className={`text-sm font-semibold ${scoreColor(pct(ss.correct, ss.total))}`}>
+                    <span className={`text-sm font-semibold ${scoreColorClass(pct(ss.correct, ss.total))}`}>
                       {ss.correct}/{ss.total}
                     </span>
                     {expandedSubject === subj ? (
-                      <ChevronUp className="w-4 h-4 text-gray-400" />
+                      <ChevronUp className="w-4 h-4 text-slate-500" />
                     ) : (
-                      <ChevronDown className="w-4 h-4 text-gray-400" />
+                      <ChevronDown className="w-4 h-4 text-slate-500" />
                     )}
                   </div>
                 </button>
                 {expandedSubject === subj && (
-                  <div className="border-t divide-y">
+                  <div className="border-t border-white/[0.05] divide-y divide-white/[0.04]">
                     {ss.questions.map((qr, idx) => (
                       <div key={qr.question_id} className="px-5 py-4">
                         <div className="flex items-start gap-3">
                           {qr.correct ? (
-                            <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                            <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
                           ) : (
-                            <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                            <XCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
                           )}
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm text-gray-500 mb-1">Q{idx + 1} · {qr.difficulty}</p>
-                            <p className="text-sm text-gray-800 leading-relaxed mb-3">
+                            <p className="text-xs text-slate-600 mb-1">Q{idx + 1} · <span className="capitalize">{qr.difficulty}</span></p>
+                            <p className="text-sm text-slate-300 leading-relaxed mb-3">
                               {qr.question_data.question_text}
                             </p>
-                            {/* Options */}
                             <div className="space-y-1.5 mb-3">
                               {qr.question_data.options.map(opt => {
                                 const isCorrect = qr.correct_option_ids.includes(opt.id)
                                 const isStudent = qr.student_answer === opt.id
-                                let cls = 'border-gray-200 bg-gray-50 text-gray-600'
-                                if (isCorrect) cls = 'border-green-400 bg-green-50 text-green-800 font-medium'
+                                let cls = 'border-white/[0.05] bg-study-elevated text-slate-500'
+                                if (isCorrect) cls = 'border-green-500/40 bg-green-600/10 text-green-300 font-medium'
                                 else if (isStudent && !isCorrect)
-                                  cls = 'border-red-400 bg-red-50 text-red-800 line-through'
+                                  cls = 'border-red-500/40 bg-red-600/10 text-red-300 line-through'
                                 return (
-                                  <div key={opt.id} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm ${cls}`}>
+                                  <div key={opt.id} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${cls}`}>
                                     <span className="font-semibold">{opt.id}.</span>
                                     <span>{opt.text}</span>
                                   </div>
                                 )
                               })}
                             </div>
-                            {/* Explanation toggle */}
                             <button
                               onClick={() =>
                                 setExpandedQuestion(expandedQuestion === qr.question_id ? null : qr.question_id)
                               }
-                              className="text-xs text-indigo-600 hover:text-indigo-800"
+                              className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
                             >
                               {expandedQuestion === qr.question_id ? 'Hide explanation' : 'Show explanation'}
                             </button>
                             {expandedQuestion === qr.question_id && (
-                              <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+                              <div className="mt-2 p-3 bg-indigo-600/10 border border-indigo-500/20 rounded-xl text-xs text-slate-300 leading-relaxed">
                                 {qr.explanation || 'No explanation available.'}
                                 {qr.student_answer &&
                                   !qr.correct &&
                                   qr.common_mistakes[qr.student_answer] && (
-                                    <p className="mt-2 text-yellow-700">
+                                    <p className="mt-2 text-amber-400">
                                       <strong>Why {qr.student_answer} is wrong:</strong>{' '}
                                       {qr.common_mistakes[qr.student_answer]}
                                     </p>
@@ -616,14 +597,14 @@ export default function MockTests() {
           <div className="flex gap-3 pb-6">
             <button
               onClick={() => setView('idle')}
-              className="flex-1 border border-gray-200 text-gray-700 py-3 rounded-xl text-sm font-medium hover:bg-gray-50"
+              className="flex-1 border border-white/[0.1] text-slate-400 hover:text-slate-200 hover:bg-study-elevated py-3 rounded-2xl text-sm font-medium transition-colors"
             >
               New Mock Test
             </button>
             {postExamCollegeId && (
               <button
                 onClick={goToLeaderboard}
-                className="flex-1 bg-indigo-600 text-white py-3 rounded-xl text-sm font-medium hover:bg-indigo-700 flex items-center justify-center gap-2"
+                className="flex-1 bg-indigo-600 text-white py-3 rounded-2xl text-sm font-medium hover:bg-indigo-500 flex items-center justify-center gap-2 transition-colors"
               >
                 <Trophy className="w-4 h-4" />
                 View Leaderboard
@@ -639,62 +620,68 @@ export default function MockTests() {
   // View: Idle (tabs)
   // ---------------------------------------------------------------------------
   return (
-    <div className="flex flex-col h-full bg-gray-50">
+    <div className="flex flex-col h-full bg-study-bg">
       {/* Tab bar */}
-      <div className="bg-white border-b px-6 flex gap-0">
-        {(['college', 'custom', 'leaderboard'] as IdleTab[]).map(tab => (
-          <button
-            key={tab}
-            onClick={() => setIdleTab(tab)}
-            className={`px-5 py-4 text-sm font-medium border-b-2 transition-colors capitalize ${
-              idleTab === tab
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            {tab === 'college' ? 'College Format' : tab === 'custom' ? 'Customizable' : 'Leaderboard'}
-          </button>
-        ))}
+      <div className="bg-study-surface border-b border-white/[0.06] px-4 py-2 flex items-center">
+        <div className="flex gap-1 bg-study-card rounded-xl p-1">
+          {(['college', 'custom', 'leaderboard'] as IdleTab[]).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setIdleTab(tab)}
+              className={`px-4 py-2 text-sm font-medium rounded-xl transition-colors ${
+                idleTab === tab
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-slate-500 hover:text-slate-300 hover:bg-study-elevated'
+              }`}
+            >
+              {tab === 'college' ? 'College Format' : tab === 'custom' ? 'Customizable' : 'Leaderboard'}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto dark-scrollbar">
         {/* ------------------------------------------------------------------ */}
         {/* College Format tab */}
         {/* ------------------------------------------------------------------ */}
         {idleTab === 'college' && (
           <div className="p-6 max-w-4xl mx-auto">
             {collegesLoading ? (
-              <p className="text-gray-400 text-center py-12">Loading colleges...</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[1, 2, 3, 4].map(i => <DarkSkeleton key={i} className="h-40 w-full" variant="block" />)}
+              </div>
             ) : colleges.length === 0 ? (
-              <p className="text-gray-400 text-center py-12">No colleges configured yet.</p>
+              <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <p className="text-slate-500 text-sm">No colleges configured yet.</p>
+              </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {colleges.map(col => (
                   <div
                     key={col.id}
-                    className="bg-white rounded-xl border shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                    className="bg-study-card border border-white/[0.07] rounded-2xl overflow-hidden hover:border-indigo-500/20 hover:-translate-y-0.5 transition-all cursor-pointer"
                     onClick={() => {
                       setSelectedCollege(col)
                       setShowStartModal(true)
                     }}
                   >
                     <div className="p-5">
-                      <h3 className="font-semibold text-gray-900 text-lg mb-0.5">{col.name}</h3>
+                      <h3 className="font-semibold text-slate-200 text-base mb-0.5">{col.name}</h3>
                       {col.location && (
-                        <p className="text-sm text-gray-400 mb-3">{col.location}</p>
+                        <p className="text-xs text-slate-500 mb-3">{col.location}</p>
                       )}
-                      <div className="flex gap-4 text-sm text-gray-600">
+                      <div className="flex gap-4 text-xs text-slate-400">
                         <span>📝 {col.total_questions} questions</span>
                         <span>⏱ {col.total_time_minutes} min</span>
                       </div>
                     </div>
                     {Object.keys(col.question_distribution).length > 0 && (
-                      <div className="border-t bg-gray-50 px-5 py-3">
-                        <div className="flex flex-wrap gap-2">
+                      <div className="border-t border-white/[0.05] bg-study-elevated px-5 py-3">
+                        <div className="flex flex-wrap gap-1.5">
                           {Object.entries(col.question_distribution).map(([s, n]) => (
                             <span
                               key={s}
-                              className="text-xs bg-white border rounded-full px-2.5 py-1 text-gray-600"
+                              className="text-[10px] bg-study-card border border-white/[0.07] rounded-full px-2.5 py-1 text-slate-500"
                             >
                               {subjectLabel(s)}: {n}
                             </span>
@@ -709,28 +696,28 @@ export default function MockTests() {
 
             {/* Start modal */}
             {showStartModal && selectedCollege && (
-              <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-xl p-6 max-w-sm w-full shadow-xl">
-                  <h3 className="font-semibold text-lg mb-1">{selectedCollege.name}</h3>
+              <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+                <div className="bg-study-card border border-white/[0.1] rounded-2xl p-6 max-w-sm w-full shadow-[0_8px_40px_rgba(0,0,0,0.5)]">
+                  <h3 className="font-semibold text-base text-slate-100 mb-1">{selectedCollege.name}</h3>
                   {selectedCollege.location && (
-                    <p className="text-sm text-gray-400 mb-4">{selectedCollege.location}</p>
+                    <p className="text-xs text-slate-500 mb-4">{selectedCollege.location}</p>
                   )}
                   <div className="space-y-2 mb-4">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Total questions</span>
-                      <span className="font-medium">{selectedCollege.total_questions}</span>
+                      <span className="text-slate-500">Total questions</span>
+                      <span className="font-medium text-slate-300">{selectedCollege.total_questions}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Time limit</span>
-                      <span className="font-medium">{selectedCollege.total_time_minutes} min</span>
+                      <span className="text-slate-500">Time limit</span>
+                      <span className="font-medium text-slate-300">{selectedCollege.total_time_minutes} min</span>
                     </div>
                   </div>
                   {Object.keys(selectedCollege.question_distribution).length > 0 && (
-                    <div className="bg-gray-50 rounded-lg p-3 mb-4 space-y-1">
+                    <div className="bg-study-elevated rounded-xl p-3 mb-4 space-y-1.5">
                       {Object.entries(selectedCollege.question_distribution).map(([s, n]) => (
-                        <div key={s} className="flex justify-between text-sm">
-                          <span className="text-gray-600">{subjectLabel(s)}</span>
-                          <span className="font-medium text-gray-800">{n} questions</span>
+                        <div key={s} className="flex justify-between text-xs">
+                          <span className="text-slate-500">{subjectLabel(s)}</span>
+                          <span className="font-medium text-slate-300">{n} questions</span>
                         </div>
                       ))}
                     </div>
@@ -738,14 +725,14 @@ export default function MockTests() {
                   <div className="flex gap-3">
                     <button
                       onClick={() => setShowStartModal(false)}
-                      className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-lg text-sm hover:bg-gray-50"
+                      className="flex-1 border border-white/[0.1] text-slate-400 hover:text-slate-200 py-2.5 rounded-xl text-sm hover:bg-study-elevated transition-colors"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={() => startCollegeExam(selectedCollege)}
                       disabled={examLoading}
-                      className="flex-1 bg-indigo-600 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+                      className="flex-1 bg-indigo-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-500 disabled:opacity-50 transition-colors"
                     >
                       {examLoading ? 'Starting...' : 'Start Exam'}
                     </button>
@@ -761,26 +748,30 @@ export default function MockTests() {
         {/* ------------------------------------------------------------------ */}
         {idleTab === 'custom' && (
           <div className="p-6 max-w-xl mx-auto">
-            <div className="bg-white rounded-xl border shadow-sm p-6 space-y-6">
+            <div className="bg-study-card border border-white/[0.07] rounded-2xl p-6 space-y-6">
               <div>
-                <h3 className="font-semibold text-gray-800 mb-3">Select Subjects</h3>
+                <h3 className="font-semibold text-slate-300 text-sm mb-3">Select Subjects</h3>
                 <div className="space-y-2">
                   {availableSubjects.map(s => {
                     const checked = selectedSubjects.includes(s)
                     return (
                       <label
                         key={s}
-                        className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                          checked ? 'border-indigo-300 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
+                        className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                          checked
+                            ? 'border-indigo-500/50 bg-indigo-600/10'
+                            : 'border-white/[0.07] bg-study-elevated hover:border-indigo-500/20'
                         }`}
                       >
                         <input
                           type="checkbox"
                           checked={checked}
                           onChange={() => toggleSubject(s)}
-                          className="w-4 h-4 text-indigo-600 rounded"
+                          className="w-4 h-4 accent-indigo-600 rounded"
                         />
-                        <span className="text-sm font-medium text-gray-800">{subjectLabel(s)}</span>
+                        <span className={`text-sm font-medium ${checked ? 'text-slate-200' : 'text-slate-400'}`}>
+                          {subjectLabel(s)}
+                        </span>
                       </label>
                     )
                   })}
@@ -789,13 +780,13 @@ export default function MockTests() {
 
               {selectedSubjects.length > 0 && (
                 <div>
-                  <h3 className="font-semibold text-gray-800 mb-3">Questions per Subject</h3>
+                  <h3 className="font-semibold text-slate-300 text-sm mb-3">Questions per Subject</h3>
                   <div className="space-y-4">
                     {selectedSubjects.map(s => (
                       <div key={s}>
-                        <div className="flex justify-between text-sm mb-1">
-                          <span className="text-gray-700">{subjectLabel(s)}</span>
-                          <span className="font-semibold text-indigo-600">{subjectCounts[s] ?? 10}</span>
+                        <div className="flex justify-between text-sm mb-1.5">
+                          <span className="text-slate-400">{subjectLabel(s)}</span>
+                          <span className="font-semibold text-indigo-400">{subjectCounts[s] ?? 10}</span>
                         </div>
                         <input
                           type="range"
@@ -807,7 +798,7 @@ export default function MockTests() {
                           }
                           className="w-full accent-indigo-600"
                         />
-                        <div className="flex justify-between text-xs text-gray-400">
+                        <div className="flex justify-between text-xs text-slate-600 mt-0.5">
                           <span>5</span><span>30</span>
                         </div>
                       </div>
@@ -817,7 +808,7 @@ export default function MockTests() {
               )}
 
               <div>
-                <h3 className="font-semibold text-gray-800 mb-3">Time Limit</h3>
+                <h3 className="font-semibold text-slate-300 text-sm mb-3">Time Limit</h3>
                 <div className="flex items-center gap-3">
                   <input
                     type="number"
@@ -825,16 +816,16 @@ export default function MockTests() {
                     max={180}
                     value={customTime}
                     onChange={e => setCustomTime(Number(e.target.value))}
-                    className="w-24 border border-gray-200 rounded-lg px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    className="w-24 bg-study-surface border border-white/[0.1] rounded-xl px-3 py-2 text-sm text-slate-200 text-center focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all"
                   />
-                  <span className="text-sm text-gray-500">minutes</span>
+                  <span className="text-sm text-slate-500">minutes</span>
                 </div>
               </div>
 
               <button
                 onClick={startCustomExam}
                 disabled={examLoading || selectedSubjects.length === 0}
-                className="w-full bg-indigo-600 text-white py-3 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+                className="w-full bg-indigo-600 text-white py-3 rounded-xl text-sm font-medium hover:bg-indigo-500 disabled:opacity-50 transition-colors"
               >
                 {examLoading ? 'Starting...' : 'Start Exam'}
               </button>
@@ -847,28 +838,28 @@ export default function MockTests() {
         {/* ------------------------------------------------------------------ */}
         {idleTab === 'leaderboard' && (
           <div className="p-6 max-w-2xl mx-auto">
-            <div className="bg-white rounded-xl border shadow-sm p-6">
+            <div className="bg-study-card border border-white/[0.07] rounded-2xl p-6">
               <div className="flex flex-col sm:flex-row gap-4 mb-6">
                 <select
                   value={lbCollegeId}
                   onChange={e => setLbCollegeId(e.target.value)}
-                  className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  className="flex-1 bg-study-surface border border-white/[0.1] rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all"
                 >
                   <option value="">Select college</option>
                   {colleges.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
-                <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+                <div className="flex rounded-xl border border-white/[0.1] overflow-hidden">
                   <button
                     onClick={() => setLbAllTime(false)}
-                    className={`px-4 py-2 text-sm font-medium ${!lbAllTime ? 'bg-indigo-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                    className={`px-4 py-2 text-sm font-medium transition-colors ${!lbAllTime ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-300 hover:bg-study-elevated'}`}
                   >
                     Today
                   </button>
                   <button
                     onClick={() => setLbAllTime(true)}
-                    className={`px-4 py-2 text-sm font-medium ${lbAllTime ? 'bg-indigo-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                    className={`px-4 py-2 text-sm font-medium transition-colors ${lbAllTime ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-300 hover:bg-study-elevated'}`}
                   >
                     All Time
                   </button>
@@ -876,11 +867,13 @@ export default function MockTests() {
               </div>
 
               {!lbCollegeId ? (
-                <p className="text-center text-gray-400 py-8">Select a college to view the leaderboard.</p>
+                <p className="text-center text-slate-500 py-8 text-sm">Select a college to view the leaderboard.</p>
               ) : lbLoading ? (
-                <p className="text-center text-gray-400 py-8">Loading...</p>
+                <div className="space-y-2">
+                  {[1, 2, 3, 4, 5].map(i => <DarkSkeleton key={i} className="h-14 w-full" variant="block" />)}
+                </div>
               ) : !lbData || lbData.top10.length === 0 ? (
-                <p className="text-center text-gray-400 py-8">No results yet. Be the first!</p>
+                <p className="text-center text-slate-500 py-8 text-sm">No results yet. Be the first!</p>
               ) : (
                 <>
                   <div className="space-y-2">
@@ -890,29 +883,31 @@ export default function MockTests() {
                       return (
                         <div
                           key={entry.rank}
-                          className={`flex items-center gap-4 px-4 py-3 rounded-xl ${
-                            isMe ? 'bg-indigo-50 border border-indigo-200' : 'bg-gray-50 border border-gray-100'
+                          className={`flex items-center gap-4 px-4 py-3 rounded-xl border ${
+                            isMe
+                              ? 'bg-indigo-600/10 border-indigo-500/20'
+                              : 'bg-study-elevated border-white/[0.04]'
                           }`}
                         >
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
                             entry.rank === 1
-                              ? 'bg-yellow-100 text-yellow-700'
+                              ? 'bg-amber-500/20 text-amber-400'
                               : entry.rank === 2
-                                ? 'bg-gray-100 text-gray-600'
+                                ? 'bg-slate-500/20 text-slate-400'
                                 : entry.rank === 3
-                                  ? 'bg-orange-100 text-orange-600'
-                                  : 'bg-white text-gray-500 border'
+                                  ? 'bg-orange-500/20 text-orange-400'
+                                  : 'bg-study-card text-slate-500 border border-white/[0.07]'
                           }`}>
                             {entry.rank}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-medium truncate ${isMe ? 'text-indigo-800' : 'text-gray-800'}`}>
-                              {entry.name} {isMe && '(You)'}
+                            <p className={`text-sm font-medium truncate ${isMe ? 'text-indigo-300' : 'text-slate-300'}`}>
+                              {entry.name} {isMe && <span className="text-indigo-400 font-normal">(You)</span>}
                             </p>
                           </div>
                           <div className="text-right flex-shrink-0">
-                            <p className={`text-sm font-bold ${scoreColor(ep)}`}>{ep}%</p>
-                            <p className="text-xs text-gray-400">{entry.correct}/{entry.total}</p>
+                            <p className={`text-sm font-bold ${scoreColorClass(ep)}`}>{ep}%</p>
+                            <p className="text-xs text-slate-600">{entry.correct}/{entry.total}</p>
                           </div>
                         </div>
                       )
@@ -920,17 +915,17 @@ export default function MockTests() {
                   </div>
 
                   {lbData.my_rank && lbData.my_rank > 10 && (
-                    <div className="mt-3 flex items-center gap-4 px-4 py-3 rounded-xl bg-indigo-50 border border-indigo-200">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                    <div className="mt-3 flex items-center gap-4 px-4 py-3 rounded-xl bg-indigo-600/10 border border-indigo-500/20">
+                      <div className="w-8 h-8 rounded-full bg-indigo-600/20 text-indigo-400 flex items-center justify-center text-sm font-bold flex-shrink-0">
                         {lbData.my_rank}
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-indigo-800">You</p>
+                        <p className="text-sm font-medium text-indigo-300">You</p>
                       </div>
                     </div>
                   )}
 
-                  <p className="text-xs text-gray-400 text-center mt-4">
+                  <p className="text-xs text-slate-600 text-center mt-4">
                     {lbData.total_participants} participant{lbData.total_participants !== 1 ? 's' : ''}{' '}
                     {lbAllTime ? 'all time' : 'today'}
                   </p>

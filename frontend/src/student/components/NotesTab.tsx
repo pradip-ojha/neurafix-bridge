@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { FileText, Download, BookOpen, PanelLeftOpen, PanelLeftClose } from 'lucide-react'
-import Skeleton from '../../components/Skeleton'
+import DarkSkeleton from './DarkSkeleton'
+import { useMobileLayout } from '../../contexts/MobileLayoutContext'
 
 interface ChapterNote {
   chapter_id: string
@@ -18,16 +19,19 @@ interface NotesResponse {
 }
 
 export default function NotesTab({ subject }: { subject: string }) {
-  const [data, setData] = useState<NotesResponse | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [data, setData]                     = useState<NotesResponse | null>(null)
+  const [loading, setLoading]               = useState(true)
   const [selectedChapter, setSelectedChapter] = useState<ChapterNote | null>(null)
-  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768)
+  const [sidebarOpen, setSidebarOpen]       = useState(window.innerWidth >= 768)
+  const { mainSidebarOpen } = useMobileLayout()
+
+  useEffect(() => {
+    if (mainSidebarOpen && window.innerWidth < 768) setSidebarOpen(false)
+  }, [mainSidebarOpen])
 
   useEffect(() => {
     const token = sessionStorage.getItem('token')
-    fetch(`/api/notes/${subject}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    fetch(`/api/notes/${subject}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(async (r) => {
         if (!r.ok) return
         const d: NotesResponse = await r.json()
@@ -42,14 +46,16 @@ export default function NotesTab({ subject }: { subject: string }) {
 
   if (loading) {
     return (
-      <div className="flex h-full overflow-hidden">
-        <div className="w-52 flex-shrink-0 bg-white border-r border-gray-200 p-3 space-y-2 hidden md:block">
+      <div className="flex h-full overflow-hidden bg-study-bg">
+        <div className="w-52 flex-shrink-0 bg-study-surface border-r border-white/[0.06] p-3 space-y-2 hidden md:block">
           {Array.from({ length: 8 }).map((_, i) => (
-            <Skeleton key={i} className="h-8 w-full" variant="block" />
+            <DarkSkeleton key={i} className="h-8 w-full" variant="block" />
           ))}
         </div>
-        <div className="flex-1 flex items-center justify-center bg-gray-50">
-          <div className="text-sm text-gray-400">Loading notes…</div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="space-y-2 w-64">
+            {[...Array(6)].map((_, i) => <DarkSkeleton key={i} className="h-4" />)}
+          </div>
         </div>
       </div>
     )
@@ -57,57 +63,44 @@ export default function NotesTab({ subject }: { subject: string }) {
 
   if (!data) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-sm text-gray-400">Could not load notes.</div>
+      <div className="flex items-center justify-center h-full bg-study-bg">
+        <p className="text-sm text-slate-500">Could not load notes.</p>
       </div>
     )
   }
 
   return (
-    <div className="flex h-full overflow-hidden relative">
-      {/* Mobile backdrop */}
+    <div className="flex h-full overflow-hidden relative bg-study-bg">
       {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/30 z-10 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
+        <div className="fixed inset-0 bg-black/40 z-10 md:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* Sidebar */}
-      <div
-        className={`
-          flex-shrink-0 bg-white border-r border-gray-200 flex flex-col
-          transition-all duration-200
-          md:relative md:translate-x-0
-          ${sidebarOpen
-            ? 'w-52 fixed md:relative inset-y-0 left-0 z-20 md:z-auto translate-x-0'
-            : 'w-0 overflow-hidden md:w-0'}
-        `}
-      >
-        <div className="w-52 flex-1 overflow-y-auto py-2">
+      <div className={`flex-shrink-0 bg-study-surface border-r border-white/[0.06] flex flex-col transition-all duration-200 md:relative ${sidebarOpen ? 'w-52 fixed md:relative inset-y-0 left-0 z-20 md:z-auto' : 'w-0 overflow-hidden md:w-0'}`}>
+        <div className="w-52 flex-1 overflow-y-auto py-2 dark-scrollbar">
           {data.chapters.map((ch) =>
             ch.has_note ? (
               <button
                 key={ch.chapter_id}
                 onClick={() => { setSelectedChapter(ch); if (window.innerWidth < 768) setSidebarOpen(false) }}
-                className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${
+                className={`w-full text-left px-4 py-2.5 text-xs flex items-center gap-2 transition-colors border-l-2 ${
                   selectedChapter?.chapter_id === ch.chapter_id
-                    ? 'bg-indigo-50 text-indigo-700 font-medium'
-                    : 'text-gray-700 hover:bg-gray-50'
+                    ? 'bg-indigo-600/15 text-indigo-400 border-indigo-500 pl-[14px]'
+                    : 'text-slate-400 hover:bg-study-hover hover:text-slate-200 border-transparent pl-[14px]'
                 }`}
               >
-                <FileText size={14} className="flex-shrink-0" />
+                <FileText size={13} className="flex-shrink-0" />
                 <span className="truncate">{ch.display_name}</span>
               </button>
             ) : (
               <div
                 key={ch.chapter_id}
-                className="px-3 py-2 text-sm flex items-center gap-2 text-gray-400 cursor-not-allowed select-none"
+                className="px-4 py-2.5 text-xs flex items-center gap-2 text-slate-600 cursor-not-allowed select-none border-l-2 border-transparent pl-[14px]"
                 title="Note not yet available"
               >
-                <BookOpen size={14} className="flex-shrink-0" />
+                <BookOpen size={13} className="flex-shrink-0" />
                 <span className="truncate">{ch.display_name}</span>
-                <span className="ml-auto text-xs flex-shrink-0">soon</span>
+                <span className="ml-auto text-slate-700 text-[10px] flex-shrink-0">soon</span>
               </div>
             )
           )}
@@ -115,35 +108,29 @@ export default function NotesTab({ subject }: { subject: string }) {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-gray-50 min-w-0">
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         {selectedChapter ? (
           <>
-            {/* Top bar */}
-            <div className="bg-white border-b border-gray-200 px-3 py-2 flex items-center justify-between flex-shrink-0 gap-2">
+            <div className="bg-study-surface border-b border-white/[0.06] px-3 py-2 flex items-center justify-between flex-shrink-0 gap-2">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 flex-shrink-0"
-                  title={sidebarOpen ? 'Hide chapters' : 'Show chapters'}
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-study-hover flex-shrink-0 transition-colors"
                 >
-                  {sidebarOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+                  {sidebarOpen ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
                 </button>
-                <span className="text-sm font-medium text-gray-800 truncate">{selectedChapter.display_name}</span>
+                <span className="text-sm font-medium text-slate-300 truncate">{selectedChapter.display_name}</span>
               </div>
               <a
                 href={selectedChapter.url}
-                download
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors flex-shrink-0"
+                download target="_blank" rel="noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-400 border border-indigo-500/30 rounded-lg hover:bg-indigo-600/10 transition-colors flex-shrink-0"
               >
                 <Download size={13} />
                 <span className="hidden sm:inline">Download PDF</span>
               </a>
             </div>
-
-            {/* PDF viewer */}
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-hidden bg-study-bg">
               <iframe
                 key={selectedChapter.chapter_id}
                 src={selectedChapter.url}
@@ -157,13 +144,13 @@ export default function NotesTab({ subject }: { subject: string }) {
             <div className="text-center px-4">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="md:hidden mb-3 px-4 py-2 text-sm text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50"
+                className="md:hidden mb-3 px-4 py-2 text-sm text-indigo-400 border border-indigo-500/30 rounded-xl hover:bg-indigo-600/10 transition-colors"
               >
                 Select a chapter
               </button>
-              <BookOpen size={32} className="mx-auto text-gray-300 mb-3" />
-              <p className="text-sm text-gray-400">No notes uploaded yet for this subject.</p>
-              <p className="text-xs text-gray-300 mt-1">Check back after your teacher uploads them.</p>
+              <BookOpen size={32} className="mx-auto text-slate-700 mb-3" />
+              <p className="text-sm text-slate-500">No notes uploaded yet for this subject.</p>
+              <p className="text-xs text-slate-600 mt-1">Check back after they are uploaded.</p>
             </div>
           </div>
         )}

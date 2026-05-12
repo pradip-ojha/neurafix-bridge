@@ -1,3 +1,132 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ── Study color tokens (dark = default) ──────────────────────────────── */
+:root {
+  --study-base:     11 17 32;
+  --study-surface:  15 23 41;
+  --study-bg:       17 29 53;
+  --study-card:     23 35 64;
+  --study-elevated: 28 45 80;
+  --study-hover:    30 49 88;
+}
+
+/* Light theme: applied via .theme-light wrapper div */
+.theme-light {
+  --study-base:     248 250 252;
+  --study-surface:  255 255 255;
+  --study-bg:       241 245 249;
+  --study-card:     255 255 255;
+  --study-elevated: 241 245 249;
+  --study-hover:    226 232 240;
+}
+
+/* Text inversions in light mode */
+.theme-light .text-slate-100 { color: rgb(15 23 42) !important; }
+.theme-light .text-slate-200 { color: rgb(30 41 59) !important; }
+.theme-light .text-slate-300 { color: rgb(51 65 85) !important; }
+.theme-light .text-slate-400 { color: rgb(71 85 105) !important; }
+.theme-light .text-slate-500 { color: rgb(100 116 139) !important; }
+.theme-light .text-slate-600 { color: rgb(148 163 184) !important; }
+
+/* Border inversions — covers border-white/[0.07], /[0.06], /[0.1], /[0.05] etc. */
+.theme-light [class*="border-white\/"] { border-color: rgb(226 232 240) !important; }
+
+/* Scrollbar in light mode */
+.theme-light .dark-scrollbar::-webkit-scrollbar-thumb       { background: rgba(100, 116, 139, 0.3); }
+.theme-light .dark-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.5); }
+
+/* Gradient text stays legible on light bg — no override needed */
+
+/* Shimmer in light mode */
+.theme-light .shimmer {
+  background: linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.04) 50%, transparent 100%);
+  background-size: 200% 100%;
+}
+
+@layer base {
+  * {
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  }
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer components {
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.04) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.8s linear infinite;
+  }
+
+  .study-card-hover {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .study-card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseDot {
+  0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+  40%           { transform: scale(1);   opacity: 1;   }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.25s ease forwards;
+}
+
+.animate-pulse-dot {
+  animation: pulseDot 1.4s ease-in-out infinite;
+}
+
+.animate-blink {
+  animation: blink 1s step-end infinite;
+}
+
+/* Scrollbar styling for dark surfaces */
+.dark-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.dark-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dark-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+.dark-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* KaTeX display math centering */
+.katex-display {
+  margin: 0.75rem 0;
+  overflow-x: auto;
+}

@@ -65,8 +65,8 @@ export default function Onboarding() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-lg w-full max-w-lg p-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to HamroGuru</h1>
-          <p className="text-gray-500 mb-8 text-sm">How will you be using HamroGuru?</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to NeuraFix Bridge</h1>
+          <p className="text-gray-500 mb-8 text-sm">How will you be using NeuraFix Bridge?</p>
 
           {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 

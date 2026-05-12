@@ -1,7 +1,8 @@
 import { useEffect, useState, FormEvent } from 'react'
-import { Heart, Trash2, Plus, X } from 'lucide-react'
+import { Heart, Trash2, Plus, X, Users } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import api from '../../lib/api'
+import DarkSkeleton from '../components/DarkSkeleton'
 
 type Post = {
   id: string
@@ -125,20 +126,22 @@ export default function Community() {
   }
 
   const roleBadge = (role: string) => {
-    if (role === 'admin') return 'bg-red-100 text-red-700'
-    return 'bg-indigo-100 text-indigo-700'
+    if (role === 'admin') return 'bg-red-600/15 text-red-400 border border-red-500/20'
+    return 'bg-indigo-600/15 text-indigo-400 border border-indigo-500/20'
   }
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-lg p-1 mb-6">
+      <div className="flex gap-1 bg-study-elevated rounded-xl p-1 mb-6">
         {(Object.keys(TAB_LABELS) as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`flex-1 text-sm font-medium py-2 rounded-md transition-colors ${
-              tab === t ? 'bg-white shadow text-indigo-700' : 'text-gray-500 hover:text-gray-700'
+            className={`flex-1 text-sm font-medium py-2 rounded-lg transition-colors ${
+              tab === t
+                ? 'bg-study-card text-slate-200 shadow-sm'
+                : 'text-slate-500 hover:text-slate-300'
             }`}
           >
             {TAB_LABELS[t]}
@@ -150,44 +153,69 @@ export default function Community() {
       {(tab === 'post' || isAdmin) && (
         <button
           onClick={() => setShowModal(true)}
-          className="w-full flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-400 hover:border-indigo-300 hover:text-indigo-600 transition-colors mb-4"
+          className="w-full flex items-center gap-2 bg-study-card border border-white/[0.07] rounded-xl px-4 py-3 text-sm text-slate-500 hover:border-indigo-500/30 hover:text-slate-300 transition-colors mb-4"
         >
-          <Plus size={16} />
+          <Plus size={16} className="text-indigo-400" />
           {tab === 'post' ? "What's on your mind?" : `Create ${TAB_LABELS[tab]}`}
         </button>
       )}
 
       {/* Post list */}
       <div className="space-y-4">
+        {loading && posts.length === 0 && (
+          <>
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-study-card border border-white/[0.07] rounded-2xl p-5 space-y-3">
+                <div className="flex items-center gap-3">
+                  <DarkSkeleton className="h-8 w-8" variant="circle" />
+                  <div className="space-y-1.5 flex-1">
+                    <DarkSkeleton className="h-3 w-28" />
+                    <DarkSkeleton className="h-2.5 w-20" />
+                  </div>
+                </div>
+                <DarkSkeleton className="h-3 w-full" />
+                <DarkSkeleton className="h-3 w-3/4" />
+              </div>
+            ))}
+          </>
+        )}
+
         {posts.map((post) => (
-          <div key={post.id} className="bg-white rounded-xl border border-gray-200 p-4">
+          <div key={post.id} className="bg-study-card border border-white/[0.07] rounded-2xl p-5 animate-fade-in-up">
             <div className="flex items-start justify-between mb-3">
-              <div>
-                <span className="font-semibold text-gray-900 text-sm">{post.author_name}</span>
-                <span
-                  className={`ml-2 text-xs px-2 py-0.5 rounded-full font-medium ${roleBadge(post.author_role)}`}
-                >
-                  {post.author_role}
-                </span>
-                <p className="text-xs text-gray-400 mt-0.5">{formatDate(post.created_at)}</p>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-indigo-600/20 flex items-center justify-center flex-shrink-0">
+                  <span className="text-xs font-bold text-indigo-400">
+                    {post.author_name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-slate-200 text-sm">{post.author_name}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium capitalize ${roleBadge(post.author_role)}`}>
+                      {post.author_role}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-600 mt-0.5">{formatDate(post.created_at)}</p>
+                </div>
               </div>
               {(post.author_id === user?.id || isAdmin) && (
                 <button
                   onClick={() => handleDelete(post.id)}
-                  className="text-gray-300 hover:text-red-500 transition-colors"
+                  className="text-slate-700 hover:text-red-400 transition-colors p-1"
                 >
-                  <Trash2 size={15} />
+                  <Trash2 size={14} />
                 </button>
               )}
             </div>
 
-            <p className="text-gray-800 text-sm whitespace-pre-wrap mb-3">{post.content}</p>
+            <p className="text-slate-300 text-sm whitespace-pre-wrap mb-3 leading-relaxed">{post.content}</p>
 
             {post.image_url && (
               <img
                 src={post.image_url}
                 alt="post image"
-                className="rounded-lg max-h-64 object-cover w-full mb-3"
+                className="rounded-xl max-h-64 object-cover w-full mb-3 border border-white/[0.05]"
                 onError={(e) => (e.currentTarget.style.display = 'none')}
               />
             )}
@@ -197,42 +225,45 @@ export default function Community() {
                 href={post.link_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block text-xs text-indigo-600 hover:underline truncate mb-3"
+                className="block text-xs text-indigo-400 hover:text-indigo-300 hover:underline truncate mb-3"
               >
                 {post.link_url}
               </a>
             )}
 
-            <div className="flex items-center gap-1 pt-2 border-t border-gray-100">
+            <div className="flex items-center gap-1 pt-3 border-t border-white/[0.05]">
               <button
                 onClick={() => handleLike(post.id)}
-                className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors ${
+                className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-colors ${
                   post.liked_by_me
-                    ? 'text-red-500 bg-red-50'
-                    : 'text-gray-400 hover:text-red-500 hover:bg-red-50'
+                    ? 'text-red-400 bg-red-600/10'
+                    : 'text-slate-500 hover:text-red-400 hover:bg-red-600/10'
                 }`}
               >
-                <Heart size={14} fill={post.liked_by_me ? 'currentColor' : 'none'} />
+                <Heart size={13} fill={post.liked_by_me ? 'currentColor' : 'none'} />
                 {post.like_count}
               </button>
             </div>
           </div>
         ))}
 
-        {loading && (
-          <div className="text-center py-4 text-sm text-gray-400">Loading...</div>
+        {loading && posts.length > 0 && (
+          <div className="text-center py-4 text-sm text-slate-500">Loading...</div>
         )}
 
         {!loading && posts.length === 0 && (
-          <div className="text-center py-12 text-gray-400">
-            <p className="text-sm">No {TAB_LABELS[tab].toLowerCase()} yet.</p>
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-study-elevated flex items-center justify-center">
+              <Users size={22} className="text-slate-600" />
+            </div>
+            <p className="text-sm text-slate-500">No {TAB_LABELS[tab].toLowerCase()} yet.</p>
           </div>
         )}
 
         {hasMore && !loading && posts.length > 0 && (
           <button
             onClick={handleLoadMore}
-            className="w-full text-sm text-indigo-600 hover:text-indigo-700 py-2"
+            className="w-full text-sm text-indigo-400 hover:text-indigo-300 py-2 transition-colors"
           >
             Load more
           </button>
@@ -241,22 +272,22 @@ export default function Community() {
 
       {/* Create post modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-semibold text-gray-900">Create Post</h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-study-card border border-white/[0.1] rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.5)] w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-base font-semibold text-slate-100">Create Post</h2>
+              <button onClick={() => setShowModal(false)} className="text-slate-500 hover:text-slate-300 transition-colors">
                 <X size={18} />
               </button>
             </div>
-            <form onSubmit={handleSubmitPost} className="space-y-3">
+            <form onSubmit={handleSubmitPost} className="space-y-4">
               {isAdmin && (
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Post type</label>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Post type</label>
                   <select
                     value={newPostType}
                     onChange={(e) => setNewPostType(e.target.value as Tab)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full bg-study-surface border border-white/[0.1] rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20"
                   >
                     <option value="post">Community Post</option>
                     <option value="announcement">Announcement</option>
@@ -265,40 +296,40 @@ export default function Community() {
                 </div>
               )}
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Content</label>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Content</label>
                 <textarea
                   required
                   rows={4}
                   value={newContent}
                   onChange={(e) => setNewContent(e.target.value)}
                   placeholder="Write something..."
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                  className="w-full bg-study-surface border border-white/[0.1] rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 resize-none"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Image URL (optional)</label>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Image URL (optional)</label>
                 <input
                   type="text"
                   value={newImageUrl}
                   onChange={(e) => setNewImageUrl(e.target.value)}
                   placeholder="https://..."
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full bg-study-surface border border-white/[0.1] rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Link URL (optional)</label>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Link URL (optional)</label>
                 <input
                   type="text"
                   value={newLinkUrl}
                   onChange={(e) => setNewLinkUrl(e.target.value)}
                   placeholder="https://..."
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full bg-study-surface border border-white/[0.1] rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20"
                 />
               </div>
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-indigo-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition"
+                className="w-full bg-indigo-600 text-white rounded-xl py-2.5 text-sm font-medium hover:bg-indigo-500 disabled:opacity-50 transition-colors"
               >
                 {submitting ? 'Posting...' : 'Post'}
               </button>

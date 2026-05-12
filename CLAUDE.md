@@ -861,37 +861,6 @@ Services communicate using `X-Internal-Secret` header. Value = `MAIN_BACKEND_INT
 
 ---
 
-## Phase 14 — Hardening, Analytics, Mobile Polish
-
-**Services:** All four
-**Goal:** Production readiness — error handling, resilience, analytics, responsive UI, PWA.
-
-### Error handling
-- `ai_service`: timeouts + fallbacks for OpenAI/Pinecone/main_backend; tutor degrades gracefully without RAG ("Knowledge base temporarily unavailable")
-- `worker`: `max_retries=3`, exponential backoff; error logging to admin notification endpoint
-- `main_backend`: standardize error format `{error: {code, message, field?}}`
-
-### Admin analytics (new endpoints)
-```
-GET /api/admin/analytics/daily-active-users   ?days=30
-GET /api/admin/analytics/subject-usage
-GET /api/admin/analytics/mock-test-scores     ?college_id
-GET /api/admin/analytics/retention
-```
-
-### Performance
-- Cache profile fetches in ai_service: Redis `profile:{user_id}` TTL=5min
-- Cache `SubjectTimingConfig` in main_backend
-- DB connection pool tuning in all services
-- Pinecone query result cache: Redis `pinecone:{hash(query+subject+chapter)}` TTL=10min
-
-### Frontend polish
-- Fully responsive for mobile viewports (primary device = mobile in Nepal)
-- Loading skeletons on chat, practice, and notes pages
-- Offline error handling ("No internet connection")
-- PWA manifest for "Add to home screen"
-
----
 
 ## Critical Files Reference
 

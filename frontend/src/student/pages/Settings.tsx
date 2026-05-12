@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode, type FormEvent } from 'react'
 import { User, GraduationCap, FileText, ChevronRight, ExternalLink } from 'lucide-react'
 import api from '../../lib/api'
+import DarkSkeleton from '../components/DarkSkeleton'
 
 interface Profile {
   full_name: string | null
@@ -19,19 +20,19 @@ const SECTIONS = ['personal', 'academic', 'marksheets'] as const
 type Section = typeof SECTIONS[number]
 
 const SECTION_META: Record<Section, { label: string; icon: ReactNode }> = {
-  personal: { label: 'Personal Info', icon: <User size={16} /> },
-  academic: { label: 'Academic Background', icon: <GraduationCap size={16} /> },
-  marksheets: { label: 'Marksheets', icon: <FileText size={16} /> },
+  personal:  { label: 'Personal Info',        icon: <User size={14} /> },
+  academic:  { label: 'Academic Background',  icon: <GraduationCap size={14} /> },
+  marksheets:{ label: 'Marksheets',           icon: <FileText size={14} /> },
 }
 
 const YEAR_OPTIONS = ['Class 8 Final', 'Class 9 Final', 'Class 10 Final', 'SEE']
 
-const inputCls = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400'
+const inputCls = 'w-full bg-study-surface border border-white/[0.1] rounded-xl px-3 py-2.5 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all'
 
 function Field({ label, children, className = '' }: { label: string; children: ReactNode; className?: string }) {
   return (
     <div className={className}>
-      <label className="text-xs text-gray-500 mb-1 block">{label}</label>
+      <label className="text-xs text-slate-500 mb-1.5 block">{label}</label>
       {children}
     </div>
   )
@@ -43,11 +44,11 @@ function SaveButton({ loading, saved }: { loading: boolean; saved: boolean }) {
       <button
         type="submit"
         disabled={loading}
-        className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors"
+        className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-medium px-5 py-2 rounded-xl transition-colors"
       >
         {loading ? 'Saving...' : 'Save'}
       </button>
-      {saved && <span className="text-sm text-green-600">Saved!</span>}
+      {saved && <span className="text-sm text-green-400">Saved!</span>}
     </div>
   )
 }
@@ -162,62 +163,73 @@ export default function Settings() {
   }
 
   if (loading) {
-    return <div className="flex items-center justify-center h-full text-gray-400">Loading...</div>
+    return (
+      <div className="flex h-full overflow-hidden bg-study-bg">
+        <div className="w-52 flex-shrink-0 bg-study-surface border-r border-white/[0.06] p-4 space-y-2">
+          {[1, 2, 3].map(i => <DarkSkeleton key={i} className="h-10 w-full" variant="block" />)}
+        </div>
+        <div className="flex-1 px-8 py-6 space-y-4">
+          <DarkSkeleton className="h-5 w-36" variant="block" />
+          <DarkSkeleton className="h-6 w-full" variant="block" />
+          {[1, 2, 3].map(i => <DarkSkeleton key={i} className="h-12 w-full" variant="block" />)}
+        </div>
+      </div>
+    )
   }
 
   const completion = profile?.profile_completion_pct ?? 0
 
   return (
-    <div className="flex h-full overflow-hidden">
+    <div className="flex h-full overflow-hidden bg-study-bg">
       {/* Section sidebar */}
-      <aside className="w-52 flex-shrink-0 border-r border-gray-200 bg-gray-50 p-4 space-y-1">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-2">Profile</p>
+      <aside className="w-52 flex-shrink-0 border-r border-white/[0.06] bg-study-surface p-4 space-y-1 flex-shrink-0">
+        <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest mb-3 px-2">Settings</p>
         {SECTIONS.map(sec => (
           <button
             key={sec}
             onClick={() => setActiveSection(sec)}
-            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-medium transition-colors border-l-2 ${
               activeSection === sec
-                ? 'bg-indigo-50 text-indigo-700'
-                : 'text-gray-600 hover:bg-white hover:text-gray-900'
+                ? 'bg-indigo-600/15 text-indigo-400 border-indigo-500 pl-[10px]'
+                : 'text-slate-400 hover:bg-study-hover hover:text-slate-200 border-transparent pl-[10px]'
             }`}
           >
             {SECTION_META[sec].icon}
-            {SECTION_META[sec].label}
-            {activeSection === sec && <ChevronRight size={14} className="ml-auto" />}
+            <span className="flex-1 text-left">{SECTION_META[sec].label}</span>
+            {activeSection === sec && <ChevronRight size={12} className="flex-shrink-0" />}
           </button>
         ))}
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 overflow-y-auto px-8 py-6 max-w-2xl space-y-6">
+      <div className="flex-1 overflow-y-auto px-8 py-6 max-w-2xl dark-scrollbar space-y-6">
 
         {/* Profile completion bar */}
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-gray-500">Profile completion</span>
-            <span className="text-xs font-semibold text-gray-700">{completion}%</span>
+        <div className="bg-study-card border border-white/[0.07] rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-slate-500">Profile completion</span>
+            <span className="text-xs font-semibold text-slate-300">{completion}%</span>
           </div>
-          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-1.5 bg-study-elevated rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all ${
+              className={`h-full rounded-full transition-all duration-500 ${
                 completion >= 80 ? 'bg-green-500' : completion >= 50 ? 'bg-indigo-500' : 'bg-amber-400'
               }`}
               style={{ width: `${completion}%` }}
             />
           </div>
           {completion < 60 && (
-            <p className="text-xs text-gray-400 mt-1">Complete your profile to get better personalised tutoring.</p>
+            <p className="text-xs text-slate-600 mt-2">Complete your profile to get better personalised tutoring.</p>
           )}
         </div>
 
         {/* Mock test prompt */}
         {hasPractice === false && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800 flex items-center justify-between">
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 text-sm text-amber-400 flex items-center justify-between">
             <span>Take your first mock test to help your tutor understand your starting level.</span>
             <a
               href="/student/mock-tests"
-              className="ml-3 flex items-center gap-1 text-amber-700 font-semibold whitespace-nowrap hover:underline"
+              className="ml-3 flex items-center gap-1 text-amber-300 font-semibold whitespace-nowrap hover:text-amber-200 transition-colors"
             >
               Go <ExternalLink size={13} />
             </a>
@@ -226,8 +238,8 @@ export default function Settings() {
 
         {/* Personal Info */}
         {activeSection === 'personal' && (
-          <form onSubmit={savePersonal} className="space-y-4">
-            <h2 className="text-base font-semibold text-gray-900">Personal Info</h2>
+          <form onSubmit={savePersonal} className="space-y-5">
+            <h2 className="text-base font-semibold text-slate-200">Personal Info</h2>
             <Field label="Full Name">
               <input
                 type="text"
@@ -261,8 +273,8 @@ export default function Settings() {
 
         {/* Academic Background */}
         {activeSection === 'academic' && (
-          <form onSubmit={saveAcademic} className="space-y-5">
-            <h2 className="text-base font-semibold text-gray-900">Academic Background</h2>
+          <form onSubmit={saveAcademic} className="space-y-6">
+            <h2 className="text-base font-semibold text-slate-200">Academic Background</h2>
             {(
               [
                 ['Class 8', class8Gpa, setClass8Gpa, class8Pct, setClass8Pct],
@@ -270,8 +282,8 @@ export default function Settings() {
                 ['Class 10', class10Gpa, setClass10Gpa, class10Pct, setClass10Pct],
               ] as [string, string, (v: string) => void, string, (v: string) => void][]
             ).map(([label, gpa, setGpa, pct, setPct]) => (
-              <div key={label} className="space-y-2">
-                <p className="text-sm font-medium text-gray-700">{label} Scores</p>
+              <div key={label} className="space-y-3">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{label} Scores</p>
                 <div className="flex gap-3">
                   <Field label="GPA (out of 4.00)" className="flex-1">
                     <input
@@ -319,18 +331,21 @@ export default function Settings() {
         {/* Marksheets */}
         {activeSection === 'marksheets' && (
           <div className="space-y-5">
-            <h2 className="text-base font-semibold text-gray-900">Marksheets</h2>
+            <h2 className="text-base font-semibold text-slate-200">Marksheets</h2>
 
             {(profile?.marksheet_urls ?? []).length > 0 ? (
-              <div className="space-y-1 bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div className="bg-study-card border border-white/[0.07] rounded-2xl overflow-hidden">
                 {(profile?.marksheet_urls ?? []).map(entry => (
-                  <div key={entry.year} className="flex items-center justify-between px-4 py-3 border-b border-gray-50 last:border-0">
-                    <span className="text-sm text-gray-700">{entry.year}</span>
+                  <div
+                    key={entry.year}
+                    className="flex items-center justify-between px-4 py-3 border-b border-white/[0.04] last:border-0"
+                  >
+                    <span className="text-sm text-slate-300">{entry.year}</span>
                     <a
                       href={entry.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-indigo-600 hover:underline flex items-center gap-1"
+                      className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition-colors"
                     >
                       View <ExternalLink size={11} />
                     </a>
@@ -338,11 +353,11 @@ export default function Settings() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-400 italic">No marksheets uploaded yet.</p>
+              <p className="text-sm text-slate-500 italic">No marksheets uploaded yet.</p>
             )}
 
-            <form onSubmit={uploadMarksheet} className="space-y-3 pt-4 border-t border-gray-100">
-              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Upload New</p>
+            <form onSubmit={uploadMarksheet} className="space-y-4 pt-4 border-t border-white/[0.05]">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Upload New</p>
               <Field label="Year / Exam">
                 <select
                   value={markYear}
@@ -353,8 +368,8 @@ export default function Settings() {
                 </select>
               </Field>
               <Field label="File (PDF or image)">
-                <label className="flex items-center gap-2 border border-dashed border-gray-300 rounded-lg px-3 py-3 cursor-pointer hover:bg-gray-50">
-                  <span className="text-sm text-gray-500">{markFile ? markFile.name : 'Choose file'}</span>
+                <label className="flex items-center gap-3 border border-dashed border-white/[0.1] rounded-xl px-4 py-3 cursor-pointer hover:border-indigo-500/30 hover:bg-study-elevated/50 transition-colors">
+                  <span className="text-sm text-slate-500 truncate">{markFile ? markFile.name : 'Choose file'}</span>
                   <input
                     ref={fileRef}
                     type="file"
@@ -364,11 +379,11 @@ export default function Settings() {
                   />
                 </label>
               </Field>
-              {markError && <p className="text-xs text-red-500">{markError}</p>}
+              {markError && <p className="text-xs text-red-400">{markError}</p>}
               <button
                 type="submit"
                 disabled={uploadingMark}
-                className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-medium px-5 py-2 rounded-xl transition-colors"
               >
                 {uploadingMark ? 'Uploading...' : 'Upload'}
               </button>
