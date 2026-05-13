@@ -2,27 +2,17 @@ import asyncio
 import hashlib
 import logging
 
-from openai import AsyncOpenAI
-
+from app.agents.model_router import get_azure_client
 from app.config import settings
 from app.pinecone_client import get_index
 from app import redis_client
 
 logger = logging.getLogger(__name__)
 
-_client: AsyncOpenAI | None = None
-_EMBED_MODEL = "text-embedding-3-large"
 _EMBED_DIM = 3072
 _EMBED_TIMEOUT = 8.0
 _PINECONE_TIMEOUT = 5.0
 _CACHE_TTL = 600  # 10 min
-
-
-def _get_client() -> AsyncOpenAI:
-    global _client
-    if _client is None:
-        _client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
-    return _client
 
 
 def _cache_key(query: str, subject: str, chapter: str | None, topic: str | None) -> str:
@@ -51,12 +41,12 @@ async def retrieve(
     except Exception:
         pass  # Redis unavailable — proceed to live query
 
-    client = _get_client()
+    client = get_azure_client()
 
     try:
         response = await asyncio.wait_for(
             client.embeddings.create(
-                model=_EMBED_MODEL,
+                model=settings.MODEL_EMBEDDING.strip(),
                 input=[query],
                 dimensions=_EMBED_DIM,
             ),

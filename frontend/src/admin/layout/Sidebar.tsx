@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, Users, CreditCard, Gift, BookOpen,
   HelpCircle, FileText, Plus, Building2, Clock, Settings,
-  Bell, LogOut, Megaphone,
+  Bell, LogOut, Megaphone, ListTree,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -16,6 +16,7 @@ const nav = [
   { to: '/admin/content/rag-notes', label: 'RAG Notes', icon: BookOpen },
   { to: '/admin/content/questions', label: 'Questions', icon: HelpCircle },
   { to: '/admin/content/level-notes', label: 'Level Notes', icon: FileText },
+  { to: '/admin/content/subject-chapters', label: 'Subject Chapters', icon: ListTree },
   { to: '/admin/content/extra-subjects', label: 'Extra Subjects', icon: Plus },
   { label: 'Configuration', type: 'group' },
   { to: '/admin/colleges', label: 'Colleges', icon: Building2 },

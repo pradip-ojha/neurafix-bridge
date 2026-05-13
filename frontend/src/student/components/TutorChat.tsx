@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, KeyboardEvent } from 'react'
-import { Send, Plus, PanelLeftOpen, PanelLeftClose, ChevronDown, Bot, Lightbulb, Menu } from 'lucide-react'
+import { Send, Plus, PanelLeftOpen, PanelLeftClose, ChevronDown, Bot, Lightbulb } from 'lucide-react'
 import { SUBJECT_CHAPTERS, Chapter } from '../constants/subjectStructure'
 import DarkSkeleton from './DarkSkeleton'
 import AIThinkingState from './AIThinkingState'
@@ -22,6 +22,8 @@ interface Session {
 interface Props {
   subject: string
 }
+
+type TutorMode = 'fast' | 'thinking' | 'deep_thinking'
 
 function groupSessionsByDate(sessions: Session[]) {
   const today     = new Date().toISOString().slice(0, 10)
@@ -50,6 +52,7 @@ export default function TutorChat({ subject }: Props) {
   const [messages, setMessages]             = useState<Message[]>([])
   const [input, setInput]                   = useState('')
   const [chapter, setChapter]               = useState<string>('')
+  const [mode, setMode]                     = useState<TutorMode>('fast')
   const [isStreaming, setIsStreaming]        = useState(false)
   const [streamingText, setStreamingText]   = useState('')
   const [loadingMessages, setLoadingMessages] = useState(false)
@@ -60,6 +63,10 @@ export default function TutorChat({ subject }: Props) {
 
   const { mainSidebarOpen } = useMobileLayout()
   const chapters: Chapter[] = SUBJECT_CHAPTERS[subject] || []
+
+  useEffect(() => {
+    if (chapters.length > 0 && !chapter) setChapter(chapters[0].id)
+  }, [chapter, chapters])
 
   useEffect(() => {
     if (mainSidebarOpen && window.innerWidth < 768) setSidebarOpen(false)
@@ -104,6 +111,10 @@ export default function TutorChat({ subject }: Props) {
   const sendMessage = async (text?: string) => {
     const msg = (text ?? input).trim()
     if (!msg || isStreaming) return
+    if (!chapter) {
+      setMessages((prev) => [...prev, { role: 'assistant', content: 'Select a chapter before starting tutor chat.' }])
+      return
+    }
 
     setInput('')
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
@@ -122,13 +133,13 @@ export default function TutorChat({ subject }: Props) {
           subject,
           message: msg,
           session_id: activeSessionId,
-          chapter: chapter || null,
+          chapter,
+          mode,
         }),
       })
 
-      if (response.status === 402) { window.location.href = '/student/payment'; return }
       if (response.status === 429) {
-        setMessages((prev) => [...prev, { role: 'assistant', content: 'You have reached your daily message limit. It resets tomorrow.' }])
+        setMessages((prev) => [...prev, { role: 'assistant', content: "You've reached today's limit for this feature. Upgrade to paid for more access: /student/payment" }])
         setStreamingText('')
         return
       }
@@ -270,7 +281,6 @@ export default function TutorChat({ subject }: Props) {
               onChange={(e) => setChapter(e.target.value)}
               className="text-xs bg-study-card border border-white/[0.1] text-slate-300 rounded-xl px-3 py-1.5 pr-7 focus:outline-none focus:border-indigo-500/40 appearance-none cursor-pointer"
             >
-              <option value="">No specific chapter</option>
               {chapters.map((ch) => (
                 <option key={ch.id} value={ch.id}>{ch.display_name}</option>
               ))}
@@ -302,7 +312,7 @@ export default function TutorChat({ subject }: Props) {
                   Ask anything about{' '}
                   {chapter
                     ? chapters.find((c) => c.id === chapter)?.display_name || chapter
-                    : 'any topic'}
+                    : 'the selected chapter'}
                 </p>
               </div>
               <div className="flex flex-col gap-2 w-full max-w-sm">
@@ -359,6 +369,29 @@ export default function TutorChat({ subject }: Props) {
 
         {/* Input bar */}
         <div className="bg-study-surface border-t border-white/[0.06] px-4 py-3 flex-shrink-0">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[10px] uppercase tracking-widest text-slate-600 font-semibold">Mode</span>
+            <div className="flex rounded-xl border border-white/[0.08] bg-study-card p-1">
+              {[
+                { value: 'fast', label: 'Fast' },
+                { value: 'thinking', label: 'Thinking' },
+                { value: 'deep_thinking', label: 'Deep' },
+              ].map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setMode(item.value as TutorMode)}
+                  className={`px-3 py-1 text-xs rounded-lg transition-colors ${
+                    mode === item.value
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="flex items-end gap-2">
             <div className="flex-1 bg-study-card border border-white/[0.1] rounded-xl px-4 py-2.5 focus-within:border-indigo-500/40 focus-within:ring-1 focus-within:ring-indigo-500/10 transition-all">
               <textarea
@@ -374,14 +407,14 @@ export default function TutorChat({ subject }: Props) {
             </div>
             <button
               onClick={() => sendMessage()}
-              disabled={!input.trim() || isStreaming}
+              disabled={!input.trim() || isStreaming || !chapter}
               className="flex-shrink-0 p-2.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <Send size={16} />
             </button>
           </div>
           <p className="text-[10px] text-slate-600 mt-1.5 text-center">
-            Enter to send · Shift+Enter for new line · AI can make mistakes — verify important info
+            Chapter is required · Fast uses limited context · Thinking uses full context · Deep adds RAG notes
           </p>
         </div>
       </div>

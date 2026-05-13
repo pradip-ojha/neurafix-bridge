@@ -7,7 +7,7 @@ interface Overview {
   total_users: number
   students: number
   affiliation_partners: number
-  subscriptions: { trial: number; active: number; expired: number }
+  subscriptions: { free: number; active: number; expired: number }
   streams: { science: number; management: number }
   pending_payments_count: number
   recent_payments: Array<{ id: string; user_id: string; amount: number; status: string; created_at: string }>
@@ -27,7 +27,7 @@ export default function Dashboard() {
     { label: 'Total Users', value: data.total_users, icon: Users, color: 'bg-indigo-50 text-indigo-600' },
     { label: 'Students', value: data.students, icon: Users, color: 'bg-blue-50 text-blue-600' },
     { label: 'Active Subscriptions', value: data.subscriptions.active, icon: CreditCard, color: 'bg-green-50 text-green-600' },
-    { label: 'Trial Users', value: data.subscriptions.trial, icon: TrendingUp, color: 'bg-yellow-50 text-yellow-600' },
+    { label: 'Free Users', value: data.subscriptions.free, icon: TrendingUp, color: 'bg-yellow-50 text-yellow-600' },
     { label: 'Expired', value: data.subscriptions.expired, icon: TrendingUp, color: 'bg-red-50 text-red-600' },
     { label: 'Affiliates', value: data.affiliation_partners, icon: Users, color: 'bg-purple-50 text-purple-600' },
   ]

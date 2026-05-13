@@ -2,7 +2,6 @@
 Personalization agent — called internally by worker jobs, not by students.
 
 All functions are async and write directly to the database.
-Uses gpt-4o-mini for cost efficiency (summaries, not tutoring).
 """
 from __future__ import annotations
 
@@ -10,10 +9,10 @@ import logging
 from datetime import datetime, date, UTC
 
 import httpx
-from openai import AsyncOpenAI
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agents.model_router import ROLES, get_azure_client
 from app.config import settings
 from app.models.chat_session import ChatMessage, ChatSession
 from app.models.personalization import AgentType, StudentLevel
@@ -21,7 +20,6 @@ from app.personalization import summary_manager
 
 logger = logging.getLogger(__name__)
 
-_MODEL = "gpt-4o-mini"
 _ALL_SUBJECTS = [
     "compulsory_math",
     "optional_math",
@@ -35,9 +33,9 @@ def _subject_display(subject: str) -> str:
 
 
 async def _llm(system: str, user: str) -> str:
-    client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+    client = get_azure_client()
     resp = await client.chat.completions.create(
-        model=_MODEL,
+        model=ROLES["personalization"],
         messages=[
             {"role": "system", "content": system},
             {"role": "user", "content": user},

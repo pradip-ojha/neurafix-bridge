@@ -14,6 +14,7 @@ from app.core.security import (
     verify_password,
 )
 from app.database import get_db
+from app.models.subscription import Subscription, SubscriptionStatus
 from app.models.user import User
 from app.schemas.auth import (
     LoginRequest,
@@ -63,6 +64,8 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
         referred_by=referred_by_id,
     )
     db.add(user)
+    await db.flush()
+    db.add(Subscription(user_id=user.id, status=SubscriptionStatus.free, trial_ends_at=None))
     await db.commit()
     await db.refresh(user)
 

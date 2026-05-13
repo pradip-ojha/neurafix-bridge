@@ -12,12 +12,27 @@ from app.models.platform_config import PlatformConfig
 from app.models.subscription import Subscription, SubscriptionStatus
 
 
-async def check_rate_limit(user_id: str, db: AsyncSession) -> None:
+_FEATURE_TO_FIELD = {
+    "tutor_fast": "tutor_fast_limit",
+    "tutor_thinking": "tutor_thinking_limit",
+    "tutor_deep": "tutor_deep_thinking_limit",
+    "consultant_normal": "consultant_normal_limit",
+    "consultant_thinking": "consultant_thinking_limit",
+    "practice": "practice_limit",
+    "mock_test": "mock_test_limit",
+    "capsule_followup": "capsule_followup_limit",
+}
+
+
+async def check_rate_limit(user_id: str, feature: str, db: AsyncSession) -> None:
+    if feature not in _FEATURE_TO_FIELD:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unknown rate limit feature: {feature}",
+        )
+
     sub_result = await db.execute(select(Subscription).where(Subscription.user_id == user_id))
     sub = sub_result.scalar_one_or_none()
-
-    if not sub or sub.status == SubscriptionStatus.expired:
-        return  # already blocked by subscription gate
 
     config_result = await db.execute(select(PlatformConfig).where(PlatformConfig.id == 1))
     config = config_result.scalar_one_or_none()
@@ -25,14 +40,12 @@ async def check_rate_limit(user_id: str, db: AsyncSession) -> None:
     if not config:
         return  # no config row; skip rate limiting
 
-    limit = (
-        config.trial_daily_message_limit
-        if sub.status == SubscriptionStatus.trial
-        else config.paid_daily_message_limit
-    )
+    tier = "paid" if sub and sub.status in (SubscriptionStatus.active, SubscriptionStatus.trial) else "free"
+    limit_field = f"{tier}_{_FEATURE_TO_FIELD[feature]}"
+    limit = getattr(config, limit_field)
 
     date_str = datetime.now(UTC).strftime("%Y-%m-%d")
-    key = f"ratelimit:{user_id}:{date_str}"
+    key = f"ratelimit:{user_id}:{date_str}:{feature}"
     base = settings.UPSTASH_REDIS_REST_URL
     headers = {"Authorization": f"Bearer {settings.UPSTASH_REDIS_REST_TOKEN}"}
 
@@ -48,5 +61,5 @@ async def check_rate_limit(user_id: str, db: AsyncSession) -> None:
     if count > limit:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"Daily message limit of {limit} reached. Resets tomorrow.",
+            detail=f"Daily limit for {feature} reached. Upgrade to paid for more.",
         )

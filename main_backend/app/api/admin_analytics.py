@@ -33,9 +33,9 @@ async def analytics_overview(
         )
     ).scalar_one()
 
-    trial_count = (
+    free_count = (
         await db.execute(
-            select(func.count()).select_from(Subscription).where(Subscription.status == SubscriptionStatus.trial)
+            select(func.count()).select_from(Subscription).where(Subscription.status == SubscriptionStatus.free)
         )
     ).scalar_one()
 
@@ -88,7 +88,7 @@ async def analytics_overview(
         "students": students,
         "affiliation_partners": affiliates,
         "subscriptions": {
-            "trial": trial_count,
+            "free": free_count,
             "active": active_count,
             "expired": expired_count,
         },

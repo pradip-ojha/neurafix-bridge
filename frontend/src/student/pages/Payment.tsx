@@ -1,19 +1,16 @@
 import { useEffect, useRef, useState, type ReactNode, type FormEvent } from 'react'
-import { CreditCard, CheckCircle, Clock, XCircle, Upload, Wallet } from 'lucide-react'
+import { CheckCircle, XCircle, Upload, Wallet } from 'lucide-react'
 import api from '../../lib/api'
 import DarkSkeleton from '../components/DarkSkeleton'
 
 interface SubscriptionStatus {
-  status: 'trial' | 'active' | 'expired' | 'none'
+  status: 'free' | 'active' | 'expired' | 'none'
   trial_ends_at: string | null
   subscription_ends_at: string | null
 }
 
 interface PlatformConfig {
   subscription_price: number
-  trial_duration_days: number
-  trial_daily_message_limit: number
-  paid_daily_message_limit: number
   payment_qr_url: string | null
   payment_instructions: string | null
 }
@@ -28,7 +25,7 @@ interface PaymentRecord {
 }
 
 const STATUS_STYLES: Record<string, { badge: string; icon: ReactNode; label: string }> = {
-  trial:   { badge: 'bg-blue-600/15 text-blue-400 border border-blue-500/20',   icon: <Clock size={13} />,         label: 'Free Trial'     },
+  free:    { badge: 'bg-blue-600/15 text-blue-400 border border-blue-500/20',   icon: <CheckCircle size={13} />,   label: 'Free'           },
   active:  { badge: 'bg-green-600/15 text-green-400 border border-green-500/20', icon: <CheckCircle size={13} />,   label: 'Active'         },
   expired: { badge: 'bg-red-600/15 text-red-400 border border-red-500/20',       icon: <XCircle size={13} />,       label: 'Expired'        },
   none:    { badge: 'bg-slate-700/50 text-slate-400 border border-white/[0.07]', icon: <XCircle size={13} />,       label: 'No Subscription'},
@@ -94,7 +91,7 @@ export default function Payment() {
 
   const statusKey = sub?.status || 'none'
   const statusStyle = STATUS_STYLES[statusKey]
-  const expiryDate = sub?.status === 'trial' ? sub.trial_ends_at : sub?.subscription_ends_at
+  const expiryDate = sub?.subscription_ends_at
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-8 space-y-6">
@@ -114,7 +111,7 @@ export default function Payment() {
         </div>
         <div className="text-right">
           <p className="text-xs text-slate-500 mb-0.5">
-            {sub?.status === 'trial' ? 'Trial ends' : sub?.status === 'active' ? 'Renews' : 'Expired'}
+            {sub?.status === 'active' ? 'Renews' : 'Upgrade anytime'}
           </p>
           <p className="text-sm font-medium text-slate-300">{formatDate(expiryDate || null)}</p>
         </div>

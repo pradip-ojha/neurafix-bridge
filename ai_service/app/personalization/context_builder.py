@@ -2,14 +2,13 @@
 Assembles personalization context strings injected into agent system prompts.
 
 Four context types:
-  build_tutor_context      — for subject tutor agent (smart RAG gating via classifier)
+  build_tutor_context      — for subject tutor agent (explicit student-selected mode)
   build_capsule_context    — for daily capsule agent
   build_consultant_context — for consultant agent
   build_personalization_context — raw data for worker/personalization agent
 """
 from __future__ import annotations
 
-import asyncio
 import logging
 from datetime import datetime, UTC
 
@@ -21,9 +20,8 @@ from app import redis_client
 from app.config import settings
 from app.models.personalization import SessionMemory
 from app.personalization import summary_manager
-from app.personalization.context_classifier import classify_tutor_query, classify_consultant_query
 from app.rag import retriever
-from app.subject_structure.loader import get_structure
+from app.subject_structure.loader import get_chapter_names, get_chapter_structure
 
 _PROFILE_TTL = 300  # 5 min
 
@@ -117,25 +115,20 @@ def _subject_display(subject: str) -> str:
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _build_chapter_syllabus(subject: str, chapter: str | None) -> str:
+async def _build_chapter_syllabus(subject: str, chapter: str | None) -> str:
     if not chapter:
         return ""
     try:
-        structure = get_structure(subject)
-        chapters = structure.get("chapters", [])
-        match = next(
-            (c for c in chapters if c.get("id") == chapter or c.get("display_name") == chapter),
-            None,
-        )
-        if match:
-            lines = [f"## Chapter Syllabus: {match.get('display_name', chapter)}"]
-            for topic in match.get("topics", []):
-                line = f"- {topic.get('display_name', '')}"
-                subtopics = topic.get("subtopics", [])
-                if subtopics:
-                    line += ": " + ", ".join(subtopics)
-                lines.append(line)
-            return "\n".join(lines)
+        structure = await get_chapter_structure(subject, chapter)
+        lines = [f"## Chapter Syllabus: {structure.get('display_name', chapter)}"]
+        for topic in structure.get("topics", []):
+            topic_name = topic.get("topic") or topic.get("id") or ""
+            line = f"- {topic_name}"
+            subtopics = topic.get("subtopics", [])
+            if subtopics:
+                line += ": " + ", ".join(subtopics)
+            lines.append(line)
+        return "\n".join(lines)
     except Exception as exc:
         logger.warning("Could not load chapter syllabus for subject=%s chapter=%s: %s", subject, chapter, exc)
     return ""
@@ -154,6 +147,22 @@ def _format_rag_chunks(chunks: list[dict]) -> str:
     return "## Knowledge Base Notes\n" + "\n---\n".join(parts)
 
 
+async def _build_subject_chapter_names() -> str:
+    sections = []
+    for subject in _ALL_SUBJECTS:
+        try:
+            names = await get_chapter_names(subject)
+        except Exception as exc:
+            logger.warning("Could not load chapter names for subject=%s: %s", subject, exc)
+            names = []
+        if names:
+            chapter_list = ", ".join(item.get("display_name") or item.get("chapter_id", "") for item in names)
+        else:
+            chapter_list = "[No chapters configured]"
+        sections.append(f"### {_subject_display(subject)}\n{chapter_list}")
+    return "## Subject Chapter Names\n" + "\n\n".join(sections)
+
+
 # ---------------------------------------------------------------------------
 # build_tutor_context
 # ---------------------------------------------------------------------------
@@ -163,34 +172,24 @@ async def build_tutor_context(
     user_id: str,
     subject: str,
     message: str,
-    chapter: str | None = None,
+    chapter: str,
+    mode: str = "fast",
     student_stream: str = "both",
 ) -> tuple[str, str]:
     """
     Returns (context_string, student_stream).
 
-    All independent fetches (profile, summaries, classifier) run in parallel via asyncio.gather.
-    Profile is only fetched when the overall summary doesn't exist yet (new-user fallback).
-
-    Context layout — static first for prompt cache hits:
-      needs_rag=False: chapter_syllabus --- overall + all_time + yesterday + timeline
-      needs_rag=True:  rag_chunks + chapter_syllabus --- overall + all_time + weekly + yesterday + timeline
+    Fast mode: chapter syllabus + overall summary + yesterday's daily summary.
+    Thinking mode: fast context + all-time summary + weekly summary + timeline.
+    Deep Thinking mode: thinking context + RAG chunks for the selected chapter.
     """
-    # Classifier (OpenAI API, no DB) fires concurrently while cache + timeline are fetched
-    classify_task = asyncio.create_task(classify_tutor_query(message, subject, chapter))
-
     # Cache: overall + this subject only (not all 4) — 1 Redis GET, 4 DB queries on miss
     summaries = await summary_manager.get_subject_summaries_cached(db, user_id, subject)
-    # Timeline always fresh — consultant can update it mid-session
-    timeline_row = await summary_manager.get_consultant_timeline(db, user_id)
-
-    classification = await classify_task
 
     overall = summaries["overall"]
     all_time = summaries.get("all_time", _NO_SUMMARY)
     weekly = summaries.get("weekly", _NO_SUMMARY)
     daily_prev = summaries.get("daily_prev", _NO_SUMMARY)
-    timeline_section = timeline_row.content if timeline_row else "[No preparation timeline yet]"
 
     # Only fetch profile if no summary yet (new user — rare path)
     if overall == _NO_SUMMARY:
@@ -200,36 +199,35 @@ async def build_tutor_context(
     else:
         student_context_section = f"## Overall Student Summary\n{overall}"
 
-    needs_rag: bool = classification["needs_rag"]
-    rag_chapter: str | None = classification.get("chapter") or chapter
-    rag_topic: str | None = classification.get("topic")
-
     # --- Static section (same for all students on the same topic) ---
     static_parts: list[str] = []
 
-    if needs_rag:
+    if mode == "deep_thinking":
         chunks = await retriever.retrieve(
             query=message,
             subject=subject,
-            chapter=rag_chapter,
-            topic=rag_topic,
+            chapter=chapter,
+            topic=None,
             top_k=4,
         )
         rag_block = _format_rag_chunks(chunks)
         if rag_block:
             static_parts.append(rag_block)
 
-    chapter_syllabus = _build_chapter_syllabus(subject, chapter or rag_chapter)
+    chapter_syllabus = await _build_chapter_syllabus(subject, chapter)
     if chapter_syllabus:
         static_parts.append(chapter_syllabus)
 
     # --- Dynamic section (student-specific) ---
     dynamic_parts: list[str] = [student_context_section]
-    dynamic_parts.append(f"## {_subject_display(subject)} — All-Time Summary\n{all_time}")
-    if needs_rag:
+    if mode in ("thinking", "deep_thinking"):
+        timeline_row = await summary_manager.get_consultant_timeline(db, user_id)
+        timeline_section = timeline_row.content if timeline_row else "[No preparation timeline yet]"
+        dynamic_parts.append(f"## {_subject_display(subject)} — All-Time Summary\n{all_time}")
         dynamic_parts.append(f"## {_subject_display(subject)} — Weekly Summary\n{weekly}")
     dynamic_parts.append(f"## {_subject_display(subject)} — Yesterday's Summary\n{daily_prev}")
-    dynamic_parts.append(f"## Preparation Timeline\n{timeline_section}")
+    if mode in ("thinking", "deep_thinking"):
+        dynamic_parts.append(f"## Preparation Timeline\n{timeline_section}")
 
     static_block = "\n\n".join(static_parts)
     dynamic_block = "\n\n".join(dynamic_parts)
@@ -253,7 +251,7 @@ async def build_capsule_context(
 ) -> tuple[str, str]:
     """
     Context for daily capsule agent.
-    Static: RAG chunks for chapters studied/practiced today.
+    Static: chapter syllabi for chapters practiced today.
     Dynamic: overall summary + weekly + today's daily + today's practice + timeline.
     Returns (context_string, student_stream).
     """
@@ -281,46 +279,20 @@ async def build_capsule_context(
 
     # Collect chapters studied today
     chapters_today: set[str] = {p.chapter for p in today_practice if p.chapter}
-    today_midnight = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
-    stmt = (
-        select(SessionMemory)
-        .where(
-            SessionMemory.user_id == user_id,
-            SessionMemory.subject == subject,
-            SessionMemory.generated_at >= today_midnight,
-        )
-    )
-    mem_result = await db.execute(stmt)
-    today_memories = mem_result.scalars().all()
 
-    # Fetch RAG chunks for chapters studied today (cap at 3 chapters)
-    all_chunks: list[dict] = []
+    # Fetch chapter syllabi for chapters practiced today.
+    syllabus_sections: list[str] = []
     if chapters_today:
-        capped_chapters = list(chapters_today)[:3]
-        chunks_per_chapter = max(1, 6 // len(capped_chapters))
-        for ch in capped_chapters:
+        for ch in sorted(chapters_today):
             try:
-                structure = get_structure(subject)
-                match = next(
-                    (c for c in structure.get("chapters", []) if c.get("id") == ch),
-                    None,
-                )
-                display = match.get("display_name", ch) if match else ch
-                chunks = await retriever.retrieve(
-                    query=f"key concepts for {display}",
-                    subject=subject,
-                    chapter=ch,
-                    top_k=chunks_per_chapter,
-                )
-                all_chunks.extend(chunks)
+                syllabus = await _build_chapter_syllabus(subject, ch)
+                if syllabus:
+                    syllabus_sections.append(syllabus)
             except Exception as exc:
-                logger.warning("Capsule RAG fetch failed for chapter=%s: %s", ch, exc)
+                logger.warning("Capsule chapter syllabus fetch failed for chapter=%s: %s", ch, exc)
 
     # Static section
-    static_parts: list[str] = []
-    rag_block = _format_rag_chunks(all_chunks)
-    if rag_block:
-        static_parts.append(rag_block)
+    static_parts: list[str] = syllabus_sections
 
     # Dynamic section
     practice_lines = []
@@ -358,22 +330,15 @@ async def build_capsule_context(
 # build_consultant_context
 # ---------------------------------------------------------------------------
 
-async def _noop_general() -> dict:
-    return {"query_type": "general"}
-
-
 async def build_consultant_context(
     db: AsyncSession,
     user_id: str,
-    message: str = "",
+    mode: str = "normal",
 ) -> str:
     """Context for the consultant agent.
 
-    Classifier + always-needed data (overall summary + timeline) run in parallel.
-    If student_performance, the full subject batch also runs in a single gather.
-
-    student_performance → full context (overall + all subject summaries + practice + memories + timeline)
-    general             → lean context (overall + timeline only)
+    Normal: overall summary + timeline + chapter names only.
+    Thinking: normal context + subject summaries + today's practice + tutor memories.
     """
     today_midnight = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
     memory_stmt = (
@@ -385,18 +350,13 @@ async def build_consultant_context(
         .order_by(SessionMemory.generated_at.asc())
     )
 
-    classify_coro = classify_consultant_query(message) if message else _noop_general()
-    classify_task = asyncio.create_task(classify_coro)
-
     # Overall always needed; cache: 1 Redis GET, 1 DB query on miss
     overall = await summary_manager.get_overall_cached(db, user_id)
     # Timeline always fresh — consultant can update it mid-session
     timeline_row = await summary_manager.get_consultant_timeline(db, user_id)
 
-    classification = await classify_task
-    query_type = classification["query_type"]
-
     timeline_section = timeline_row.content if timeline_row else "[No preparation timeline yet]"
+    chapter_names_section = await _build_subject_chapter_names()
 
     if overall == _NO_SUMMARY:
         profile_data = await _fetch_profile(user_id)
@@ -405,11 +365,13 @@ async def build_consultant_context(
     else:
         student_context_section = f"## Overall Student Summary\n{overall}"
 
-    if query_type != "student_performance":
+    if mode != "thinking":
         return f"""{student_context_section}
 
 ## Preparation Timeline
-{timeline_section}"""
+{timeline_section}
+
+{chapter_names_section}"""
 
     # Full context — fetch all 4 subjects from cache (1 Redis GET, 13 DB queries on miss)
     all_summaries = await summary_manager.get_all_subjects_summaries_cached(db, user_id)
@@ -428,6 +390,7 @@ async def build_consultant_context(
         f"### {_subject_display(subj)}\n**All-Time:** {d.get('all_time', _NO_SUMMARY)}\n\n**Weekly:** {d.get('weekly', _NO_SUMMARY)}"
         for subj, d in subject_values
     ]
+    subject_summary_section = "\n\n".join(subject_sections)
 
     if practice_rows:
         practice_lines = [
@@ -452,14 +415,29 @@ async def build_consultant_context(
     return f"""{student_context_section}
 
 ## Subject Summaries
-{"".join(subject_sections)}
+{subject_summary_section}
 
 {practice_section}
 
 {memory_section}
 
 ## Preparation Timeline
-{timeline_section}"""
+{timeline_section}
+
+{chapter_names_section}"""
+
+
+async def build_capsule_followup_context(
+    db: AsyncSession,
+    user_id: str,
+) -> str:
+    """Minimal context for daily capsule follow-up chat."""
+    overall = await summary_manager.get_overall_cached(db, user_id)
+    if overall == _NO_SUMMARY:
+        profile_data = await _fetch_profile(user_id)
+        profile_section, _ = _format_profile(profile_data)
+        return profile_section
+    return f"## Overall Student Summary\n{overall}"
 
 
 # ---------------------------------------------------------------------------

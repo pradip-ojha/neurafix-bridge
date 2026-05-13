@@ -8,7 +8,8 @@ from app.database import get_db
 from app.models.admin_notification import AdminNotification
 from app.models.college import College
 from app.models.student_profile import StudentProfile
-from app.models.subscription import Subscription
+from app.models.subject_chapter import SubjectChapter
+from app.models.subscription import Subscription, SubscriptionStatus
 from app.models.user import User
 from app.schemas.auth import UserOut
 from app.schemas.student_profile import ProfileOut
@@ -37,12 +38,51 @@ async def get_internal_subscription(user_id: str, db: AsyncSession = Depends(get
     result = await db.execute(select(Subscription).where(Subscription.user_id == user_id))
     sub = result.scalar_one_or_none()
     if not sub:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+        sub = Subscription(user_id=user_id, status=SubscriptionStatus.free, trial_ends_at=None)
+        db.add(sub)
+        await db.commit()
+        await db.refresh(sub)
     return {
         "status": sub.status,
         "trial_ends_at": sub.trial_ends_at,
         "subscription_ends_at": sub.subscription_ends_at,
     }
+
+
+@router.get("/subject-structure/{subject}/chapters/{chapter_id}", dependencies=[Depends(verify_internal_secret)])
+async def get_internal_chapter_structure(
+    subject: str,
+    chapter_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(SubjectChapter).where(
+            SubjectChapter.subject == subject,
+            SubjectChapter.chapter_id == chapter_id,
+        )
+    )
+    row = result.scalar_one_or_none()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter structure not found")
+    return {
+        "subject": row.subject,
+        "chapter": row.chapter_id,
+        "display_name": row.display_name,
+        "topics": row.topics,
+    }
+
+
+@router.get("/subject-structure/{subject}/chapter-names", dependencies=[Depends(verify_internal_secret)])
+async def get_internal_subject_chapter_names(subject: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(SubjectChapter)
+        .where(SubjectChapter.subject == subject)
+        .order_by(SubjectChapter.sort_order, SubjectChapter.display_name)
+    )
+    return [
+        {"chapter_id": row.chapter_id, "display_name": row.display_name}
+        for row in result.scalars().all()
+    ]
 
 
 class AdminNotifyBody(BaseModel):

@@ -1,5 +1,7 @@
 import re
 from pathlib import Path
+from typing import Optional
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,7 +13,13 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str
     PINECONE_API_KEY: str
-    OPENAI_API_KEY: str
+    OPENAI_API_KEY: Optional[str] = None
+    AZURE_OPENAI_ENDPOINT: str
+    AZURE_OPENAI_API_KEY: str
+    AZURE_OPENAI_API_VERSION: str
+    MODEL_CHAT_FAST: str
+    MODEL_CHAT_THINKING: str
+    MODEL_EMBEDDING: str
     UPSTASH_REDIS_REST_URL: str
     UPSTASH_REDIS_REST_TOKEN: str
     R2_ACCOUNT_ID: str

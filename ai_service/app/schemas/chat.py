@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, date
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -10,7 +10,8 @@ class ChatRequest(BaseModel):
     subject: str
     message: str
     session_id: str | None = None
-    chapter: str | None = None
+    chapter: str
+    mode: Literal["fast", "thinking", "deep_thinking"] = "fast"
 
 
 class MessageOut(BaseModel):

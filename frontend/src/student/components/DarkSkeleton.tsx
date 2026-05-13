@@ -1,16 +1,17 @@
 interface Props {
   className?: string
   variant?: 'line' | 'block' | 'circle'
+  style?: React.CSSProperties
 }
 
-export default function DarkSkeleton({ className = '', variant = 'line' }: Props) {
+export default function DarkSkeleton({ className = '', variant = 'line', style }: Props) {
   const base = 'shimmer bg-study-elevated'
   const shape =
     variant === 'circle' ? 'rounded-full' :
     variant === 'block'  ? 'rounded-xl' :
     'rounded-md'
 
-  return <div className={`${base} ${shape} ${className}`} />
+  return <div className={`${base} ${shape} ${className}`} style={style} />
 }
 
 export function DarkSkeletonMessage() {

@@ -11,9 +11,12 @@ from __future__ import annotations
 import httpx
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, StreamingResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.core.dependencies import get_current_user, get_rate_limited_user, get_subscribed_user
+from app.core.dependencies import get_current_user, get_subscribed_user
+from app.core.rate_limiter import check_rate_limit
+from app.database import get_db
 from app.models.user import User
 
 router = APIRouter(prefix="/api/capsule", tags=["capsule-proxy"])
@@ -57,10 +60,12 @@ async def proxy_capsule_by_date(
 async def proxy_capsule_chat(
     subject: str,
     request: Request,
-    current_user: User = Depends(get_rate_limited_user),
+    current_user: User = Depends(get_subscribed_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """SSE-stream capsule chat response by forwarding to ai_service."""
     body = await request.body()
+    await check_rate_limit(current_user.id, "capsule_followup", db)
     auth_header = request.headers.get("Authorization", "")
 
     async def generate():

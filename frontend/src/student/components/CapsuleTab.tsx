@@ -220,8 +220,7 @@ export default function CapsuleTab({ subject }: Props) {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionStorage.getItem('token')}` },
         body: JSON.stringify({ message: text, capsule_date: selectedDate }),
       })
-      if (response.status === 402) { window.location.href = '/student/payment'; return }
-      if (response.status === 429) { setMessages((prev) => [...prev, { role: 'assistant', content: 'Daily limit reached. Resets tomorrow.' }]); setStreamingText(''); return }
+      if (response.status === 429) { setMessages((prev) => [...prev, { role: 'assistant', content: "You've reached today's limit for this feature. Upgrade to paid for more access: /student/payment" }]); setStreamingText(''); return }
       if (!response.ok || !response.body) { setMessages((prev) => [...prev, { role: 'assistant', content: 'Something went wrong. Please try again.' }]); setStreamingText(''); return }
       const reader = response.body.getReader(); const decoder = new TextDecoder()
       let accumulated = ''; let buffer = ''

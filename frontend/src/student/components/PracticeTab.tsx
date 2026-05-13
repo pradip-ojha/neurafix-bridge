@@ -179,6 +179,7 @@ export default function PracticeTab({ subject }: Props) {
         body: JSON.stringify({ subject, chapter: apiChapter, count, timer_enabled: timerEnabled, optional_message: optionalMessage || null }),
       })
       const data = await res.json()
+      if (res.status === 429) throw new Error("You've reached today's practice limit. Upgrade to paid for more access: /student/payment")
       if (!res.ok) throw new Error(data.detail || 'Failed to start practice')
       setSessionId(data.session_id); setQuestions(data.questions); setCurrentIdx(0); setAnswers({}); setView('session')
     } catch (e: unknown) {
@@ -233,9 +234,8 @@ export default function PracticeTab({ subject }: Props) {
         headers: { 'Content-Type': 'application/json', ...authHeader() },
         body: JSON.stringify({ session_id: sessionId, message: text, session_history: followupMessages }),
       })
-      if (res.status === 402) { window.location.href = '/student/payment'; return }
       if (res.status === 429) {
-        setFollowupMessages((prev) => [...prev, { role: 'assistant', content: 'Daily limit reached. Resets tomorrow.' }])
+        setFollowupMessages((prev) => [...prev, { role: 'assistant', content: "You've reached today's limit for this feature. Upgrade to paid for more access: /student/payment" }])
         setStreamingText(''); return
       }
       if (!res.ok || !res.body) {

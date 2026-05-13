@@ -1,11 +1,11 @@
 import { useNavigate, useOutletContext } from 'react-router-dom'
-import { Calculator, BookOpen, Microscope, PenLine, ChevronRight, Lock } from 'lucide-react'
+import { Calculator, BookOpen, Microscope, PenLine, ChevronRight, type LucideIcon } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 interface SubjectCard {
   key: string
   display: string
-  icon: React.ComponentType<{ size?: number; className?: string }>
+  icon: LucideIcon
   gradient: string
 }
 
@@ -32,16 +32,11 @@ const item = {
 
 export default function SubjectGrid() {
   const navigate = useNavigate()
-  const { stream, subscriptionStatus } = useOutletContext<{ stream: string; subscriptionStatus: string | null }>()
+  const { stream } = useOutletContext<{ stream: string; subscriptionStatus: string | null }>()
 
   const subjects = stream === 'management' ? MANAGEMENT_SUBJECTS : SCIENCE_SUBJECTS
-  const isBlocked = subscriptionStatus !== null && subscriptionStatus !== 'trial' && subscriptionStatus !== 'active'
 
   const handleSubjectClick = (key: string) => {
-    if (isBlocked) {
-      navigate('/student/payment')
-      return
-    }
     navigate(`/student/tutor/${key}`)
   }
 
@@ -65,7 +60,6 @@ export default function SubjectGrid() {
       >
         {subjects.map((subject) => {
           const Icon = subject.icon
-          const locked = isBlocked
           return (
             <motion.button
               key={subject.key}
@@ -74,37 +68,25 @@ export default function SubjectGrid() {
               className="bg-study-card border border-white/[0.07] rounded-2xl overflow-hidden text-left study-card-hover group focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
             >
               {/* Gradient icon zone */}
-              <div className={`relative h-28 flex items-center justify-center ${locked ? 'bg-study-elevated' : `bg-gradient-to-br ${subject.gradient}`}`}>
-                {locked && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                    <Lock size={24} className="text-slate-500" />
-                    <span className="text-slate-500 text-xs font-medium">Subscription required</span>
-                  </div>
-                )}
-                {!locked && (
-                  <>
-                    <div className="absolute inset-0 bg-black/10" />
-                    <Icon size={44} className="text-white/90 relative" />
-                  </>
-                )}
+              <div className={`relative h-28 flex items-center justify-center bg-gradient-to-br ${subject.gradient}`}>
+                <div className="absolute inset-0 bg-black/10" />
+                <Icon size={44} className="text-white/90 relative" />
               </div>
 
               {/* Card body */}
               <div className="p-5 flex items-start justify-between">
                 <div>
-                  <p className={`font-semibold text-sm leading-snug ${locked ? 'text-slate-500' : 'text-slate-200 group-hover:text-white'} transition-colors`}>
+                  <p className="font-semibold text-sm leading-snug text-slate-200 group-hover:text-white transition-colors">
                     {subject.display}
                   </p>
                   <p className="text-xs text-slate-500 mt-1">
-                    {locked ? 'Unlock with subscription' : 'Tutor · Notes · Practice'}
+                    Tutor · Notes · Practice
                   </p>
                 </div>
-                {!locked && (
-                  <ChevronRight
-                    size={16}
-                    className="text-slate-600 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-0.5"
-                  />
-                )}
+                <ChevronRight
+                  size={16}
+                  className="text-slate-600 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-0.5"
+                />
               </div>
             </motion.button>
           )

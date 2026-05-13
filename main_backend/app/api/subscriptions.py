@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, verify_internal_secret
 from app.database import get_db
-from app.models.subscription import Subscription
+from app.models.subscription import Subscription, SubscriptionStatus
 from app.models.user import User
 
 router = APIRouter(tags=["subscriptions"])
@@ -20,7 +20,10 @@ async def subscription_status(
     result = await db.execute(select(Subscription).where(Subscription.user_id == current_user.id))
     sub = result.scalar_one_or_none()
     if not sub:
-        return {"status": "none", "trial_ends_at": None, "subscription_ends_at": None}
+        sub = Subscription(user_id=current_user.id, status=SubscriptionStatus.free, trial_ends_at=None)
+        db.add(sub)
+        await db.commit()
+        await db.refresh(sub)
     return {
         "status": sub.status,
         "trial_ends_at": sub.trial_ends_at,

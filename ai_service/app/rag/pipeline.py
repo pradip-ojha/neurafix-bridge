@@ -3,8 +3,8 @@ RAG pipeline orchestrator — text-only (.txt / .md).
 
 Steps:
   1. chunking   — markdown-aware text splitter → list[RawChunk]
-  2. refining   — gpt-4o-mini assigns topic/subtopic/chunk_type/difficulty
-  3. embedding  — text-embedding-3-large → Pinecone upsert
+  2. refining   — configured fast Azure chat model assigns topic/subtopic/chunk_type/difficulty
+  3. embedding  — configured Azure embedding model → Pinecone upsert
 
 No R2 upload. Text is processed and discarded.
 Progress is tracked in Redis and the RagNote DB row.
@@ -24,7 +24,7 @@ from app.rag.chunker import chunk_text
 from app.rag.embedder import embed_and_upsert
 from app.rag.semantic_refiner import refine_chunks
 from app.redis_client import set_json
-from app.subject_structure.loader import get_structure
+from app.subject_structure.loader import get_chapter_structure
 
 logger = logging.getLogger(__name__)
 
@@ -92,19 +92,15 @@ async def run_pipeline(
                 await _mark_failed(note_id, db, "File produced 0 chunks. Ensure the file has readable content.")
                 return
 
-            # Stage 2: LLM semantic refinement (gpt-4o-mini)
+            # Stage 2: LLM semantic refinement
             await _update_progress(
                 note_id, db,
                 status=RagNoteStatus.processing,
                 stage="refining",
                 progress_pct=30,
-                message=f"Classifying {len(raw_chunks)} chunks with gpt-4o-mini...",
+                message=f"Classifying {len(raw_chunks)} chunks with configured fast chat model...",
             )
-            structure = get_structure(subject)
-            chapter_structure = next(
-                (c for c in structure.get("chapters", []) if c["id"] == chapter),
-                None,
-            )
+            chapter_structure = await get_chapter_structure(subject, chapter)
             refined = await refine_chunks(
                 raw_chunks,
                 chapter_structure=chapter_structure,

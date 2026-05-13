@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, KeyboardEvent } from 'react'
-import { useNavigate, useOutletContext } from 'react-router-dom'
 import { Send, Plus, ChevronDown, ChevronUp, CalendarDays, Compass, Lightbulb, Menu } from 'lucide-react'
 import AIThinkingState from '../components/AIThinkingState'
 import MarkdownRenderer from '../components/MarkdownRenderer'
@@ -9,6 +8,7 @@ import { useMobileLayout } from '../../contexts/MobileLayoutContext'
 interface Message { role: 'user' | 'assistant'; content: string }
 interface Session { id: string; title: string; session_date: string; agent_type: string; subject: string | null }
 interface Timeline { content: string | null; version: number; updated_at: string | null }
+type ConsultantMode = 'normal' | 'thinking'
 
 function groupSessionsByDate(sessions: Session[]) {
   const today     = new Date().toISOString().slice(0, 10)
@@ -29,7 +29,13 @@ const SUGGESTIONS = [
   'Recommend colleges for my target career',
 ]
 
-const CONSULTANT_STEPS = [
+const CONSULTANT_NORMAL_STEPS = [
+  'Reviewing your preparation data…',
+  'Analysing your progress…',
+  'Crafting personalised advice…',
+]
+
+const CONSULTANT_THINKING_STEPS = [
   'Reviewing your preparation data…',
   'Searching for latest information…',
   'Analysing your progress…',
@@ -37,19 +43,11 @@ const CONSULTANT_STEPS = [
 ]
 
 export default function Consultant() {
-  const navigate = useNavigate()
-  const { subscriptionStatus } = useOutletContext<{ stream: string; subscriptionStatus: string | null }>()
-
-  useEffect(() => {
-    if (subscriptionStatus !== null && subscriptionStatus !== 'trial' && subscriptionStatus !== 'active') {
-      navigate('/student/payment', { replace: true })
-    }
-  }, [subscriptionStatus, navigate])
-
   const [sessions, setSessions]               = useState<Session[]>([])
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [messages, setMessages]               = useState<Message[]>([])
   const [input, setInput]                     = useState('')
+  const [mode, setMode]                       = useState<ConsultantMode>('normal')
   const [isStreaming, setIsStreaming]         = useState(false)
   const [streamingText, setStreamingText]     = useState('')
   const [loadingMessages, setLoadingMessages] = useState(false)
@@ -110,10 +108,9 @@ export default function Consultant() {
       const response = await fetch('/api/consultant/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionStorage.getItem('token')}` },
-        body: JSON.stringify({ message: msg, session_id: activeSessionId }),
+        body: JSON.stringify({ message: msg, session_id: activeSessionId, mode }),
       })
-      if (response.status === 402) { window.location.href = '/student/payment'; return }
-      if (response.status === 429) { setMessages((prev) => [...prev, { role: 'assistant', content: 'Daily limit reached. Resets tomorrow.' }]); setStreamingText(''); return }
+      if (response.status === 429) { setMessages((prev) => [...prev, { role: 'assistant', content: "You've reached today's limit for this feature. Upgrade to paid for more access: /student/payment" }]); setStreamingText(''); return }
       if (!response.ok || !response.body) { setMessages((prev) => [...prev, { role: 'assistant', content: 'Something went wrong. Please try again.' }]); setStreamingText(''); return }
       const reader = response.body.getReader(); const decoder = new TextDecoder()
       let accumulated = ''; let buffer = ''
@@ -260,7 +257,7 @@ export default function Consultant() {
 
           {isStreaming && !streamingText && (
             <div className="flex justify-start">
-              <AIThinkingState steps={CONSULTANT_STEPS} />
+              <AIThinkingState steps={mode === 'thinking' ? CONSULTANT_THINKING_STEPS : CONSULTANT_NORMAL_STEPS} />
             </div>
           )}
 
@@ -298,6 +295,28 @@ export default function Consultant() {
 
         {/* Input bar */}
         <div className="bg-study-surface border-t border-white/[0.06] px-4 py-3 flex-shrink-0">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[10px] uppercase tracking-widest text-slate-600 font-semibold">Mode</span>
+            <div className="flex rounded-xl border border-white/[0.08] bg-study-card p-1">
+              {[
+                { value: 'normal', label: 'Normal' },
+                { value: 'thinking', label: 'Thinking' },
+              ].map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setMode(item.value as ConsultantMode)}
+                  className={`px-3 py-1 text-xs rounded-lg transition-colors ${
+                    mode === item.value
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="flex items-end gap-2">
             <div className="flex-1 bg-study-card border border-white/[0.1] rounded-xl px-4 py-2.5 focus-within:border-indigo-500/40 focus-within:ring-1 focus-within:ring-indigo-500/10 transition-all">
               <textarea
@@ -316,7 +335,7 @@ export default function Consultant() {
             </button>
           </div>
           <p className="text-[10px] text-slate-600 mt-1.5 text-center">
-            Consultant uses web search — responses may take a moment
+            Normal uses preparation context only · Thinking adds web search for research-heavy questions
           </p>
         </div>
       </div>

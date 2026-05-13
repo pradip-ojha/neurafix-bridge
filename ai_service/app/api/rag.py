@@ -27,7 +27,7 @@ from app.rag.embedder import delete_note_vectors
 from app.rag.pipeline import run_pipeline
 from app.rag.schemas import NoteStatus
 from app.redis_client import get_json
-from app.subject_structure.loader import get_structure
+from app.subject_structure.loader import get_chapter_structure
 
 logger = logging.getLogger(__name__)
 
@@ -199,13 +199,14 @@ async def delete_note(
     return {"deleted": True, "note_id": note_id}
 
 
-@router.get("/structure/{subject}")
-async def get_subject_structure(
+@router.get("/structure/{subject}/{chapter}")
+async def get_subject_chapter_structure(
     subject: str,
+    chapter: str,
     _: None = Depends(require_internal_secret),
 ):
-    """Return the full subject structure JSON for the given subject."""
+    """Return the selected chapter syllabus JSON for the given subject."""
     try:
-        return get_structure(subject)
+        return await get_chapter_structure(subject, chapter)
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail=f"Structure for subject '{subject}' not found")
+        raise HTTPException(status_code=404, detail=f"Structure for subject '{subject}' chapter '{chapter}' not found")

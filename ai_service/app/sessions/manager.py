@@ -5,11 +5,10 @@ import json
 import logging
 from datetime import datetime, UTC
 
-from openai import AsyncOpenAI
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
+from app.agents.model_router import ROLES, get_azure_client
 from app.models.chat_session import ChatMessage, ChatSession
 from app.models.personalization import SessionMemory
 from app.redis_client import lrange, rpush, set
@@ -17,7 +16,6 @@ from app.redis_client import lrange, rpush, set
 logger = logging.getLogger(__name__)
 
 _SESSION_TTL = 86400  # 24 hours
-_MEMORY_MODEL = "gpt-4o-mini"
 
 
 def _msg_key(session_id: str) -> str:
@@ -173,9 +171,9 @@ async def _generate_and_save_session_memory(
                 f"{r.role.upper()}: {r.content}" for r in rows
             )
 
-            client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+            client = get_azure_client()
             resp = await client.chat.completions.create(
-                model=_MEMORY_MODEL,
+                model=ROLES["session_memory"],
                 messages=[
                     {
                         "role": "system",

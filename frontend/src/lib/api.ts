@@ -60,12 +60,6 @@ api.interceptors.response.use(
       }
     }
 
-    if (err.response?.status === 402) {
-      if (!window.location.pathname.includes('/payment')) {
-        window.location.href = '/student/payment'
-      }
-    }
-
     return Promise.reject(err)
   }
 )

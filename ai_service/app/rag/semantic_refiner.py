@@ -1,5 +1,5 @@
 """
-LLM-based semantic refinement using gpt-4o-mini.
+LLM-based semantic refinement using the configured fast Azure chat model.
 
 The chunker extracts topic_hint (from ## headings) and subtopic_hint (from ###
 headings) from the markdown structure. These are passed to the LLM as
@@ -18,16 +18,12 @@ import json
 import logging
 import re
 
-from openai import AsyncOpenAI
-
-from app.config import settings
+from app.agents.model_router import ROLES, get_azure_client
 from app.rag.schemas import RawChunk, RefinedChunk
 
 logger = logging.getLogger(__name__)
 
-_client: AsyncOpenAI | None = None
 _BATCH_SIZE = 8
-_MODEL = "gpt-4o-mini"
 
 _SYSTEM_PROMPT = """\
 You are an expert educational content classifier for the Nepali school curriculum (class 8–10, SEE exam preparation).
@@ -67,26 +63,21 @@ Return ONLY valid JSON:
 """
 
 
-def _get_client() -> AsyncOpenAI:
-    global _client
-    if _client is None:
-        _client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
-    return _client
-
-
 def _valid_topic_ids(chapter_structure: dict | None) -> set[str]:
     if not chapter_structure:
         return set()
-    return {t["id"] for t in chapter_structure.get("topics", [])}
+    return {t.get("topic") or t.get("id") for t in chapter_structure.get("topics", []) if t.get("topic") or t.get("id")}
 
 
 def _format_structure(chapter_structure: dict | None) -> str:
     if not chapter_structure:
         return "No structure available."
-    lines = [f"Chapter: {chapter_structure.get('display_name', 'Unknown')}",
-             "Valid topic_ids (use these exactly):"]
+    lines = [f"Chapter: {chapter_structure.get('display_name') or chapter_structure.get('chapter', 'Unknown')}",
+             "Valid topics (use these exactly):"]
     for topic in chapter_structure.get("topics", []):
-        lines.append(f"  topic_id: \"{topic['id']}\"  ({topic['display_name']})")
+        topic_id = topic.get("topic") or topic.get("id")
+        topic_label = topic.get("display_name") or topic_id
+        lines.append(f"  topic: \"{topic_id}\"  ({topic_label})")
         subtopics = topic.get("subtopics", [])
         if subtopics:
             lines.append(f"    subtopics: {', '.join(subtopics)}")
@@ -108,21 +99,25 @@ def _best_topic_fallback(hint: str, chapter_structure: dict | None) -> str:
     topics = chapter_structure.get("topics", [])
 
     for topic in topics:
-        if topic["display_name"].lower().strip() == hint_lower:
-            return topic["id"]
+        topic_id = topic.get("topic") or topic.get("id")
+        topic_label = topic.get("display_name") or topic_id or ""
+        if topic_label.lower().strip() == hint_lower:
+            return topic_id
 
     for topic in topics:
-        name = topic["display_name"].lower()
+        topic_id = topic.get("topic") or topic.get("id")
+        name = (topic.get("display_name") or topic_id or "").lower()
         if hint_lower in name or name in hint_lower:
-            return topic["id"]
+            return topic_id
 
     hint_words = set(hint_lower.split())
     best_id, best_score = None, 0
     for topic in topics:
-        name_words = set(topic["display_name"].lower().split())
+        topic_id = topic.get("topic") or topic.get("id")
+        name_words = set((topic.get("display_name") or topic_id or "").lower().split())
         overlap = len(hint_words & name_words)
         if overlap > best_score:
-            best_score, best_id = overlap, topic["id"]
+            best_score, best_id = overlap, topic_id
     if best_id and best_score >= max(1, len(hint_words) // 2):
         return best_id
 
@@ -136,11 +131,11 @@ async def refine_chunks(
     chapter: str,
 ) -> list[RefinedChunk]:
     """
-    Classify all raw chunks through gpt-4o-mini in batches.
+    Classify all raw chunks through the configured fast chat deployment in batches.
     The LLM receives the heading-derived topic/subtopic hints as suggestions
     and the full structure's valid topic_ids. It confirms or corrects each.
     """
-    client = _get_client()
+    client = get_azure_client()
     structure_text = _format_structure(chapter_structure)
     valid_ids = _valid_topic_ids(chapter_structure)
     refined: list[RefinedChunk] = []
@@ -161,7 +156,7 @@ async def refine_chunks(
 
         try:
             response = await client.chat.completions.create(
-                model=_MODEL,
+                model=ROLES["practice_filter"],
                 messages=[
                     {"role": "system", "content": _SYSTEM_PROMPT},
                     {

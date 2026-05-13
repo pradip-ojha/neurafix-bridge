@@ -14,6 +14,7 @@ import RagNotes from './admin/pages/content/RagNotes'
 import Questions from './admin/pages/content/Questions'
 import LevelNotes from './admin/pages/content/LevelNotes'
 import ExtraSubjects from './admin/pages/content/ExtraSubjects'
+import SubjectChapters from './admin/pages/content/SubjectChapters'
 import Colleges from './admin/pages/Colleges'
 import SubjectTiming from './admin/pages/SubjectTiming'
 import Config from './admin/pages/Config'
@@ -71,6 +72,7 @@ export default function App() {
             <Route path="content/questions" element={<Questions />} />
             <Route path="content/level-notes" element={<LevelNotes />} />
             <Route path="content/extra-subjects" element={<ExtraSubjects />} />
+            <Route path="content/subject-chapters" element={<SubjectChapters />} />
             <Route path="colleges" element={<Colleges />} />
             <Route path="subject-timing" element={<SubjectTiming />} />
             <Route path="config" element={<Config />} />

@@ -6,7 +6,7 @@ from typing import AsyncGenerator
 
 from agents import Agent, Runner, RawResponsesStreamEvent
 
-from app.agents.base_agent import TUTOR_MODEL
+from app.agents.model_router import get_model
 from app.agents.shared.rag_tool import make_rag_tool
 from app.agents.tutor.prompts import build_system_prompt
 
@@ -14,20 +14,22 @@ logger = logging.getLogger(__name__)
 
 
 class TutorAgent:
-    def __init__(self, user_id: str, subject: str, stream: str = "both", chapter: str | None = None):
+    def __init__(self, user_id: str, subject: str, stream: str = "both", chapter: str | None = None, mode: str = "fast"):
         self.user_id = user_id
         self.subject = subject
         self.stream = stream
         self.chapter = chapter
+        self.mode = mode
 
     def _build_agent(self, student_context: str) -> Agent:
         system_prompt = build_system_prompt(self.subject, student_context)
-        rag_tool = make_rag_tool(self.subject, self.chapter)
+        tools = [make_rag_tool(self.subject, self.chapter)] if self.mode == "deep_thinking" else []
+        model_role = "tutor_fast" if self.mode == "fast" else "tutor_thinking"
         return Agent(
             name=f"Tutor-{self.subject}",
             instructions=system_prompt,
-            tools=[rag_tool],
-            model=TUTOR_MODEL,
+            tools=tools,
+            model=get_model(model_role),
         )
 
     async def stream_response(

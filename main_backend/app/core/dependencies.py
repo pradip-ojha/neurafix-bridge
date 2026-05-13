@@ -54,33 +54,34 @@ async def get_subscribed_user(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    """Like get_current_user but also enforces active/trial subscription."""
+    """Like get_current_user but normalizes expired paid plans to free."""
     result = await db.execute(select(Subscription).where(Subscription.user_id == current_user.id))
     sub = result.scalar_one_or_none()
     now = datetime.now(UTC)
 
     if not sub:
-        raise HTTPException(status_code=402, detail="No active subscription")
-
-    now = datetime.now(UTC)
+        db.add(Subscription(user_id=current_user.id, status=SubscriptionStatus.free, trial_ends_at=None))
+        await db.commit()
+        return current_user
 
     # Trial period ended → downgrade to free
     if sub.status == SubscriptionStatus.trial and sub.trial_ends_at and sub.trial_ends_at < now:
         sub.status = SubscriptionStatus.free
+        sub.trial_ends_at = None
         await db.commit()
-        raise HTTPException(status_code=402, detail="Your trial has ended. Please subscribe.")
 
     # Paid subscription ended → downgrade to free
     if sub.status == SubscriptionStatus.active and sub.subscription_ends_at and sub.subscription_ends_at < now:
         sub.status = SubscriptionStatus.free
+        sub.subscription_ends_at = None
         await db.commit()
-        raise HTTPException(status_code=402, detail="Your subscription has expired. Please renew.")
 
-    # Free tier and legacy expired → blocked
-    if sub.status in (SubscriptionStatus.free, SubscriptionStatus.expired):
-        raise HTTPException(status_code=402, detail="Please subscribe to access this feature.")
+    if sub.status == SubscriptionStatus.expired:
+        sub.status = SubscriptionStatus.free
+        sub.trial_ends_at = None
+        sub.subscription_ends_at = None
+        await db.commit()
 
-    # trial (active) and active → allowed
     return current_user
 
 
@@ -88,7 +89,7 @@ async def get_rate_limited_user(
     current_user: User = Depends(get_subscribed_user),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    """Subscription-gated user with daily message rate limiting."""
+    """Backward-compatible generic rate limit dependency. Prefer explicit feature checks."""
     from app.core.rate_limiter import check_rate_limit
-    await check_rate_limit(current_user.id, db)
+    await check_rate_limit(current_user.id, "tutor_fast", db)
     return current_user

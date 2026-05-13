@@ -27,16 +27,61 @@ _admin_only = require_role("admin")
 
 class PlatformConfigUpdate(BaseModel):
     subscription_price: float | None = None
-    trial_duration_days: int | None = None
     referral_commission_pct: float | None = None
     referral_discount_pct: float | None = None
-    trial_daily_message_limit: int | None = None
-    paid_daily_message_limit: int | None = None
+    free_tutor_fast_limit: int | None = None
+    free_tutor_thinking_limit: int | None = None
+    free_tutor_deep_thinking_limit: int | None = None
+    free_consultant_normal_limit: int | None = None
+    free_consultant_thinking_limit: int | None = None
+    free_practice_limit: int | None = None
+    free_mock_test_limit: int | None = None
+    free_capsule_followup_limit: int | None = None
+    paid_tutor_fast_limit: int | None = None
+    paid_tutor_thinking_limit: int | None = None
+    paid_tutor_deep_thinking_limit: int | None = None
+    paid_consultant_normal_limit: int | None = None
+    paid_consultant_thinking_limit: int | None = None
+    paid_practice_limit: int | None = None
+    paid_mock_test_limit: int | None = None
+    paid_capsule_followup_limit: int | None = None
     payment_qr_url: str | None = None
     payment_instructions: str | None = None
 
 _DEFAULT_SECONDS = 72
 _DIFFICULTIES = ["easy", "medium", "hard"]
+
+_DEFAULT_LIMITS = {
+    "free_tutor_fast_limit": 10,
+    "free_tutor_thinking_limit": 5,
+    "free_tutor_deep_thinking_limit": 3,
+    "free_consultant_normal_limit": 5,
+    "free_consultant_thinking_limit": 2,
+    "free_practice_limit": 5,
+    "free_mock_test_limit": 2,
+    "free_capsule_followup_limit": 5,
+    "paid_tutor_fast_limit": 100,
+    "paid_tutor_thinking_limit": 50,
+    "paid_tutor_deep_thinking_limit": 20,
+    "paid_consultant_normal_limit": 30,
+    "paid_consultant_thinking_limit": 15,
+    "paid_practice_limit": 50,
+    "paid_mock_test_limit": 20,
+    "paid_capsule_followup_limit": 30,
+}
+
+
+def _serialize_platform_config(config: PlatformConfig) -> dict:
+    data = {
+        "subscription_price": float(config.subscription_price),
+        "referral_commission_pct": float(config.referral_commission_pct),
+        "referral_discount_pct": float(config.referral_discount_pct),
+        "payment_qr_url": config.payment_qr_url,
+        "payment_instructions": config.payment_instructions,
+    }
+    for field in _DEFAULT_LIMITS:
+        data[field] = getattr(config, field)
+    return data
 
 
 @router.get("/platform")
@@ -48,20 +93,13 @@ async def get_platform_config(
     if not config:
         return {
             "subscription_price": 2000,
-            "trial_duration_days": 7,
-            "trial_daily_message_limit": 20,
-            "paid_daily_message_limit": 50,
+            "referral_commission_pct": 10,
+            "referral_discount_pct": 5,
             "payment_qr_url": None,
             "payment_instructions": None,
+            **_DEFAULT_LIMITS,
         }
-    return {
-        "subscription_price": float(config.subscription_price),
-        "trial_duration_days": config.trial_duration_days,
-        "trial_daily_message_limit": config.trial_daily_message_limit,
-        "paid_daily_message_limit": config.paid_daily_message_limit,
-        "payment_qr_url": config.payment_qr_url,
-        "payment_instructions": config.payment_instructions,
-    }
+    return _serialize_platform_config(config)
 
 
 @router.patch("/admin/platform", dependencies=[Depends(_admin_only)])
@@ -81,16 +119,7 @@ async def update_platform_config(
     await db.commit()
     await db.refresh(config)
 
-    return {
-        "subscription_price": float(config.subscription_price),
-        "trial_duration_days": config.trial_duration_days,
-        "referral_commission_pct": float(config.referral_commission_pct),
-        "referral_discount_pct": float(config.referral_discount_pct),
-        "trial_daily_message_limit": config.trial_daily_message_limit,
-        "paid_daily_message_limit": config.paid_daily_message_limit,
-        "payment_qr_url": config.payment_qr_url,
-        "payment_instructions": config.payment_instructions,
-    }
+    return _serialize_platform_config(config)
 
 
 @router.get("/subject-timing")

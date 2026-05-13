@@ -1,5 +1,5 @@
 import mimetypes
-from datetime import datetime, UTC, timedelta
+from datetime import datetime, UTC
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel
@@ -10,7 +10,6 @@ from app.core import r2_client
 from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.models.affiliation_profile import AffiliationProfile
-from app.models.platform_config import PlatformConfig
 from app.models.student_profile import Stream, StudentProfile
 from app.models.subscription import Subscription, SubscriptionStatus
 from app.models.user import User, UserRole
@@ -101,30 +100,18 @@ async def student_set_stream(
     current_user.onboarding_complete = True
     db.add(current_user)
 
-    # Auto-create trial subscription if one doesn't exist yet
+    # Auto-create free subscription if one doesn't exist yet
     existing_sub = (
         await db.execute(select(Subscription).where(Subscription.user_id == current_user.id))
     ).scalar_one_or_none()
     if not existing_sub:
-        config = (
-            await db.execute(select(PlatformConfig).where(PlatformConfig.id == 1))
-        ).scalar_one_or_none()
-        trial_days = config.trial_duration_days if config else 7
         now = datetime.now(UTC)
-        if trial_days > 0:
-            db.add(Subscription(
-                user_id=current_user.id,
-                status=SubscriptionStatus.trial,
-                trial_ends_at=now + timedelta(days=trial_days),
-                updated_at=now,
-            ))
-        else:
-            db.add(Subscription(
-                user_id=current_user.id,
-                status=SubscriptionStatus.free,
-                trial_ends_at=now,
-                updated_at=now,
-            ))
+        db.add(Subscription(
+            user_id=current_user.id,
+            status=SubscriptionStatus.free,
+            trial_ends_at=None,
+            updated_at=now,
+        ))
 
     await db.commit()
     await db.refresh(profile)

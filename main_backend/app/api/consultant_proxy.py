@@ -8,12 +8,17 @@ GET  /api/consultant/timeline               → ai_service proxy
 """
 from __future__ import annotations
 
+import json
+
 import httpx
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, StreamingResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.core.dependencies import get_current_user, get_rate_limited_user
+from app.core.dependencies import get_current_user, get_subscribed_user
+from app.core.rate_limiter import check_rate_limit
+from app.database import get_db
 from app.models.user import User
 
 router = APIRouter(prefix="/api/consultant", tags=["consultant-proxy"])
@@ -36,10 +41,17 @@ async def _forward_ai_get(path: str, auth_header: str, params: dict | None = Non
 @router.post("/chat")
 async def proxy_consultant_chat(
     request: Request,
-    current_user: User = Depends(get_rate_limited_user),
+    current_user: User = Depends(get_subscribed_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """SSE-stream consultant response by forwarding to ai_service."""
     body = await request.body()
+    try:
+        payload = json.loads(body or b"{}")
+    except json.JSONDecodeError:
+        payload = {}
+    feature = "consultant_thinking" if payload.get("mode") == "thinking" else "consultant_normal"
+    await check_rate_limit(current_user.id, feature, db)
     auth_header = request.headers.get("Authorization", "")
 
     async def generate():

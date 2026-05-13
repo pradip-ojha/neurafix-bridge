@@ -15,6 +15,7 @@ from datetime import datetime, UTC
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from typing import Literal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -53,6 +54,7 @@ async def _check_subscription(user_id: str) -> None:
 class ConsultantChatRequest(BaseModel):
     message: str
     session_id: str | None = None
+    mode: Literal["normal", "thinking"] = "normal"
 
 
 @router.post("/chat")
@@ -88,11 +90,11 @@ async def chat(
     if msg_count <= 1:
         await session_manager.update_session_title(db, session_id, req.message)
 
-    student_context = await context_builder.build_consultant_context(db, user_id, req.message)
+    student_context = await context_builder.build_consultant_context(db, user_id, mode=req.mode)
     recent = await session_manager.get_recent_messages(db, session_id)
     messages = [{"role": m["role"], "content": m["content"]} for m in recent]
 
-    consultant = ConsultantAgent(user_id=user_id, db=db)
+    consultant = ConsultantAgent(user_id=user_id, db=db, mode=req.mode)
 
     async def generate():
         full_text = ""

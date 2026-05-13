@@ -102,6 +102,8 @@ async def chat(
             status_code=400,
             detail=f"Subject '{req.subject}' is not available for stream '{student_stream}'.",
         )
+    if not req.chapter.strip():
+        raise HTTPException(status_code=400, detail="chapter is required for tutor chat")
 
     asyncio.create_task(_maybe_assign_level(user_id, req.subject))
 
@@ -122,7 +124,7 @@ async def chat(
 
     # Build personalization context — pass already-fetched stream to avoid double profile fetch
     student_context, ctx_stream = await context_builder.build_tutor_context(
-        db, user_id, req.subject, req.message, req.chapter, student_stream=student_stream
+        db, user_id, req.subject, req.message, req.chapter, mode=req.mode, student_stream=student_stream
     )
 
     # Recent messages (last 6) with session memory prepended if available
@@ -134,6 +136,7 @@ async def chat(
         subject=req.subject,
         stream=ctx_stream,
         chapter=req.chapter,
+        mode=req.mode,
     )
 
     async def generate():

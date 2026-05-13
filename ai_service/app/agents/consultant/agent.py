@@ -7,7 +7,7 @@ from typing import AsyncGenerator
 from agents import Agent, Runner, RawResponsesStreamEvent, WebSearchTool, function_tool
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.agents.base_agent import TUTOR_MODEL
+from app.agents.model_router import get_model
 from app.agents.consultant.prompts import build_system_prompt
 from app.personalization import summary_manager
 
@@ -15,9 +15,10 @@ logger = logging.getLogger(__name__)
 
 
 class ConsultantAgent:
-    def __init__(self, user_id: str, db: AsyncSession):
+    def __init__(self, user_id: str, db: AsyncSession, mode: str = "normal"):
         self.user_id = user_id
         self.db = db
+        self.mode = mode
 
     def _make_tools(self) -> list:
         db = self.db
@@ -40,14 +41,17 @@ class ConsultantAgent:
                 f"## {display} — This Week\n{weekly}"
             )
 
-        return [WebSearchTool(), update_timeline, get_subject_progress]
+        tools = [update_timeline, get_subject_progress]
+        if self.mode == "thinking":
+            tools.insert(0, WebSearchTool())
+        return tools
 
     def _build_agent(self, student_context: str) -> Agent:
         return Agent(
             name="Consultant",
             instructions=build_system_prompt(student_context),
             tools=self._make_tools(),
-            model=TUTOR_MODEL,
+            model=get_model("consultant"),
         )
 
     async def stream_response(

@@ -11,9 +11,12 @@ from __future__ import annotations
 import httpx
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, get_subscribed_user
+from app.core.rate_limiter import check_rate_limit
+from app.database import get_db
 from app.models.user import User
 
 router = APIRouter(prefix="/api/mock", tags=["mock-proxy"])
@@ -46,9 +49,11 @@ async def _forward_ai_get(path: str, auth_header: str, params: dict | None = Non
 @router.post("/start")
 async def proxy_start(
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_subscribed_user),
+    db: AsyncSession = Depends(get_db),
 ):
     body = await request.body()
+    await check_rate_limit(current_user.id, "mock_test", db)
     auth_header = request.headers.get("Authorization", "")
     return await _forward_ai_post("/api/mock/start", body, auth_header)
 

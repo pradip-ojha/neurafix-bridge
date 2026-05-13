@@ -42,9 +42,6 @@ function StudentLayoutInner() {
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [topBarVisible, setTopBarVisible] = useState(true)
-  const [subBannerDismissed, setSubBannerDismissed] = useState(
-    () => sessionStorage.getItem('sub_banner_dismissed') === '1'
-  )
   const [profileBannerDismissed, setProfileBannerDismissed] = useState(
     () => sessionStorage.getItem('profile_banner_dismissed') === '1'
   )
@@ -65,19 +62,6 @@ function StudentLayoutInner() {
   }, [user])
 
   const showProfileBanner = !profileBannerDismissed && profilePct !== null && profilePct < 100
-  const showSubBanner = !subBannerDismissed && subscriptionStatus !== null && subscriptionStatus !== 'active'
-
-  const subBannerMessage =
-    subscriptionStatus === 'trial'
-      ? "You're on free trial — subscribe to keep full access after it ends."
-      : subscriptionStatus === 'expired'
-      ? 'Your subscription has expired. Subscribe to continue.'
-      : 'Subscribe to unlock tutors, consultant, and practice sessions.'
-
-  const dismissSubBanner = () => {
-    setSubBannerDismissed(true)
-    sessionStorage.setItem('sub_banner_dismissed', '1')
-  }
 
   const dismissProfileBanner = () => {
     setProfileBannerDismissed(true)
@@ -91,28 +75,6 @@ function StudentLayoutInner() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {topBarVisible && (
           <MobileTopBar onMenuClick={() => setSidebarOpen(true)} />
-        )}
-
-        {/* Subscription banner */}
-        {showSubBanner && (
-          <div className="bg-indigo-600/10 border-b border-indigo-500/20 px-4 md:px-6 py-2 flex items-center justify-between flex-shrink-0">
-            <p className="text-sm text-indigo-300">{subBannerMessage}</p>
-            <div className="flex items-center gap-3 ml-4">
-              <a
-                href="/student/payment"
-                className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors whitespace-nowrap"
-              >
-                Subscribe now
-              </a>
-              <button
-                onClick={dismissSubBanner}
-                className="text-indigo-500 hover:text-indigo-300 transition-colors"
-                aria-label="Dismiss"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          </div>
         )}
 
         {/* Profile completion banner */}

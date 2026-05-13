@@ -25,8 +25,8 @@ class Subscription(Base):
     status: Mapped[str] = mapped_column(
         Enum(SubscriptionStatus, name="subscription_status_enum"),
         nullable=False,
-        default=SubscriptionStatus.trial,
+        default=SubscriptionStatus.free,
     )
-    trial_ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    trial_ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     subscription_ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))

@@ -6,7 +6,7 @@ from typing import AsyncGenerator
 
 from agents import Agent, Runner, RawResponsesStreamEvent
 
-from app.agents.base_agent import TUTOR_MODEL
+from app.agents.model_router import get_model
 from app.agents.shared.rag_tool import make_rag_tool
 
 logger = logging.getLogger(__name__)
@@ -74,7 +74,7 @@ class PracticeFollowupAgent:
             name=f"PracticeFollowup-{self.subject}",
             instructions=system_prompt,
             tools=[rag_tool],
-            model=TUTOR_MODEL,
+            model=get_model("capsule_followup"),
         )
 
     async def stream_response(

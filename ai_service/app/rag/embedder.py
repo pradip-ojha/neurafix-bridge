@@ -1,5 +1,5 @@
 """
-Embed refined chunks with text-embedding-3-large and upsert to Pinecone.
+Embed refined chunks and upsert to Pinecone.
 
 Pinecone metadata per vector:
   note_id, subject, chapter, topic, subtopic, chunk_type, text
@@ -10,27 +10,16 @@ from __future__ import annotations
 import logging
 import uuid
 
-from openai import AsyncOpenAI
-
+from app.agents.model_router import get_azure_client
 from app.config import settings
 from app.pinecone_client import get_index
 from app.rag.schemas import RefinedChunk
 
 logger = logging.getLogger(__name__)
 
-_client: AsyncOpenAI | None = None
-
-_EMBED_MODEL = "text-embedding-3-large"
 _EMBED_DIM = 3072
 _UPSERT_BATCH = 100
 _EMBED_BATCH = 50
-
-
-def _get_client() -> AsyncOpenAI:
-    global _client
-    if _client is None:
-        _client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
-    return _client
 
 
 async def embed_and_upsert(
@@ -42,7 +31,7 @@ async def embed_and_upsert(
     if not chunks:
         return 0
 
-    client = _get_client()
+    client = get_azure_client()
     index = get_index()
     total_upserted = 0
 
@@ -52,7 +41,7 @@ async def embed_and_upsert(
         texts = [c.text for c in batch]
         try:
             response = await client.embeddings.create(
-                model=_EMBED_MODEL,
+                model=settings.MODEL_EMBEDDING.strip(),
                 input=texts,
                 dimensions=_EMBED_DIM,
             )

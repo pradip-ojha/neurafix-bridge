@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react'
-import { useNavigate, useOutletContext } from 'react-router-dom'
+import { useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import PracticeTab from '../components/PracticeTab'
 
@@ -11,15 +10,6 @@ const SUBJECTS: Record<string, { label: string; stream: string[] }> = {
 }
 
 export default function Practice() {
-  const navigate = useNavigate()
-  const { subscriptionStatus } = useOutletContext<{ stream: string; subscriptionStatus: string | null }>()
-
-  useEffect(() => {
-    if (subscriptionStatus !== null && subscriptionStatus !== 'trial' && subscriptionStatus !== 'active') {
-      navigate('/student/payment', { replace: true })
-    }
-  }, [subscriptionStatus, navigate])
-
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null)
 
   if (selectedSubject) {

@@ -7,14 +7,11 @@ from datetime import datetime, UTC
 from typing import AsyncGenerator
 
 from agents import Agent, Runner, RawResponsesStreamEvent
-from openai import AsyncOpenAI
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.agents.base_agent import TUTOR_MODEL
+from app.agents.model_router import ROLES, get_azure_client, get_model
 from app.agents.capsule.prompts import build_generation_prompt, build_chat_system_prompt
-from app.agents.shared.rag_tool import make_rag_tool
-from app.config import settings
 from app.models.personalization import DailyCapsule
 from app.personalization import context_builder
 
@@ -60,9 +57,9 @@ class CapsuleAgent:
         )
 
         system_prompt = build_generation_prompt(self.subject, student_context)
-        client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        client = get_azure_client()
         resp = await client.chat.completions.create(
-            model=TUTOR_MODEL,
+            model=ROLES["capsule_gen"],
             messages=[{"role": "user", "content": system_prompt}],
             temperature=0.4,
             response_format={"type": "json_object"},
@@ -99,12 +96,11 @@ class CapsuleAgent:
 
     def _build_chat_agent(self, capsule_content: str, student_context: str) -> Agent:
         system_prompt = build_chat_system_prompt(self.subject, capsule_content, student_context)
-        rag_tool = make_rag_tool(self.subject)
         return Agent(
             name=f"Capsule-{self.subject}",
             instructions=system_prompt,
-            tools=[rag_tool],
-            model=TUTOR_MODEL,
+            tools=[],
+            model=get_model("capsule_followup"),
         )
 
     async def stream_response(

@@ -3,7 +3,7 @@ import { Bell } from 'lucide-react'
 import api from '../../lib/api'
 
 export default function Notifications() {
-  const [target, setTarget] = useState<'all' | 'paid' | 'trial'>('all')
+  const [target, setTarget] = useState<'all' | 'paid' | 'free'>('all')
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [sending, setSending] = useState(false)
@@ -32,7 +32,7 @@ export default function Notifications() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Target</label>
             <div className="flex gap-3">
-              {(['all', 'paid', 'trial'] as const).map((t) => (
+              {(['all', 'paid', 'free'] as const).map((t) => (
                 <label key={t} className="flex items-center gap-2 cursor-pointer">
                   <input type="radio" value={t} checked={target === t} onChange={() => setTarget(t)} className="accent-indigo-600" />
                   <span className="text-sm capitalize text-gray-700">{t}</span>

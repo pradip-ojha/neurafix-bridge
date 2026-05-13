@@ -219,8 +219,8 @@ async def capsule_chat(
     session_id = session.id
     await session_manager.append_message(db, session_id, "user", req.message)
 
-    # Build student context for the agent
-    student_context, _ = await context_builder.build_capsule_context(db, user_id, subject)
+    # Capsule follow-up context is intentionally small: capsule content + overall student context.
+    student_context = await context_builder.build_capsule_followup_context(db, user_id)
     recent = await session_manager.get_recent_messages(db, session_id)
     messages = [{"role": m["role"], "content": m["content"]} for m in recent]
 

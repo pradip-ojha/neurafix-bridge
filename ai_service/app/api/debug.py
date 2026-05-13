@@ -20,14 +20,15 @@ def _verify_internal(x_internal_secret: str = Header(default="")):
 async def get_context(
     user_id: str = Query(...),
     subject: str = Query(...),
-    chapter: str | None = Query(default=None),
+    chapter: str = Query(...),
+    mode: str = Query(default="fast"),
     message: str = Query(default="[debug inspection]"),
     _: None = Depends(_verify_internal),
     db: AsyncSession = Depends(get_db),
 ):
     """Returns the assembled tutor context string for a given user and subject."""
     ctx, student_stream = await context_builder.build_tutor_context(
-        db, user_id, subject, message, chapter
+        db, user_id, subject, message, chapter, mode=mode
     )
     return {
         "user_id": user_id,

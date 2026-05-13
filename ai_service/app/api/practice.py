@@ -11,6 +11,7 @@ POST /api/practice/followup    → SSE follow-up chat about a session
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import math
 from datetime import datetime, UTC
@@ -23,12 +24,14 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.agents.model_router import ROLES, get_azure_client
 from app.core.auth import get_current_user_id
 from app.database import get_db
 from app.models.mcq_question import MainQuestion
 from app.models.personalization import PracticeSessionSummary
 from app.models.practice_session import PracticeSession, PracticeSessionStatus
 from app.agents.practice.agent import PracticeFollowupAgent
+from app.subject_structure.loader import get_chapter_structure
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +83,79 @@ def _compute_difficulty_split(count: int) -> dict[str, int]:
 
 def _strip_answers(data: dict) -> dict:
     return {k: v for k, v in data.items() if k != "correct_option_ids"}
+
+
+async def _focus_filters(
+    subject: str,
+    chapter: str | None,
+    instruction: str | None,
+) -> dict:
+    if not instruction or not instruction.strip():
+        return {}
+
+    structure_text = "No chapter structure available."
+    allowed_topics: set[str] = set()
+    if chapter:
+        try:
+            structure = await get_chapter_structure(subject, chapter)
+            structure_text = json.dumps(structure, ensure_ascii=False)
+            allowed_topics = {
+                topic.get("topic")
+                for topic in structure.get("topics", [])
+                if isinstance(topic, dict) and isinstance(topic.get("topic"), str)
+            }
+        except Exception as exc:
+            logger.warning("Practice focus structure fetch failed subject=%s chapter=%s: %s", subject, chapter, exc)
+
+    system = (
+        "You convert a student's practice focus instruction into database filters. "
+        "Return only JSON with keys: difficulties and topics. "
+        "difficulties is an array containing any of easy, medium, hard, or an empty array. "
+        "topics is an array of topic ids from the provided chapter structure, or an empty array. "
+        "Do not invent topic ids."
+    )
+    user = (
+        f"Subject: {subject}\nChapter: {chapter or 'whole subject'}\n"
+        f"Chapter structure:\n{structure_text}\n\n"
+        f"Student focus instruction: {instruction}"
+    )
+    try:
+        client = get_azure_client()
+        response = await client.chat.completions.create(
+            model=ROLES["practice_filter"],
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0,
+            max_tokens=160,
+        )
+        parsed = json.loads(response.choices[0].message.content or "{}")
+    except Exception as exc:
+        logger.warning("Practice focus filter failed: %s", exc)
+        return {}
+
+    allowed_difficulties = {"easy", "medium", "hard"}
+    difficulties = [
+        d for d in parsed.get("difficulties", [])
+        if isinstance(d, str) and d in allowed_difficulties
+    ]
+    topics = [
+        t for t in parsed.get("topics", [])
+        if isinstance(t, str) and t.strip() and (not allowed_topics or t in allowed_topics)
+    ]
+    return {"difficulties": difficulties, "topics": topics}
+
+
+def _apply_focus(stmt, focus: dict):
+    difficulties = focus.get("difficulties") or []
+    topics = focus.get("topics") or []
+    if difficulties:
+        stmt = stmt.where(MainQuestion.difficulty.in_(difficulties))
+    if topics:
+        stmt = stmt.where(MainQuestion.topic.in_(topics))
+    return stmt
 
 
 # ---------------------------------------------------------------------------
@@ -138,28 +214,38 @@ async def start_practice(
 
     selected_rows: list[MainQuestion] = []
     chapter_key = req.chapter or _WHOLE_SUBJECT  # stored in DB
+    focus = await _focus_filters(req.subject, req.chapter, req.optional_message)
 
     if req.chapter:
-        # Chapter-wise: 40/40/20 difficulty split from a single chapter
-        split = _compute_difficulty_split(req.count)
-        for diff, target in split.items():
-            if target == 0:
-                continue
-            rows = (await db.execute(
-                select(MainQuestion)
-                .where(
-                    MainQuestion.subject == req.subject,
-                    MainQuestion.chapter == req.chapter,
-                    MainQuestion.difficulty == diff,
-                    MainQuestion.is_active == True,
-                )
-                .order_by(text("RANDOM()"))
-                .limit(target)
-            )).scalars().all()
-            selected_rows.extend(rows)
+        if focus.get("difficulties") or focus.get("topics"):
+            stmt = select(MainQuestion).where(
+                MainQuestion.subject == req.subject,
+                MainQuestion.chapter == req.chapter,
+                MainQuestion.is_active == True,
+            )
+            stmt = _apply_focus(stmt, focus).order_by(text("RANDOM()")).limit(req.count)
+            selected_rows.extend((await db.execute(stmt)).scalars().all())
+        else:
+            # Chapter-wise: 40/40/20 difficulty split from a single chapter
+            split = _compute_difficulty_split(req.count)
+            for diff, target in split.items():
+                if target == 0:
+                    continue
+                rows = (await db.execute(
+                    select(MainQuestion)
+                    .where(
+                        MainQuestion.subject == req.subject,
+                        MainQuestion.chapter == req.chapter,
+                        MainQuestion.difficulty == diff,
+                        MainQuestion.is_active == True,
+                    )
+                    .order_by(text("RANDOM()"))
+                    .limit(target)
+                )).scalars().all()
+                selected_rows.extend(rows)
 
         # Fill remainder if pool is thin for this chapter
-        if len(selected_rows) < req.count:
+        if len(selected_rows) < req.count and not (focus.get("difficulties") or focus.get("topics")):
             existing_ids = {r.question_id for r in selected_rows}
             extra = (await db.execute(
                 select(MainQuestion)
@@ -196,11 +282,13 @@ async def start_practice(
             if ch_count == 0:
                 continue
             rows = (await db.execute(
-                select(MainQuestion)
-                .where(
+                _apply_focus(
+                    select(MainQuestion).where(
                     MainQuestion.subject == req.subject,
                     MainQuestion.chapter == ch,
                     MainQuestion.is_active == True,
+                    ),
+                    focus,
                 )
                 .order_by(text("RANDOM()"))
                 .limit(ch_count)
@@ -456,7 +544,7 @@ async def _generate_practice_summary(
     session_date,
     score_data: dict,
 ) -> None:
-    from openai import AsyncOpenAI
+    from app.agents.model_router import ROLES, get_azure_client
     from app.database import AsyncSessionLocal
 
     try:
@@ -482,9 +570,9 @@ async def _generate_practice_summary(
             f"Most mistakes on [topics]. Performed well on [topics].'"
         )
 
-        client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        client = get_azure_client()
         resp = await client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=ROLES["practice_filter"],
             messages=[
                 {"role": "system", "content": "You generate concise practice session summaries."},
                 {"role": "user", "content": prompt},

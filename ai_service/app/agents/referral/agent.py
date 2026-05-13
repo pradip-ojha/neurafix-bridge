@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from agents import Agent, Runner
 
-from app.agents.base_agent import TUTOR_MODEL
+from app.agents.model_router import get_model
 
 _SYSTEM_PROMPT = """\
 You are a creative social media content writer for HamroGuru — a personalized AI tutoring platform \
@@ -26,7 +26,7 @@ class ReferralAgent:
         return Agent(
             name="ReferralContentAgent",
             instructions=_SYSTEM_PROMPT,
-            model=TUTOR_MODEL,
+            model=get_model("referral"),
         )
 
     async def generate_post(

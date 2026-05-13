@@ -137,7 +137,7 @@ async def _approve_payment(payment: Payment, subscription_months: int, admin_id:
         sub = Subscription(
             user_id=payment.user_id,
             status=SubscriptionStatus.active,
-            trial_ends_at=now,
+            trial_ends_at=None,
             subscription_ends_at=now + timedelta(days=30 * subscription_months),
             updated_at=now,
         )
