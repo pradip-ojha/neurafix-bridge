@@ -4,7 +4,7 @@ import json
 import logging
 from typing import AsyncGenerator
 
-from agents import Agent, Runner, RawResponsesStreamEvent, WebSearchTool, function_tool
+from agents import Agent, Runner, RawResponsesStreamEvent, function_tool
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.model_router import get_model
@@ -41,10 +41,7 @@ class ConsultantAgent:
                 f"## {display} — This Week\n{weekly}"
             )
 
-        tools = [update_timeline, get_subject_progress]
-        if self.mode == "thinking":
-            tools.insert(0, WebSearchTool())
-        return tools
+        return [update_timeline, get_subject_progress]
 
     def _build_agent(self, student_context: str) -> Agent:
         return Agent(
