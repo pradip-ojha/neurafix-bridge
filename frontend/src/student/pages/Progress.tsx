@@ -17,10 +17,10 @@ type ProgressStats = {
 }
 
 const SUBJECT_LABELS: Record<string, string> = {
-  compulsory_math:    'C. Math',
-  optional_math:      'O. Math',
-  compulsory_english: 'English',
-  compulsory_science: 'Science',
+  mathematics:  'C. Math',
+  optional_math: 'O. Math',
+  english:      'English',
+  science:      'Science',
 }
 
 const formatDay = (dateStr: string) =>

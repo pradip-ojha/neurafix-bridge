@@ -32,7 +32,7 @@ class ConsultantAgent:
 
         @function_tool
         async def get_subject_progress(subject: str) -> str:
-            """Get the student's all-time and weekly progress summary for a specific subject. Subject must be one of: compulsory_math, optional_math, compulsory_english, compulsory_science."""
+            """Get the student's all-time and weekly progress summary for a specific subject. Subject must be one of: mathematics, optional_math, english, science."""
             all_time = await summary_manager.get_or_placeholder(db, user_id, subject, "all_time")
             weekly = await summary_manager.get_or_placeholder(db, user_id, subject, "weekly")
             display = subject.replace("_", " ").title()

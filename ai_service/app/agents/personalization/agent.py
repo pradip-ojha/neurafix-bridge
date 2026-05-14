@@ -21,10 +21,10 @@ from app.personalization import summary_manager
 logger = logging.getLogger(__name__)
 
 _ALL_SUBJECTS = [
-    "compulsory_math",
+    "mathematics",
     "optional_math",
-    "compulsory_english",
-    "compulsory_science",
+    "english",
+    "science",
 ]
 
 

@@ -25,7 +25,7 @@ from app.models.mock_session import MockSession, MockSessionStatus
 
 router = APIRouter(prefix="/api/mock", tags=["mock"])
 
-_MAIN_SUBJECTS = {"compulsory_math", "optional_math", "compulsory_english", "compulsory_science"}
+_MAIN_SUBJECTS = {"mathematics", "optional_math", "english", "science"}
 
 
 def _strip_answers(data: dict) -> dict:

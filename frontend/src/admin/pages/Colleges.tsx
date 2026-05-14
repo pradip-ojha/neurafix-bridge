@@ -25,7 +25,7 @@ interface Paper {
   file_url: string
 }
 
-const SUBJECTS = ['compulsory_math', 'optional_math', 'compulsory_english', 'compulsory_science', 'gk', 'iq', 'computer_science']
+const SUBJECTS = ['mathematics', 'optional_math', 'english', 'science', 'gk', 'iq', 'computer_science']
 
 function CollegeForm({ initial, onSave, onCancel }: {
   initial?: Partial<College>

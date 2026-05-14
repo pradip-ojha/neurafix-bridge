@@ -3,10 +3,10 @@ import { Edit2, Plus, Trash2, X } from 'lucide-react'
 import api from '../../../lib/api'
 
 const SUBJECTS = [
-  { key: 'compulsory_math', label: 'Compulsory Math' },
+  { key: 'mathematics', label: 'Compulsory Math' },
   { key: 'optional_math', label: 'Optional Math' },
-  { key: 'compulsory_english', label: 'Compulsory English' },
-  { key: 'compulsory_science', label: 'Compulsory Science' },
+  { key: 'english', label: 'Compulsory English' },
+  { key: 'science', label: 'Compulsory Science' },
 ]
 
 interface Chapter {

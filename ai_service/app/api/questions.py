@@ -525,6 +525,21 @@ async def check_answers(
 # Stats
 # ---------------------------------------------------------------------------
 
+@router.get("/pool/subjects")
+async def get_pool_subjects(
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_internal_secret),
+):
+    """Return all distinct subjects stored in main_questions (active only)."""
+    rows = (await db.execute(
+        select(MainQuestion.subject)
+        .where(MainQuestion.is_active == True)
+        .distinct()
+        .order_by(MainQuestion.subject)
+    )).scalars().all()
+    return {"subjects": list(rows)}
+
+
 @router.get("/pool/stats", response_model=PoolStatsResult)
 async def get_pool_stats(
     subject: str = Query(...),

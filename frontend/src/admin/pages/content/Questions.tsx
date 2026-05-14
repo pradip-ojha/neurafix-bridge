@@ -1,6 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDown, ChevronUp, Eye, EyeOff, Trash2, Upload } from 'lucide-react'
+import { ChevronDown, ChevronUp, Eye, EyeOff, Trash2, Upload, Database } from 'lucide-react'
 import api from '../../../lib/api'
+
+interface ChapterCount {
+  chapter: string
+  counts: { easy: number; medium: number; hard: number; total: number }
+}
+
+interface PoolStats {
+  subject: string
+  chapters: ChapterCount[]
+}
 
 interface QuestionFile {
   id: string
@@ -64,6 +74,12 @@ export default function Questions() {
   const [fileDetail, setFileDetail] = useState<QuestionFileDetail | null>(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
 
+  // Pool diagnostic
+  const [diagOpen, setDiagOpen] = useState(false)
+  const [diagSubjects, setDiagSubjects] = useState<string[]>([])
+  const [diagStats, setDiagStats] = useState<Record<string, PoolStats>>({})
+  const [diagLoading, setDiagLoading] = useState(false)
+
   // Upload form
   const [uploadOpen, setUploadOpen] = useState(false)
   const [subject, setSubject] = useState('')
@@ -99,6 +115,29 @@ export default function Questions() {
       setFileDetail(res.data as QuestionFileDetail)
     } finally {
       setLoadingDetail(false)
+    }
+  }
+
+  const loadDiag = async () => {
+    setDiagLoading(true)
+    try {
+      const res = await api.get('/api/admin/questions/subjects')
+      const subjects: string[] = (res.data as { subjects: string[] }).subjects
+      setDiagSubjects(subjects)
+      const statsMap: Record<string, PoolStats> = {}
+      await Promise.all(
+        subjects.map(async (s) => {
+          try {
+            const sr = await api.get(`/api/admin/questions/stats?subject=${s}`)
+            statsMap[s] = sr.data as PoolStats
+          } catch {}
+        })
+      )
+      setDiagStats(statsMap)
+    } catch {
+      setDiagSubjects([])
+    } finally {
+      setDiagLoading(false)
     }
   }
 
@@ -305,6 +344,88 @@ export default function Questions() {
                     ))}
                   </ul>
                 )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Pool diagnostic */}
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <button
+          onClick={() => {
+            const next = !diagOpen
+            setDiagOpen(next)
+            if (next && diagSubjects.length === 0) loadDiag()
+          }}
+          className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-gray-50 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Database className="h-4 w-4 text-purple-600" />
+            <span className="font-medium text-gray-900">Pool Diagnostic</span>
+            <span className="text-xs text-gray-400 font-normal">— see what subjects &amp; chapters are actually stored in the database</span>
+          </div>
+          {diagOpen ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
+        </button>
+
+        {diagOpen && (
+          <div className="px-6 pb-6 border-t border-gray-100">
+            <div className="mt-4 flex items-center justify-between mb-3">
+              <p className="text-sm text-gray-500">
+                These are the exact <code className="bg-gray-100 px-1 rounded text-xs">subject</code> and <code className="bg-gray-100 px-1 rounded text-xs">chapter</code> keys stored in the database.
+                For practice to work, these must match the values used by the student interface
+                (e.g., <code className="bg-gray-100 px-1 rounded text-xs">mathematics</code>, <code className="bg-gray-100 px-1 rounded text-xs">science</code>, <code className="bg-gray-100 px-1 rounded text-xs">english</code>, <code className="bg-gray-100 px-1 rounded text-xs">optional_math</code>).
+              </p>
+              <button onClick={loadDiag} disabled={diagLoading} className="ml-4 shrink-0 text-xs px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+                {diagLoading ? 'Refreshing…' : 'Refresh'}
+              </button>
+            </div>
+
+            {diagLoading && <p className="text-sm text-gray-400">Loading…</p>}
+
+            {!diagLoading && diagSubjects.length === 0 && (
+              <p className="text-sm text-gray-400">No active questions found in the database.</p>
+            )}
+
+            {!diagLoading && diagSubjects.length > 0 && (
+              <div className="space-y-4">
+                {diagSubjects.map((subj) => {
+                  const stats = diagStats[subj]
+                  return (
+                    <div key={subj} className="border border-gray-100 rounded-lg overflow-hidden">
+                      <div className="bg-gray-50 px-4 py-2 flex items-center justify-between">
+                        <code className="text-sm font-semibold text-purple-700">{subj}</code>
+                        <span className="text-xs text-gray-400">
+                          {stats ? `${stats.chapters.reduce((a, c) => a + c.counts.total, 0)} total questions` : '…'}
+                        </span>
+                      </div>
+                      {stats && (
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b border-gray-100 text-gray-400">
+                              <th className="px-4 py-2 text-left font-medium">chapter (key stored in DB)</th>
+                              <th className="px-3 py-2 text-right font-medium">easy</th>
+                              <th className="px-3 py-2 text-right font-medium">medium</th>
+                              <th className="px-3 py-2 text-right font-medium">hard</th>
+                              <th className="px-3 py-2 text-right font-medium">total</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-50">
+                            {stats.chapters.map((ch) => (
+                              <tr key={ch.chapter} className="hover:bg-gray-50">
+                                <td className="px-4 py-2"><code className="text-indigo-700">{ch.chapter}</code></td>
+                                <td className="px-3 py-2 text-right text-green-600">{ch.counts.easy}</td>
+                                <td className="px-3 py-2 text-right text-yellow-600">{ch.counts.medium}</td>
+                                <td className="px-3 py-2 text-right text-red-600">{ch.counts.hard}</td>
+                                <td className="px-3 py-2 text-right font-semibold text-gray-700">{ch.counts.total}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>

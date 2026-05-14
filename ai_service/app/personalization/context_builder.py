@@ -28,10 +28,10 @@ _PROFILE_TTL = 300  # 5 min
 logger = logging.getLogger(__name__)
 
 _ALL_SUBJECTS = [
-    "compulsory_math",
+    "mathematics",
     "optional_math",
-    "compulsory_english",
-    "compulsory_science",
+    "english",
+    "science",
 ]
 
 _NO_SUMMARY = "[No summary yet]"
@@ -381,10 +381,10 @@ async def build_consultant_context(
     mem_result = await db.execute(memory_stmt)
 
     subject_values = [
-        ("compulsory_math", subj_cache.get("compulsory_math", {})),
+        ("mathematics", subj_cache.get("mathematics", {})),
         ("optional_math", subj_cache.get("optional_math", {})),
-        ("compulsory_english", subj_cache.get("compulsory_english", {})),
-        ("compulsory_science", subj_cache.get("compulsory_science", {})),
+        ("english", subj_cache.get("english", {})),
+        ("science", subj_cache.get("science", {})),
     ]
     subject_sections = [
         f"### {_subject_display(subj)}\n**All-Time:** {d.get('all_time', _NO_SUMMARY)}\n\n**Weekly:** {d.get('weekly', _NO_SUMMARY)}"

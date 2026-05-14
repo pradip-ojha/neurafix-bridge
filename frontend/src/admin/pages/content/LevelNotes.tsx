@@ -83,7 +83,7 @@ export default function LevelNotes() {
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Subject</label>
             <input
-              placeholder="e.g. compulsory_math"
+              placeholder="e.g. mathematics, science, english, optional_math"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               required

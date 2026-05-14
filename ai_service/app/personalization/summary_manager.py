@@ -322,10 +322,10 @@ async def get_session_memory(db: AsyncSession, session_id: str) -> SessionMemory
 
 _PSNL_CACHE_TTL = 900  # 15 minutes, sliding on each access
 _PSNL_SUBJECTS = [
-    "compulsory_math",
+    "mathematics",
     "optional_math",
-    "compulsory_english",
-    "compulsory_science",
+    "english",
+    "science",
 ]
 
 

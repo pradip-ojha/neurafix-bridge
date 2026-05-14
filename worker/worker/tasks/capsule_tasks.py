@@ -16,10 +16,10 @@ from worker.notify import notify_if_high_failure
 logger = logging.getLogger(__name__)
 
 _ALL_SUBJECTS = [
-    "compulsory_math",
+    "mathematics",
     "optional_math",
-    "compulsory_english",
-    "compulsory_science",
+    "english",
+    "science",
 ]
 
 _HEADERS = {"X-Internal-Secret": settings.MAIN_BACKEND_INTERNAL_SECRET}

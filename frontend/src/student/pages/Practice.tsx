@@ -3,9 +3,9 @@ import { ArrowLeft } from 'lucide-react'
 import PracticeTab from '../components/PracticeTab'
 
 const SUBJECTS: Record<string, { label: string; stream: string[] }> = {
-  compulsory_math: { label: 'Compulsory Mathematics', stream: ['science', 'management'] },
-  compulsory_english: { label: 'Compulsory English', stream: ['science', 'management'] },
-  compulsory_science: { label: 'Compulsory Science', stream: ['science'] },
+  mathematics: { label: 'Compulsory Mathematics', stream: ['science', 'management'] },
+  english: { label: 'Compulsory English', stream: ['science', 'management'] },
+  science: { label: 'Compulsory Science', stream: ['science'] },
   optional_math: { label: 'Optional Mathematics', stream: ['science'] },
 }
 

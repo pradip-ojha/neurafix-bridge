@@ -10,15 +10,15 @@ interface SubjectCard {
 }
 
 const SCIENCE_SUBJECTS: SubjectCard[] = [
-  { key: 'compulsory_math',    display: 'Compulsory Mathematics', icon: Calculator, gradient: 'from-blue-600 to-indigo-700' },
-  { key: 'compulsory_english', display: 'Compulsory English',     icon: BookOpen,   gradient: 'from-emerald-500 to-teal-600' },
-  { key: 'compulsory_science', display: 'Compulsory Science',     icon: Microscope, gradient: 'from-violet-600 to-purple-800' },
-  { key: 'optional_math',      display: 'Optional Mathematics',   icon: PenLine,    gradient: 'from-orange-500 to-amber-600' },
+  { key: 'mathematics',  display: 'Compulsory Mathematics', icon: Calculator, gradient: 'from-blue-600 to-indigo-700' },
+  { key: 'english',      display: 'Compulsory English',     icon: BookOpen,   gradient: 'from-emerald-500 to-teal-600' },
+  { key: 'science',      display: 'Compulsory Science',     icon: Microscope, gradient: 'from-violet-600 to-purple-800' },
+  { key: 'optional_math', display: 'Optional Mathematics',  icon: PenLine,    gradient: 'from-orange-500 to-amber-600' },
 ]
 
 const MANAGEMENT_SUBJECTS: SubjectCard[] = [
-  { key: 'compulsory_math',    display: 'Compulsory Mathematics', icon: Calculator, gradient: 'from-blue-600 to-indigo-700' },
-  { key: 'compulsory_english', display: 'Compulsory English',     icon: BookOpen,   gradient: 'from-emerald-500 to-teal-600' },
+  { key: 'mathematics', display: 'Compulsory Mathematics', icon: Calculator, gradient: 'from-blue-600 to-indigo-700' },
+  { key: 'english',     display: 'Compulsory English',     icon: BookOpen,   gradient: 'from-emerald-500 to-teal-600' },
 ]
 
 const container = {

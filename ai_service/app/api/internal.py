@@ -44,10 +44,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/internal", tags=["internal"])
 
 _ALL_SUBJECTS = [
-    "compulsory_math",
+    "mathematics",
     "optional_math",
-    "compulsory_english",
-    "compulsory_science",
+    "english",
+    "science",
 ]
 
 

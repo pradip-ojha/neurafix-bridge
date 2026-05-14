@@ -410,12 +410,12 @@ function SetupView({
             <span className="text-sm font-bold text-indigo-400">{count}</span>
           </div>
           <input
-            type="range" min={5} max={50} step={5} value={count}
+            type="range" min={5} max={30} step={5} value={Math.min(count, 30)}
             onChange={(e) => setCount(Number(e.target.value))}
             className="w-full accent-indigo-600 h-1.5"
           />
           <div className="flex justify-between text-xs text-slate-600 mt-1">
-            <span>5</span><span>50</span>
+            <span>5</span><span>30</span>
           </div>
         </div>
 

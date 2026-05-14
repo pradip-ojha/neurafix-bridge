@@ -1,8 +1,8 @@
 SUBJECT_NAMES: dict[str, str] = {
-    "compulsory_math": "Compulsory Mathematics",
+    "mathematics": "Compulsory Mathematics",
     "optional_math": "Optional Mathematics",
-    "compulsory_english": "Compulsory English",
-    "compulsory_science": "Compulsory Science (Physics, Chemistry & Biology)",
+    "english": "Compulsory English",
+    "science": "Compulsory Science (Physics, Chemistry & Biology)",
 }
 
 

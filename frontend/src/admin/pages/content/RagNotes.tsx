@@ -81,7 +81,7 @@ export default function RagNotes() {
       <div className="bg-white border border-gray-200 rounded-xl p-6">
         <h2 className="text-sm font-semibold text-gray-700 mb-4">Upload Note</h2>
         <form onSubmit={handleUpload} className="grid grid-cols-2 gap-4">
-          <input placeholder="Subject (e.g. compulsory_math)" value={subject} onChange={(e) => setSubject(e.target.value)} required className="border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+          <input placeholder="Subject (e.g. mathematics, science, english, optional_math)" value={subject} onChange={(e) => setSubject(e.target.value)} required className="border border-gray-300 rounded-lg px-3 py-2 text-sm" />
           <input placeholder="Chapter (e.g. sets)" value={chapter} onChange={(e) => setChapter(e.target.value)} required className="border border-gray-300 rounded-lg px-3 py-2 text-sm" />
           <input placeholder="Display name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required className="border border-gray-300 rounded-lg px-3 py-2 text-sm" />
           <input ref={fileRef} type="file" accept=".txt,.md" required onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="border border-gray-300 rounded-lg px-3 py-2 text-sm" />

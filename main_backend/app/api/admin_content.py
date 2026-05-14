@@ -25,10 +25,10 @@ router = APIRouter(prefix="/api/admin", tags=["admin-content"])
 _admin_only = require_role("admin")
 
 _MAIN_SUBJECTS = {
-    "compulsory_math",
+    "mathematics",
     "optional_math",
-    "compulsory_english",
-    "compulsory_science",
+    "english",
+    "science",
 }
 
 

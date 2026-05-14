@@ -33,9 +33,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/tutor", tags=["tutor"])
 
 _STREAM_SUBJECTS: dict[str, list[str]] = {
-    "science": ["compulsory_math", "optional_math", "compulsory_english", "compulsory_science"],
-    "management": ["compulsory_math", "compulsory_english"],
-    "both": ["compulsory_math", "optional_math", "compulsory_english", "compulsory_science"],
+    "science": ["mathematics", "optional_math", "english", "science"],
+    "management": ["mathematics", "english"],
+    "both": ["mathematics", "optional_math", "english", "science"],
 }
 
 

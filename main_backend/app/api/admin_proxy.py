@@ -123,15 +123,17 @@ async def proxy_upload_extra_questions(
     return JSONResponse(content=resp.json(), status_code=resp.status_code)
 
 
+@router.get("/questions/subjects")
+async def proxy_question_subjects(_: User = Depends(_admin_only)):
+    return await _forward_get("/api/questions/pool/subjects")
+
+
 @router.get("/questions/stats")
 async def proxy_question_stats(
-    subject: str | None = Query(None),
+    subject: str = Query(...),
     _: User = Depends(_admin_only),
 ):
-    params = {}
-    if subject:
-        params["subject"] = subject
-    return await _forward_get("/api/questions/pool/stats", params)
+    return await _forward_get("/api/questions/pool/stats", {"subject": subject})
 
 
 @router.get("/questions/files")

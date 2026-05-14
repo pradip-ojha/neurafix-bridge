@@ -11,17 +11,17 @@ import { useMobileLayout } from '../../contexts/MobileLayoutContext'
 type Tab = 'tutor' | 'notes' | 'capsule' | 'practice'
 
 const SUBJECT_DISPLAY: Record<string, string> = {
-  compulsory_math:    'Compulsory Mathematics',
-  optional_math:      'Optional Mathematics',
-  compulsory_english: 'Compulsory English',
-  compulsory_science: 'Compulsory Science',
+  mathematics:  'Compulsory Mathematics',
+  optional_math: 'Optional Mathematics',
+  english:      'Compulsory English',
+  science:      'Compulsory Science',
 }
 
 const SUBJECT_SHORT: Record<string, string> = {
-  compulsory_math:    'Math',
-  optional_math:      'Opt. Math',
-  compulsory_english: 'English',
-  compulsory_science: 'Science',
+  mathematics:  'Math',
+  optional_math: 'Opt. Math',
+  english:      'English',
+  science:      'Science',
 }
 
 const TABS: { key: Tab; label: string }[] = [

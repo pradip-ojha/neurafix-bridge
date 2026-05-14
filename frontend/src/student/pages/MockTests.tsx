@@ -83,17 +83,17 @@ interface LeaderboardData {
 // ---------------------------------------------------------------------------
 
 const SUBJECT_DISPLAY: Record<string, string> = {
-  compulsory_math:    'Compulsory Math',
-  optional_math:      'Optional Math',
-  compulsory_english: 'Compulsory English',
-  compulsory_science: 'Compulsory Science',
-  gk:                 'General Knowledge',
-  iq:                 'IQ',
-  computer_science:   'Computer Science',
+  mathematics:   'Compulsory Math',
+  optional_math: 'Optional Math',
+  english:       'Compulsory English',
+  science:       'Compulsory Science',
+  gk:            'General Knowledge',
+  iq:            'IQ',
+  computer_science: 'Computer Science',
 }
 
-const SCIENCE_SUBJECTS    = ['compulsory_math', 'optional_math', 'compulsory_english', 'compulsory_science']
-const MANAGEMENT_SUBJECTS = ['compulsory_math', 'compulsory_english']
+const SCIENCE_SUBJECTS    = ['mathematics', 'optional_math', 'english', 'science']
+const MANAGEMENT_SUBJECTS = ['mathematics', 'english']
 
 function subjectLabel(s: string): string {
   return SUBJECT_DISPLAY[s] ?? s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())

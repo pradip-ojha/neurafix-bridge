@@ -38,9 +38,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/practice", tags=["practice"])
 
 _STREAM_SUBJECTS: dict[str, list[str]] = {
-    "science": ["compulsory_math", "optional_math", "compulsory_english", "compulsory_science"],
-    "management": ["compulsory_math", "compulsory_english"],
-    "both": ["compulsory_math", "optional_math", "compulsory_english", "compulsory_science"],
+    "science": ["mathematics", "optional_math", "english", "science"],
+    "management": ["mathematics", "english"],
+    "both": ["mathematics", "optional_math", "english", "science"],
 }
 
 
@@ -168,7 +168,7 @@ _WHOLE_SUBJECT = "__all__"  # sentinel stored in DB when no specific chapter is 
 class StartRequest(BaseModel):
     subject: str
     chapter: str | None = None  # None = whole-subject practice
-    count: int = Field(default=10, ge=1, le=50)
+    count: int = Field(default=10, ge=1, le=30)
     timer_enabled: bool = False
     optional_message: str | None = None
 
@@ -404,6 +404,18 @@ async def submit_practice(
     session.score_data = score_data
     await db.commit()
 
+    # Fire-and-forget: generate PracticeSessionSummary immediately after submit
+    asyncio.create_task(
+        _generate_practice_summary(
+            session_id=session.id,
+            user_id=user_id,
+            subject=session.subject,
+            chapter=session.chapter,
+            session_date=session.session_date,
+            score_data=score_data,
+        )
+    )
+
     return score_data
 
 
@@ -425,19 +437,6 @@ async def close_practice(
 
     session.status = PracticeSessionStatus.closed
     await db.commit()
-
-    # Fire-and-forget: generate PracticeSessionSummary
-    if session.score_data:
-        asyncio.create_task(
-            _generate_practice_summary(
-                session_id=session.id,
-                user_id=user_id,
-                subject=session.subject,
-                chapter=session.chapter,
-                session_date=session.session_date,
-                score_data=session.score_data,
-            )
-        )
 
     return {"closed": True, "session_id": req.session_id}
 
@@ -547,19 +546,30 @@ async def _generate_practice_summary(
     from app.agents.model_router import ROLES, get_azure_client
     from app.database import AsyncSessionLocal
 
+    score = score_data.get("score", 0)
+    total = score_data.get("total", 0)
+    topic_wrong: dict = score_data.get("topic_wrong", {})
+    topic_correct: dict = score_data.get("topic_correct", {})
+
+    worst_topics = sorted(topic_wrong.items(), key=lambda x: x[1], reverse=True)[:3]
+    best_topics = sorted(topic_correct.items(), key=lambda x: x[1], reverse=True)[:3]
+
+    worst_str = ", ".join(f"{t} ({c} wrong)" for t, c in worst_topics) or "none"
+    best_str = ", ".join(f"{t} ({c} correct)" for t, c in best_topics) or "none"
+
+    chapter_display = "Whole Subject" if chapter == _WHOLE_SUBJECT else chapter
+
+    # Computed fallback narrative — always available without AI
+    fallback_narrative = (
+        f"Student attempted {total} questions on {chapter_display}. "
+        f"Score: {score}/{total}. "
+        f"Most mistakes on: {worst_str}. "
+        f"Performed well on: {best_str}."
+    )
+
+    # Try AI narrative; fall back to computed string on any failure
+    narrative = fallback_narrative
     try:
-        score = score_data.get("score", 0)
-        total = score_data.get("total", 0)
-        topic_wrong: dict = score_data.get("topic_wrong", {})
-        topic_correct: dict = score_data.get("topic_correct", {})
-
-        worst_topics = sorted(topic_wrong.items(), key=lambda x: x[1], reverse=True)[:3]
-        best_topics = sorted(topic_correct.items(), key=lambda x: x[1], reverse=True)[:3]
-
-        worst_str = ", ".join(f"{t} ({c} wrong)" for t, c in worst_topics) or "none"
-        best_str = ", ".join(f"{t} ({c} correct)" for t, c in best_topics) or "none"
-
-        chapter_display = "Whole Subject" if chapter == _WHOLE_SUBJECT else chapter
         prompt = (
             f"Write a 2-3 sentence practice session summary.\n"
             f"Subject: {subject}, Chapter: {chapter_display}\n"
@@ -569,7 +579,6 @@ async def _generate_practice_summary(
             f"Format: 'Student attempted N questions on [chapter]. Score X/N. "
             f"Most mistakes on [topics]. Performed well on [topics].'"
         )
-
         client = get_azure_client()
         resp = await client.chat.completions.create(
             model=ROLES["practice_filter"],
@@ -579,15 +588,21 @@ async def _generate_practice_summary(
             ],
             max_tokens=120,
         )
-        narrative = (resp.choices[0].message.content or "").strip()
+        ai_text = (resp.choices[0].message.content or "").strip()
+        if ai_text:
+            narrative = ai_text
+    except Exception as exc:
+        logger.warning("AI narrative failed for session=%s, using fallback: %s", session_id, exc)
 
-        # Compute topic_breakdown for summary model
-        all_topics = set(topic_correct) | set(topic_wrong)
-        topic_breakdown = {
-            t: {"correct": topic_correct.get(t, 0), "wrong": topic_wrong.get(t, 0)}
-            for t in all_topics
-        }
+    # Compute topic_breakdown
+    all_topics = set(topic_correct) | set(topic_wrong)
+    topic_breakdown = {
+        t: {"correct": topic_correct.get(t, 0), "wrong": topic_wrong.get(t, 0)}
+        for t in all_topics
+    }
 
+    # Save summary — always happens, independent of AI success
+    try:
         async with AsyncSessionLocal() as db:
             summary = PracticeSessionSummary(
                 user_id=user_id,
@@ -603,6 +618,5 @@ async def _generate_practice_summary(
             db.add(summary)
             await db.commit()
             logger.info("PracticeSessionSummary saved for session=%s user=%s", session_id, user_id)
-
     except Exception as exc:
-        logger.error("Failed to generate practice summary for session=%s: %s", session_id, exc)
+        logger.error("Failed to save PracticeSessionSummary for session=%s: %s", session_id, exc)
