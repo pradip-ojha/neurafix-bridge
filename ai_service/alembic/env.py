@@ -1,24 +1,39 @@
 import asyncio
+import os
+import re
 from logging.config import fileConfig
 
 from sqlalchemy.ext.asyncio import async_engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import pool, MetaData
 from alembic import context
 
-import sys, os
+import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from app.config import settings
-from app.database import Base
-import app.models  # noqa: F401 — registers all models with Base.metadata
-
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.async_database_url.replace("%", "%%"))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-target_metadata = Base.metadata
+# Try full app settings (local dev + production containers).
+# Falls back to DATABASE_URL only when settings are incomplete (CI migration runner).
+try:
+    from app.config import settings
+    from app.database import Base
+    import app.models  # noqa: F401 — registers all models with Base.metadata
+    _db_url = settings.async_database_url
+    target_metadata = Base.metadata
+except Exception:
+    _db_url = os.environ["DATABASE_URL"]
+    _db_url = _db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    _db_url = _db_url.replace("postgres://", "postgresql+asyncpg://", 1)
+    _db_url = re.sub(r"[&?]channel_binding=[^&]*", "", _db_url)
+    _db_url = _db_url.replace("sslmode=require", "ssl=require")
+    _db_url = re.sub(r"\?$", "", _db_url)
+    _db_url = re.sub(r"&$", "", _db_url)
+    target_metadata = MetaData()
+
+config.set_main_option("sqlalchemy.url", _db_url.replace("%", "%%"))
 
 
 def run_migrations_offline() -> None:
