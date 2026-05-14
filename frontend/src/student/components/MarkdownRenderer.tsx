@@ -10,25 +10,27 @@ import { useTheme } from '../../contexts/ThemeContext'
 interface Props {
   content: string
   className?: string
+  compact?: boolean
 }
 
-export default function MarkdownRenderer({ content, className = '' }: Props) {
+export default function MarkdownRenderer({ content, className = '', compact = false }: Props) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
 
   const components: Components = {
     h1: ({ children }) => (
-      <h1 className="text-lg font-bold text-slate-100 mt-4 mb-2 first:mt-0">{children}</h1>
+      <h1 className="text-xl font-bold text-slate-100 mt-5 mb-2.5 first:mt-0 pb-1 border-b border-white/[0.07]">{children}</h1>
     ),
     h2: ({ children }) => (
-      <h2 className="text-base font-semibold text-slate-100 mt-3 mb-2 first:mt-0">{children}</h2>
+      <h2 className="text-base font-semibold text-slate-100 mt-4 mb-2 first:mt-0 pl-3 border-l-2 border-indigo-500/60">{children}</h2>
     ),
     h3: ({ children }) => (
       <h3 className="text-sm font-semibold text-slate-200 mt-3 mb-1.5 first:mt-0">{children}</h3>
     ),
-    p: ({ children }) => (
-      <p className="text-slate-300 text-sm leading-relaxed mb-2 last:mb-0">{children}</p>
-    ),
+    p: ({ children }) =>
+      compact
+        ? <>{children}</>
+        : <p className="text-slate-300 text-sm leading-relaxed mb-2 last:mb-0">{children}</p>,
     ul: ({ children }) => (
       <ul className="space-y-1 mb-2 pl-4">{children}</ul>
     ),
@@ -42,7 +44,7 @@ export default function MarkdownRenderer({ content, className = '' }: Props) {
       </li>
     ),
     blockquote: ({ children }) => (
-      <blockquote className="border-l-2 border-indigo-500/60 pl-3 my-2 text-slate-400 italic text-sm">
+      <blockquote className="border-l-2 border-indigo-500/60 pl-3 my-2 bg-indigo-500/5 rounded-r-lg py-2 text-slate-300 text-sm">
         {children}
       </blockquote>
     ),

@@ -25,7 +25,15 @@ Your job:
 - Help the student understand mistakes and reinforce correct understanding.
 - Use search_knowledge_base only if the student asks about something outside the session content above.
 - Never reveal correct answers to questions that weren't in this session.
-- Keep responses focused and educational. Do not be verbose."""
+- Keep responses focused and educational. Do not be verbose.
+
+## Response Format
+- Use `-` for bullet lists. NEVER use the Unicode bullet character `•`.
+- Wrap inline math in `$...$`: e.g., the discriminant is $b^2 - 4ac$
+- Wrap standalone equations in `$$...$$` on their own line.
+- Use `**bold**` for key terms, `*italic*` for emphasis.
+- Never write raw undelimited math expressions.
+"""
 
 
 def _format_session_context(score_data: dict) -> str:

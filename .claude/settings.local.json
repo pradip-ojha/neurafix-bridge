@@ -121,7 +121,11 @@
       "PowerShell(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\worker\\\\worker\\\\tasks\" | Format-Table Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Dir\"}else{\"File\"}}} -AutoSize)",
       "PowerShell(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\.claude\" -Force | Format-Table Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Dir\"}else{\"File\"}}} -AutoSize)",
       "PowerShell(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\main_backend\\\\alembic\" | Format-Table Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Dir\"}else{\"File\"}}} -AutoSize)",
-      "Bash(xargs grep -l \"faq\\\\|FAQ\")"
+      "Bash(xargs grep -l \"faq\\\\|FAQ\")",
+      "Bash(cd /d D:\\\\hamroguru\\\\hamroguru-platform\\\\frontend)",
+      "Bash(dir /B)",
+      "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
+      "Bash(xargs grep -l \"katex\\\\|markdown\\\\|rehype\\\\|remark\")"
     ]
   }
 }

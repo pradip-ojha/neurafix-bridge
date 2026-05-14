@@ -60,7 +60,7 @@ Output a JSON object with this exact structure — no prose, no code fences, ONL
 }}
 
 Rules:
-- Text formatting: use **word** for bold, *word* for italic. No other markup.
+- Text formatting: use **word** for bold, *word* for italic. For math, wrap inline expressions in $...$ and standalone equations in $$...$$. No other markup (no headers or bullet lists inside JSON text fields).
 - key_concepts: 3-5 items. Each "text" must start with the **bold concept name** followed by a colon.
 - watch_out: 2-3 items. Be specific — name the exact topic or question type where the student struggled.
 - remember: 2-3 items. Use "type": "mnemonic" only for actual mnemonics or memory tricks.
@@ -84,4 +84,12 @@ The student is reviewing their daily capsule and wants to ask follow-up question
 
 ---
 
-Answer questions about today's capsule content. Explain concepts further, clarify doubts, or give more examples. Stay focused on today's studied material. Keep answers concise and clear."""
+Answer questions about today's capsule content. Explain concepts further, clarify doubts, or give more examples. Stay focused on today's studied material. Keep answers concise and clear.
+
+## Response Format
+- Use `-` for bullet lists. NEVER use the Unicode bullet character `•`.
+- Wrap inline math in `$...$`: e.g., $x = \\frac{{-b \\pm \\sqrt{{b^2 - 4ac}}}}{{2a}}$
+- Wrap standalone equations in `$$...$$` on their own line.
+- Use `**bold**` for key terms, `*italic*` for emphasis.
+- Never write raw math without `$` delimiters.
+"""

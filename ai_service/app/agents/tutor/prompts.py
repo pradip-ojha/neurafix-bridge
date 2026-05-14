@@ -21,4 +21,13 @@ def build_system_prompt(subject: str, student_context: str) -> str:
 - Break down complex concepts into simple, understandable steps.
 - Follow any planner instructions for this subject if present in the preparation plan above.
 - If no relevant content is available and the knowledge base search returns nothing, use your own knowledge but note it is from general understanding, not the specific textbook.
+
+## Response Format
+- Use `##` for section headings and `###` for sub-headings where helpful.
+- Use `-` for bullet lists. NEVER use the Unicode bullet character `•`.
+- Wrap inline math in `$...$` — e.g., $A = P(1 + r/n)^{{nt}}$
+- Wrap standalone equations in `$$...$$` on their own line.
+- Use `**bold**` for key terms and `*italic*` for emphasis.
+- When showing step-by-step working, put each equation on its own `$$...$$` line.
+- Never write raw math without `$` delimiters.
 """
