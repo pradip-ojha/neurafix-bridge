@@ -1,0 +1,25 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "databaseUrl":               { "value": "postgresql+asyncpg://user:pass@host/db" },
+    "jwtSecretKey":              { "value": "REPLACE_run_openssl_rand_-hex_32" },
+    "mainBackendInternalSecret": { "value": "REPLACE_run_openssl_rand_-hex_32" },
+    "azureOpenAIEndpoint":       { "value": "https://your-resource.openai.azure.com/" },
+    "azureOpenAIApiKey":         { "value": "your-azure-openai-key" },
+    "azureOpenAIApiVersion":     { "value": "2025-01-01-preview" },
+    "modelChatFast":             { "value": "gpt-4o-mini" },
+    "modelChatThinking":         { "value": "gpt-4o" },
+    "modelEmbedding":            { "value": "text-embedding-3-large" },
+    "pineconeApiKey":            { "value": "your-pinecone-key" },
+    "upstashRedisRestUrl":       { "value": "https://your-instance.upstash.io" },
+    "upstashRedisRestToken":     { "value": "your-upstash-token" },
+    "r2AccountId":               { "value": "your-cloudflare-account-id" },
+    "r2Endpoint":                { "value": "https://your-account-id.r2.cloudflarestorage.com" },
+    "r2TokenValue":              { "value": "your-r2-token-value" },
+    "r2AccessKeyId":             { "value": "your-r2-access-key-id" },
+    "r2SecretAccessKey":         { "value": "your-r2-secret-access-key" },
+    "r2BucketName":              { "value": "hamroguru" },
+    "imageTag":                  { "value": "latest" }
+  }
+}

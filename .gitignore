@@ -2,6 +2,9 @@
 .env
 .env.local
 
+# Deployment — parameter file contains real secrets
+infra/parameters.json
+
 # Python
 __pycache__/
 *.pyc

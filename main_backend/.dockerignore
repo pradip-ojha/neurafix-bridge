@@ -1,0 +1,9 @@
+.venv
+__pycache__
+*.pyc
+*.pyo
+.git
+.env*
+*.log
+alembic/versions/*.pyc
+main_out.txt

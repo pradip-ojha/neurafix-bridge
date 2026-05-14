@@ -1,0 +1,12 @@
+.venv
+__pycache__
+*.pyc
+*.pyo
+.git
+.env*
+*.log
+alembic/versions/*.pyc
+uvicorn_out.txt
+uvicorn_err.txt
+=0.7.0
+=1.1.0

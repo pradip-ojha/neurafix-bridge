@@ -1,0 +1,91 @@
+version: "3.9"
+
+# Local development / integration testing only.
+# All services read from the root .env file.
+# Override inter-service URLs so containers find each other by name.
+
+services:
+
+  main_backend:
+    build:
+      context: ./main_backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      AI_SERVICE_URL: http://ai_service:8001
+      APP_ENV: production
+      DEBUG: "false"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+
+  ai_service:
+    build:
+      context: ./ai_service
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    env_file: .env
+    environment:
+      MAIN_BACKEND_URL: http://main_backend:8000
+      APP_ENV: production
+      DEBUG: "false"
+    depends_on:
+      main_backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      CELERY_MODE: worker
+      MAIN_BACKEND_URL: http://main_backend:8000
+      AI_SERVICE_URL: http://ai_service:8001
+      APP_ENV: production
+    depends_on:
+      main_backend:
+        condition: service_healthy
+      ai_service:
+        condition: service_healthy
+
+  worker_beat:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      CELERY_MODE: beat
+      MAIN_BACKEND_URL: http://main_backend:8000
+      AI_SERVICE_URL: http://ai_service:8001
+      APP_ENV: production
+    depends_on:
+      main_backend:
+        condition: service_healthy
+      ai_service:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    environment:
+      # nginx template substitution: routes /api/* to main_backend
+      MAIN_BACKEND_URL: http://main_backend:8000
+    depends_on:
+      main_backend:
+        condition: service_healthy

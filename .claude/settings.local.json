@@ -109,7 +109,18 @@
       "PowerShell(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\frontend\\\\src\" -Recurse -File | Where-Object {$_.FullName -match \"\\(admin|affiliation\\)\"} | Select-Object FullName | Sort-Object FullName)",
       "PowerShell(head *)",
       "Bash(npx eslint *)",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "PowerShell(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\" | Format-Table Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Directory\"}else{\"File\"}}} -AutoSize)",
+      "PowerShell(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\frontend\" | Format-Table Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Dir\"}else{\"File\"}}} -AutoSize)",
+      "PowerShell(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\main_backend\" | Format-Table Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Dir\"}else{\"File\"}}} -AutoSize)",
+      "PowerShell(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\ai_service\" | Format-Table Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Dir\"}else{\"File\"}}} -AutoSize)",
+      "PowerShell(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\worker\" | Format-Table Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Dir\"}else{\"File\"}}} -AutoSize)",
+      "PowerShell(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\worker\\\\worker\" | Format-Table Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Dir\"}else{\"File\"}}} -AutoSize)",
+      "PowerShell(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\main_backend\\\\app\" | Format-Table Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Dir\"}else{\"File\"}}} -AutoSize)",
+      "PowerShell(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\ai_service\\\\app\" | Format-Table Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Dir\"}else{\"File\"}}} -AutoSize)",
+      "PowerShell(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\worker\\\\worker\\\\tasks\" | Format-Table Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Dir\"}else{\"File\"}}} -AutoSize)",
+      "PowerShell(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\.claude\" -Force | Format-Table Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Dir\"}else{\"File\"}}} -AutoSize)",
+      "PowerShell(Get-ChildItem -Path \"D:\\\\hamroguru\\\\hamroguru-platform\\\\main_backend\\\\alembic\" | Format-Table Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Dir\"}else{\"File\"}}} -AutoSize)"
     ]
   }
 }

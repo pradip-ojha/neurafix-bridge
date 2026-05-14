@@ -17,7 +17,7 @@ import app.models  # noqa: F401 — registers all ORM models with Base.metadata
 config = context.config
 
 # Override sqlalchemy.url with our async URL
-config.set_main_option("sqlalchemy.url", settings.async_database_url)
+config.set_main_option("sqlalchemy.url", settings.async_database_url.replace("%", "%%"))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

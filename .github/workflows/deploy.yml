@@ -1,0 +1,155 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: neurafixbridgeacr.azurecr.io
+  RG: neurafix-bridge-deployments
+
+jobs:
+  # ── Build all images and push to ACR ─────────────────────────────────────────
+  build:
+    name: Build & Push Images
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # Required for OIDC
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to ACR
+        run: az acr login --name neurafixbridgeacr
+
+      - name: Build and push — frontend
+        run: |
+          docker build -t $REGISTRY/hamroguru-frontend:${{ github.sha }} ./frontend
+          docker push $REGISTRY/hamroguru-frontend:${{ github.sha }}
+          docker tag  $REGISTRY/hamroguru-frontend:${{ github.sha }} $REGISTRY/hamroguru-frontend:latest
+          docker push $REGISTRY/hamroguru-frontend:latest
+
+      - name: Build and push — main-backend
+        run: |
+          docker build -t $REGISTRY/hamroguru-main-backend:${{ github.sha }} ./main_backend
+          docker push $REGISTRY/hamroguru-main-backend:${{ github.sha }}
+          docker tag  $REGISTRY/hamroguru-main-backend:${{ github.sha }} $REGISTRY/hamroguru-main-backend:latest
+          docker push $REGISTRY/hamroguru-main-backend:latest
+
+      - name: Build and push — ai-service
+        run: |
+          docker build -t $REGISTRY/hamroguru-ai-service:${{ github.sha }} ./ai_service
+          docker push $REGISTRY/hamroguru-ai-service:${{ github.sha }}
+          docker tag  $REGISTRY/hamroguru-ai-service:${{ github.sha }} $REGISTRY/hamroguru-ai-service:latest
+          docker push $REGISTRY/hamroguru-ai-service:latest
+
+      - name: Build and push — worker
+        run: |
+          docker build -t $REGISTRY/hamroguru-worker:${{ github.sha }} ./worker
+          docker push $REGISTRY/hamroguru-worker:${{ github.sha }}
+          docker tag  $REGISTRY/hamroguru-worker:${{ github.sha }} $REGISTRY/hamroguru-worker:latest
+          docker push $REGISTRY/hamroguru-worker:latest
+
+  # ── Run DB migrations before deploying new code ───────────────────────────────
+  migrate:
+    name: Run Migrations
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to ACR
+        run: az acr login --name neurafixbridgeacr
+
+      - name: Pull images
+        run: |
+          docker pull $REGISTRY/hamroguru-main-backend:${{ github.sha }}
+          docker pull $REGISTRY/hamroguru-ai-service:${{ github.sha }}
+
+      - name: Migrate — main_backend
+        run: |
+          docker run --rm \
+            -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            $REGISTRY/hamroguru-main-backend:${{ github.sha }} \
+            alembic upgrade head
+
+      - name: Migrate — ai_service
+        run: |
+          docker run --rm \
+            -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            $REGISTRY/hamroguru-ai-service:${{ github.sha }} \
+            alembic upgrade head
+
+  # ── Deploy updated images to Azure Container Apps ─────────────────────────────
+  deploy:
+    name: Deploy to Azure Container Apps
+    runs-on: ubuntu-latest
+    needs: migrate
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy — frontend
+        run: |
+          az containerapp update \
+            --name hamroguru-frontend \
+            --resource-group $RG \
+            --image $REGISTRY/hamroguru-frontend:${{ github.sha }}
+
+      - name: Deploy — main-backend
+        run: |
+          az containerapp update \
+            --name hamroguru-main-backend \
+            --resource-group $RG \
+            --image $REGISTRY/hamroguru-main-backend:${{ github.sha }}
+
+      - name: Deploy — ai-service
+        run: |
+          az containerapp update \
+            --name hamroguru-ai-service \
+            --resource-group $RG \
+            --image $REGISTRY/hamroguru-ai-service:${{ github.sha }}
+
+      - name: Deploy — worker
+        run: |
+          az containerapp update \
+            --name hamroguru-worker \
+            --resource-group $RG \
+            --image $REGISTRY/hamroguru-worker:${{ github.sha }}
+
+      - name: Deploy — worker-beat
+        run: |
+          az containerapp update \
+            --name hamroguru-worker-beat \
+            --resource-group $RG \
+            --image $REGISTRY/hamroguru-worker:${{ github.sha }}
+
+      - name: Print live URLs
+        run: |
+          echo "Frontend  : $(az containerapp show --name hamroguru-frontend     --resource-group $RG --query properties.configuration.ingress.fqdn -o tsv)"
+          echo "API       : $(az containerapp show --name hamroguru-main-backend --resource-group $RG --query properties.configuration.ingress.fqdn -o tsv)"
