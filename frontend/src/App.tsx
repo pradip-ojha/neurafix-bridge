@@ -1,8 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
-import HealthCheck from './components/HealthCheck'
 import OfflineBanner from './components/OfflineBanner'
+import Landing from './pages/Landing'
 import Login from './auth/Login'
 import Register from './auth/Register'
 import AdminLayout from './admin/layout/AdminLayout'
@@ -20,6 +20,7 @@ import SubjectTiming from './admin/pages/SubjectTiming'
 import Config from './admin/pages/Config'
 import Notifications from './admin/pages/Notifications'
 import AdminCommunity from './admin/pages/Community'
+import HomepageConfig from './admin/pages/HomepageConfig'
 import Onboarding from './student/pages/Onboarding'
 import StudentLayout from './student/layout/StudentLayout'
 import SubjectGrid from './student/pages/SubjectGrid'
@@ -78,6 +79,7 @@ export default function App() {
             <Route path="config" element={<Config />} />
             <Route path="notifications" element={<Notifications />} />
             <Route path="community" element={<AdminCommunity />} />
+            <Route path="homepage" element={<HomepageConfig />} />
           </Route>
 
           <Route
@@ -115,7 +117,7 @@ export default function App() {
             <Route path="earnings" element={<Earnings />} />
           </Route>
 
-          <Route path="/" element={<HealthCheck />} />
+          <Route path="/" element={<Landing />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

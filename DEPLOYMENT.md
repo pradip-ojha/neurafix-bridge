@@ -147,7 +147,7 @@ Go to: **GitHub → your repo → Settings → Secrets and variables → Actions
 | `AZURE_CLIENT_ID` | The `APP_ID` output from Step 4 command 1 |
 | `AZURE_TENANT_ID` | Run: `az account show --query tenantId -o tsv` |
 | `AZURE_SUBSCRIPTION_ID` | Run: `az account show --query id -o tsv` |
-| `DATABASE_URL` | Your Neon connection string from `.env` (used only for migrations) |
+| `DATABASE_URL` | Your Azure PostgreSQL connection string from `.env` (used only for migrations) |
 
 **That's it — only 4 secrets.** All other app secrets (OpenAI, Pinecone, Redis, R2, etc.)  
 are stored in Azure Container Apps secrets (set during Step 3) and never touch GitHub.

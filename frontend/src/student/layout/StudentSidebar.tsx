@@ -34,9 +34,9 @@ export default function StudentSidebar({ isOpen, onClose }: Props) {
       {/* Logo */}
       <div className="px-5 py-5 border-b border-white/[0.05] flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <img src="/company-logo.png" alt="NeuraFix Bridge" className="w-8 h-8 rounded-lg object-contain flex-shrink-0" />
+          <img src="/company-logo.png" alt="NeuraFix Bridge" className="w-10 h-10 rounded-lg object-contain flex-shrink-0" />
           <div>
-            <span className="text-sm font-bold bg-gradient-to-r from-indigo-400 to-teal-400 bg-clip-text text-transparent leading-none">
+            <span className="text-base font-bold bg-gradient-to-r from-indigo-400 to-teal-400 bg-clip-text text-transparent leading-none">
               NeuraFix Bridge
             </span>
             <p className="text-slate-500 text-[10px] leading-none mt-0.5">by NeuraFix AI</p>

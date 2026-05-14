@@ -28,16 +28,15 @@ class Settings(BaseSettings):
     R2_BUCKET_NAME: str
 
     # Internal URL of the ai_service (for proxied calls)
-    AI_SERVICE_URL: str = "http://localhost:8001"
+    AI_SERVICE_URL: str = "http://127.0.0.1:8001"
 
     @property
     def async_database_url(self) -> str:
         url = self.DATABASE_URL
         url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
         url = url.replace("postgres://", "postgresql+asyncpg://", 1)
-        # asyncpg does not support channel_binding — strip it
+        # asyncpg does not support channel_binding or sslmode params — normalize them
         url = re.sub(r"[&?]channel_binding=[^&]*", "", url)
-        # asyncpg uses ssl=require not sslmode=require
         url = url.replace("sslmode=require", "ssl=require")
         # Clean up any trailing ? or dangling &
         url = re.sub(r"\?$", "", url)

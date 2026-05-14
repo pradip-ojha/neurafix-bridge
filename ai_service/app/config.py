@@ -34,13 +34,14 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     # URL of the main_backend service (for internal calls)
-    MAIN_BACKEND_URL: str = "http://localhost:8000"
+    MAIN_BACKEND_URL: str = "http://127.0.0.1:8000"
 
     @property
     def async_database_url(self) -> str:
         url = self.DATABASE_URL
         url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
         url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+        # asyncpg does not support channel_binding or sslmode params — normalize them
         url = re.sub(r"[&?]channel_binding=[^&]*", "", url)
         url = url.replace("sslmode=require", "ssl=require")
         url = re.sub(r"\?$", "", url)

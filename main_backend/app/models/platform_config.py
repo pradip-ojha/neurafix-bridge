@@ -34,4 +34,5 @@ class PlatformConfig(Base):
     paid_capsule_followup_limit: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
     payment_qr_url: Mapped[str | None] = mapped_column(nullable=True)
     payment_instructions: Mapped[str | None] = mapped_column(nullable=True)
+    demo_video_url: Mapped[str | None] = mapped_column(nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))

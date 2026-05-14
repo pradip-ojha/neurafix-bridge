@@ -78,7 +78,7 @@ All credentials are in the root `.env` file. Keys used:
 
 | Key | Service |
 |-----|---------|
-| `DATABASE_URL` | Neon PostgreSQL connection string |
+| `DATABASE_URL` | Azure PostgreSQL connection string |
 | `PINECONE_API_KEY` | Pinecone vector DB |
 | `OPENAI_API_KEY` | OpenAI (AI service) |
 | `UPSTASH_REDIS_REST_URL` | Upstash Redis |
@@ -346,7 +346,7 @@ Remaining components will use managed services.
 
 ### Database
 Technology: PostgreSQL  
-Provider: Neon
+Provider: Azure
 
 ### Vector Database
 Technology: Pinecone
@@ -845,7 +845,7 @@ A dedicated **Personalization agent** handles all summary generation and updates
 | main_backend | 8000 | `cd main_backend && uvicorn app.main:app --reload` |
 | ai_service | 8001 | `cd ai_service && uvicorn app.main:app --reload --port 8001` |
 | worker | — | `cd worker && celery -A worker.celery_app worker --loglevel=info` |
-| frontend | 5173 | `cd frontend && npm run dev` |
+| frontend | 3000 | `cd frontend && npm run dev` |
 
 ## Internal Auth
 
@@ -861,7 +861,7 @@ Services communicate using `X-Internal-Secret` header. Value = `MAIN_BACKEND_INT
 - **Context window:** Phase 6 hardcodes `n=6` (3 message pairs) + session memory. Do not revert to `n=10`.
 - **Level default:** No StudentLevel row → serve level 2 notes. Personalization agent assigns async.
 - **books → rag_notes migration:** `ALTER TABLE RENAME` in Migration 005. Add `chapter` with empty-string default. Drop: publisher, stream, book_type, class_level, book_file_url, book_file_key columns.
-- **Worker → ai_service:** Add `AI_SERVICE_URL = "http://localhost:8001"` to `worker/worker/config.py`.
+- **Worker → ai_service:** Add `AI_SERVICE_URL = "http://127.0.0.1:8001"` to `worker/worker/config.py`.
 - **SSE subject validation:** Tutor and practice endpoints must fetch student stream from main_backend internal profile and reject subjects not in that stream's list.
 
 ---

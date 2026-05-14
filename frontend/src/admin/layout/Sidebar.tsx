@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, Users, CreditCard, Gift, BookOpen,
   HelpCircle, FileText, Plus, Building2, Clock, Settings,
-  Bell, LogOut, Megaphone, ListTree,
+  Bell, LogOut, Megaphone, ListTree, Globe,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -23,6 +23,7 @@ const nav = [
   { to: '/admin/subject-timing', label: 'Subject Timing', icon: Clock },
   { to: '/admin/config', label: 'Platform Config', icon: Settings },
   { to: '/admin/notifications', label: 'Notifications', icon: Bell },
+  { to: '/admin/homepage', label: 'Homepage', icon: Globe },
 ]
 
 export default function Sidebar() {
@@ -37,9 +38,12 @@ export default function Sidebar() {
 
   return (
     <aside className="w-60 bg-slate-900 text-slate-300 flex flex-col h-screen fixed left-0 top-0">
-      <div className="px-5 py-5 border-b border-slate-700/60">
-        <span className="text-white font-bold text-base tracking-tight">NeuraFix AI</span>
-        <p className="text-slate-500 text-xs mt-0.5">Admin Panel</p>
+      <div className="px-5 py-5 border-b border-slate-700/60 flex items-center gap-2.5">
+        <img src="/company-logo.png" alt="NeuraFix" className="w-9 h-9 object-contain flex-shrink-0" />
+        <div>
+          <span className="text-white font-bold text-base tracking-tight">NeuraFix Bridge</span>
+          <p className="text-slate-500 text-xs mt-0.5">Admin Panel</p>
+        </div>
       </div>
 
       <nav className="flex-1 overflow-y-auto py-3 space-y-0.5 px-2">

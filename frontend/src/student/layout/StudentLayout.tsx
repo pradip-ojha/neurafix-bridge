@@ -19,8 +19,8 @@ function MobileTopBar({ onMenuClick }: { onMenuClick: () => void }) {
         <Menu size={20} />
       </button>
       <div className="flex items-center gap-2 flex-1">
-        <img src="/company-logo.png" alt="NeuraFix Bridge" className="w-6 h-6 rounded-md object-contain" />
-        <span className="text-sm font-bold bg-gradient-to-r from-indigo-400 to-teal-400 bg-clip-text text-transparent">
+        <img src="/company-logo.png" alt="NeuraFix Bridge" className="w-8 h-8 rounded-md object-contain" />
+        <span className="text-base font-bold bg-gradient-to-r from-indigo-400 to-teal-400 bg-clip-text text-transparent">
           NeuraFix Bridge
         </span>
       </div>

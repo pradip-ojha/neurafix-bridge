@@ -6,12 +6,12 @@
 
 /* ── Study color tokens (dark = default) ──────────────────────────────── */
 :root {
-  --study-base:     11 17 32;
-  --study-surface:  15 23 41;
-  --study-bg:       17 29 53;
-  --study-card:     23 35 64;
-  --study-elevated: 28 45 80;
-  --study-hover:    30 49 88;
+  --study-base:     16 22 37;
+  --study-surface:  20 28 46;
+  --study-bg:       22 34 58;
+  --study-card:     28 40 69;
+  --study-elevated: 33 50 85;
+  --study-hover:    35 54 93;
 }
 
 /* Light theme: applied via .theme-light wrapper div */

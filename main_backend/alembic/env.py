@@ -1,10 +1,8 @@
-import asyncio
 import os
 import re
 from logging.config import fileConfig
 
-from sqlalchemy.ext.asyncio import async_engine_from_config
-from sqlalchemy import pool, MetaData
+from sqlalchemy import create_engine, pool, MetaData
 from alembic import context
 
 import sys
@@ -15,22 +13,31 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+
+def _make_sync_url(url: str) -> str:
+    """Convert any postgres URL to a psycopg2 sync URL for migrations."""
+    url = url.replace("postgresql+asyncpg://", "postgresql+psycopg2://", 1)
+    url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    url = url.replace("postgres://", "postgresql+psycopg2://", 1)
+    # psycopg2 does not support channel_binding — strip it
+    url = re.sub(r"[&?]channel_binding=[^&]*", "", url)
+    # psycopg2 uses sslmode=require natively — no conversion needed
+    # Clean up any trailing ? or dangling &
+    url = re.sub(r"\?$", "", url)
+    url = re.sub(r"&$", "", url)
+    return url
+
+
 # Try full app settings (local dev + production containers).
 # Falls back to DATABASE_URL only when settings are incomplete (CI migration runner).
 try:
     from app.config import settings
     from app.database import Base
     import app.models  # noqa: F401 — registers all ORM models with Base.metadata
-    _db_url = settings.async_database_url
+    _db_url = _make_sync_url(settings.DATABASE_URL)
     target_metadata = Base.metadata
 except Exception:
-    _db_url = os.environ["DATABASE_URL"]
-    _db_url = _db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
-    _db_url = _db_url.replace("postgres://", "postgresql+asyncpg://", 1)
-    _db_url = re.sub(r"[&?]channel_binding=[^&]*", "", _db_url)
-    _db_url = _db_url.replace("sslmode=require", "ssl=require")
-    _db_url = re.sub(r"\?$", "", _db_url)
-    _db_url = re.sub(r"&$", "", _db_url)
+    _db_url = _make_sync_url(os.environ["DATABASE_URL"])
     target_metadata = MetaData()
 
 config.set_main_option("sqlalchemy.url", _db_url.replace("%", "%%"))
@@ -49,29 +56,19 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
-def do_run_migrations(connection):
-    context.configure(
-        connection=connection,
-        target_metadata=target_metadata,
-        version_table="alembic_version_main_backend",
-    )
-    with context.begin_transaction():
-        context.run_migrations()
-
-
-async def run_async_migrations() -> None:
-    connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
+def run_migrations_online() -> None:
+    connectable = create_engine(
+        config.get_main_option("sqlalchemy.url"),
         poolclass=pool.NullPool,
     )
-    async with connectable.connect() as connection:
-        await connection.run_sync(do_run_migrations)
-    await connectable.dispose()
-
-
-def run_migrations_online() -> None:
-    asyncio.run(run_async_migrations())
+    with connectable.connect() as connection:
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            version_table="alembic_version_main_backend",
+        )
+        with context.begin_transaction():
+            context.run_migrations()
 
 
 if context.is_offline_mode():

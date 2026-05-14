@@ -20,10 +20,14 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from sqlalchemy import func
+
 from app.config import settings
 from app.database import get_db
-from app.models.chat_session import ChatSession
+from app.models.chat_session import ChatSession, ChatMessage, MessageRole
+from app.models.mock_session import MockSession
 from app.models.personalization import AgentType
+from app.models.practice_session import PracticeSession
 from app.personalization import summary_manager
 from app.agents.personalization.agent import (
     generate_daily_summary,
@@ -85,6 +89,62 @@ async def get_active_users(
 
     all_users = list(chat_users | practice_users)
     return {"user_ids": all_users, "count": len(all_users)}
+
+
+# ---------------------------------------------------------------------------
+# Public stats (called by main_backend's /api/public/stats)
+# ---------------------------------------------------------------------------
+
+@router.get("/platform-stats")
+async def get_platform_stats(
+    _: None = Depends(_verify_secret),
+    db: AsyncSession = Depends(get_db),
+):
+    mock_tests = (await db.execute(select(func.count()).select_from(MockSession))).scalar_one()
+    practice_sessions = (await db.execute(select(func.count()).select_from(PracticeSession))).scalar_one()
+
+    questions_practiced = (
+        await db.execute(
+            select(func.coalesce(func.sum(func.jsonb_array_length(PracticeSession.question_ids)), 0))
+        )
+    ).scalar_one()
+
+    tutor_sessions = (
+        await db.execute(
+            select(func.count())
+            .select_from(ChatSession)
+            .where(ChatSession.agent_type == AgentType.tutor)
+        )
+    ).scalar_one()
+
+    ai_tutor_messages = (
+        await db.execute(
+            select(func.count())
+            .select_from(ChatMessage)
+            .join(ChatSession, ChatMessage.session_id == ChatSession.id)
+            .where(
+                ChatSession.agent_type == AgentType.tutor,
+                ChatMessage.role == MessageRole.assistant,
+            )
+        )
+    ).scalar_one()
+
+    career_sessions = (
+        await db.execute(
+            select(func.count())
+            .select_from(ChatSession)
+            .where(ChatSession.agent_type == AgentType.consultant)
+        )
+    ).scalar_one()
+
+    return {
+        "mock_tests_attempted": mock_tests,
+        "practice_sessions_completed": practice_sessions,
+        "questions_practiced": int(questions_practiced),
+        "tutor_sessions": tutor_sessions,
+        "ai_tutor_messages": ai_tutor_messages,
+        "career_guidance_sessions": career_sessions,
+    }
 
 
 # ---------------------------------------------------------------------------
