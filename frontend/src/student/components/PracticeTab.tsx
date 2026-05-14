@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, KeyboardEvent } from 'react'
 import { ChevronRight, Clock, Send, RotateCcw, MessageSquare, X, CheckCircle, XCircle, BookOpen, Layers, PanelLeftOpen, PanelLeftClose } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { SUBJECT_CHAPTERS } from '../constants/subjectStructure'
+import { useSubjectChapters } from '../hooks/useSubjectChapters'
 import AIThinkingState from './AIThinkingState'
 import MarkdownRenderer from './MarkdownRenderer'
 import DarkSkeleton from './DarkSkeleton'
@@ -97,7 +97,7 @@ export default function PracticeTab({ subject }: Props) {
   const [closing, setClosing]               = useState(false)
   const [error, setError]                   = useState<string | null>(null)
 
-  const chapters = SUBJECT_CHAPTERS[subject] || []
+  const { chapters } = useSubjectChapters(subject)
   const canStart = mode === 'subject' || (mode === 'chapter' && selectedChapter !== null)
   const apiChapter = mode === 'subject' ? null : selectedChapter
   const selectionLabel = mode === 'subject' ? 'Whole Subject' : selectedChapter ? chapterLabel(selectedChapter, chapters) : null

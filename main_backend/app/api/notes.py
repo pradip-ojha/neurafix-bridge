@@ -10,46 +10,10 @@ from app.core import r2_client
 from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.models.level_note import LevelNote
+from app.models.subject_chapter import SubjectChapter
 from app.models.user import User
 
 router = APIRouter(prefix="/api/notes", tags=["notes"])
-
-_SUBJECT_CHAPTERS: dict[str, list[dict]] = {
-    "compulsory_math": [
-        {"id": "sets", "display_name": "Sets"},
-        {"id": "arithmetic", "display_name": "Arithmetic"},
-        {"id": "algebra", "display_name": "Algebra"},
-        {"id": "geometry", "display_name": "Geometry"},
-        {"id": "trigonometry", "display_name": "Trigonometry"},
-        {"id": "statistics", "display_name": "Statistics"},
-        {"id": "probability", "display_name": "Probability"},
-    ],
-    "compulsory_english": [
-        {"id": "reading_comprehension", "display_name": "Reading Comprehension"},
-        {"id": "grammar", "display_name": "Grammar"},
-        {"id": "vocabulary", "display_name": "Vocabulary"},
-        {"id": "writing", "display_name": "Writing Skills"},
-    ],
-    "compulsory_science": [
-        {"id": "physics_motion", "display_name": "Physics: Motion and Force"},
-        {"id": "physics_energy", "display_name": "Physics: Work, Energy and Power"},
-        {"id": "physics_light", "display_name": "Physics: Light"},
-        {"id": "physics_electricity", "display_name": "Physics: Electricity and Magnetism"},
-        {"id": "chemistry_matter", "display_name": "Chemistry: Matter and Its Properties"},
-        {"id": "chemistry_reactions", "display_name": "Chemistry: Chemical Reactions"},
-        {"id": "biology_life_processes", "display_name": "Biology: Life Processes"},
-        {"id": "biology_heredity", "display_name": "Biology: Heredity and Evolution"},
-        {"id": "biology_environment", "display_name": "Biology: Environment and Ecology"},
-    ],
-    "optional_math": [
-        {"id": "coordinate_geometry", "display_name": "Coordinate Geometry"},
-        {"id": "trigonometry_advanced", "display_name": "Trigonometry"},
-        {"id": "vectors", "display_name": "Vectors"},
-        {"id": "matrices", "display_name": "Matrices and Determinants"},
-        {"id": "calculus", "display_name": "Calculus"},
-        {"id": "probability_advanced", "display_name": "Probability"},
-    ],
-}
 
 _LEVEL_LABELS = {1: "Advanced", 2: "Average", 3: "Foundation"}
 _DEFAULT_LEVEL = 2
@@ -75,23 +39,28 @@ async def list_chapter_notes(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    chapters = _SUBJECT_CHAPTERS.get(subject)
-    if chapters is None:
-        raise HTTPException(status_code=404, detail="Subject not found")
+    ch_result = await db.execute(
+        select(SubjectChapter)
+        .where(SubjectChapter.subject == subject)
+        .order_by(SubjectChapter.sort_order, SubjectChapter.display_name)
+    )
+    chapter_rows = ch_result.scalars().all()
+    if not chapter_rows:
+        raise HTTPException(status_code=404, detail="Subject not found or no chapters configured")
 
     level = await _get_student_level(str(current_user.id), subject)
 
-    result = await db.execute(
+    note_result = await db.execute(
         select(LevelNote).where(LevelNote.subject == subject, LevelNote.level == level)
     )
-    uploaded: dict[str, LevelNote] = {n.chapter: n for n in result.scalars().all()}
+    uploaded: dict[str, LevelNote] = {n.chapter: n for n in note_result.scalars().all()}
 
     items = []
-    for ch in chapters:
-        note = uploaded.get(ch["id"])
+    for row in chapter_rows:
+        note = uploaded.get(row.chapter_id)
         entry: dict = {
-            "chapter_id": ch["id"],
-            "display_name": ch["display_name"],
+            "chapter_id": row.chapter_id,
+            "display_name": row.display_name,
             "has_note": note is not None,
             "level": level,
             "level_label": _LEVEL_LABELS.get(level, "Average"),
@@ -110,7 +79,10 @@ async def get_chapter_note(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if subject not in _SUBJECT_CHAPTERS:
+    subject_exists = await db.execute(
+        select(SubjectChapter).where(SubjectChapter.subject == subject).limit(1)
+    )
+    if not subject_exists.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Subject not found")
 
     level = await _get_student_level(str(current_user.id), subject)

@@ -40,6 +40,7 @@ from app.api.referral_proxy import router as referral_proxy_router
 from app.api.referral import router as referral_router
 from app.api.public import router as public_router
 from app.api.admin_homepage import router as admin_homepage_router
+from app.api.subjects import router as subjects_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -96,3 +97,4 @@ app.include_router(referral_proxy_router)
 app.include_router(referral_router)
 app.include_router(public_router)
 app.include_router(admin_homepage_router)
+app.include_router(subjects_router)

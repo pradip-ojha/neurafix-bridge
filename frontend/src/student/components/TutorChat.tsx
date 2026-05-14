@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, KeyboardEvent } from 'react'
 import { Send, Plus, PanelLeftOpen, PanelLeftClose, ChevronDown, Bot, Lightbulb } from 'lucide-react'
-import { SUBJECT_CHAPTERS, Chapter } from '../constants/subjectStructure'
+import { useSubjectChapters } from '../hooks/useSubjectChapters'
 import DarkSkeleton from './DarkSkeleton'
 import AIThinkingState from './AIThinkingState'
 import MarkdownRenderer from './MarkdownRenderer'
@@ -62,7 +62,7 @@ export default function TutorChat({ subject }: Props) {
   const textareaRef    = useRef<HTMLTextAreaElement>(null)
 
   const { mainSidebarOpen } = useMobileLayout()
-  const chapters: Chapter[] = SUBJECT_CHAPTERS[subject] || []
+  const { chapters } = useSubjectChapters(subject)
 
   useEffect(() => {
     if (chapters.length > 0 && !chapter) setChapter(chapters[0].id)
