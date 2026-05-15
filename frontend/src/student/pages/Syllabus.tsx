@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BookOpen, ExternalLink, ChevronRight, FileText } from 'lucide-react'
+import { BookOpen, ExternalLink, ChevronRight, FileText, ArrowLeft } from 'lucide-react'
 import api from '../../lib/api'
 import DarkSkeleton from '../components/DarkSkeleton'
 
@@ -30,6 +30,8 @@ export default function Syllabus() {
   const [pastQuestions, setPastQuestions] = useState<PastQuestionEntry[]>([])
   const [loadingContent, setLoadingContent] = useState(false)
   const [loadingColleges, setLoadingColleges] = useState(true)
+  // mobile: true = viewing college detail, false = viewing college list
+  const [mobileShowDetail, setMobileShowDetail] = useState(false)
 
   useEffect(() => {
     api.get('/api/colleges')
@@ -49,6 +51,12 @@ export default function Syllabus() {
     ]).finally(() => setLoadingContent(false))
   }, [selected])
 
+  const handleSelectCollege = (col: College) => {
+    setSelected(col)
+    setActiveTab('syllabus')
+    setMobileShowDetail(true)
+  }
+
   const pqByYear = pastQuestions.reduce<Record<number, PastQuestionEntry[]>>((acc, pq) => {
     acc[pq.year] = acc[pq.year] ?? []
     acc[pq.year].push(pq)
@@ -57,8 +65,13 @@ export default function Syllabus() {
 
   return (
     <div className="flex h-full overflow-hidden bg-study-bg">
-      {/* College list */}
-      <aside className="w-60 flex-shrink-0 bg-study-surface border-r border-white/[0.06] flex flex-col overflow-hidden">
+
+      {/* College list — hidden on mobile when detail is open */}
+      <aside className={`
+        flex-shrink-0 bg-study-surface border-r border-white/[0.06] flex-col overflow-hidden
+        md:flex md:w-60
+        ${mobileShowDetail ? 'hidden' : 'flex w-full'}
+      `}>
         <div className="px-4 py-4 border-b border-white/[0.05]">
           <div className="flex items-center gap-2">
             <BookOpen size={15} className="text-indigo-400" />
@@ -76,7 +89,7 @@ export default function Syllabus() {
             colleges.map(col => (
               <button
                 key={col.id}
-                onClick={() => { setSelected(col); setActiveTab('syllabus') }}
+                onClick={() => handleSelectCollege(col)}
                 className={`w-full text-left px-4 py-3 text-sm transition-colors flex items-center justify-between border-l-2 ${
                   selected?.id === col.id
                     ? 'bg-indigo-600/15 text-indigo-400 border-indigo-500 pl-[14px]'
@@ -87,26 +100,38 @@ export default function Syllabus() {
                   <p className="font-medium text-xs">{col.name}</p>
                   {col.location && <p className="text-[10px] text-slate-600 mt-0.5">{col.location}</p>}
                 </div>
-                {selected?.id === col.id && <ChevronRight size={13} className="flex-shrink-0" />}
+                <ChevronRight size={13} className="flex-shrink-0 text-slate-600" />
               </button>
             ))
           )}
         </div>
       </aside>
 
-      {/* Content area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Content area — hidden on mobile when list is showing */}
+      <div className={`
+        flex-1 flex-col overflow-hidden
+        md:flex
+        ${mobileShowDetail ? 'flex' : 'hidden'}
+      `}>
         {!selected ? (
           <div className="flex flex-col items-center justify-center h-full gap-3">
             <div className="w-14 h-14 rounded-2xl bg-study-elevated flex items-center justify-center">
               <BookOpen size={26} className="text-slate-600" />
             </div>
-            <p className="text-sm text-slate-500">Select a college to view syllabus and past questions.</p>
+            <p className="text-sm text-slate-500 text-center px-6">Select a college to view syllabus and past questions.</p>
           </div>
         ) : (
           <>
             {/* Header */}
-            <div className="px-6 py-4 border-b border-white/[0.06] bg-study-surface flex-shrink-0">
+            <div className="px-4 md:px-6 py-4 border-b border-white/[0.06] bg-study-surface flex-shrink-0">
+              {/* Back button — mobile only */}
+              <button
+                onClick={() => setMobileShowDetail(false)}
+                className="md:hidden flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 mb-3 transition-colors"
+              >
+                <ArrowLeft size={14} />
+                All colleges
+              </button>
               <h2 className="text-sm font-semibold text-slate-200">{selected.name}</h2>
               {selected.location && <p className="text-xs text-slate-500 mt-0.5">{selected.location}</p>}
 
@@ -128,7 +153,7 @@ export default function Syllabus() {
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto px-6 py-5 dark-scrollbar">
+            <div className="flex-1 overflow-y-auto px-4 md:px-6 py-5 dark-scrollbar">
               {loadingContent ? (
                 <div className="space-y-2">
                   {[1, 2, 3].map(i => <DarkSkeleton key={i} className="h-14 w-full" variant="block" />)}
@@ -144,17 +169,17 @@ export default function Syllabus() {
                     {syllabi.map(s => (
                       <div
                         key={s.id}
-                        className="flex items-center justify-between py-3 px-4 bg-study-card border border-white/[0.07] rounded-xl hover:border-indigo-500/20 transition-colors"
+                        className="flex items-center justify-between py-3 px-4 bg-study-card border border-white/[0.07] rounded-xl hover:border-indigo-500/20 transition-colors gap-3"
                       >
-                        <div>
-                          <p className="text-sm font-medium text-slate-300">{s.display_name}</p>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-slate-300 truncate">{s.display_name}</p>
                           <p className="text-xs text-slate-600 mt-0.5">Year {s.year}</p>
                         </div>
                         <a
                           href={s.file_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+                          className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-medium transition-colors flex-shrink-0"
                         >
                           View / Download <ExternalLink size={11} />
                         </a>
@@ -179,7 +204,7 @@ export default function Syllabus() {
                             {papers.map((pq, i) => (
                               <div
                                 key={pq.id}
-                                className="flex items-center justify-between py-3 px-4 bg-study-card border border-white/[0.07] rounded-xl hover:border-indigo-500/20 transition-colors"
+                                className="flex items-center justify-between py-3 px-4 bg-study-card border border-white/[0.07] rounded-xl hover:border-indigo-500/20 transition-colors gap-3"
                               >
                                 <p className="text-sm text-slate-300">
                                   Question Paper {papers.length > 1 ? i + 1 : ''}
@@ -188,7 +213,7 @@ export default function Syllabus() {
                                   href={pq.file_url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+                                  className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-medium transition-colors flex-shrink-0"
                                 >
                                   Download <ExternalLink size={11} />
                                 </a>
