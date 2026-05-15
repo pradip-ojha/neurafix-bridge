@@ -1,5 +1,5 @@
 import { useEffect, useState, FormEvent, ChangeEvent } from 'react'
-import { Plus, Edit2, Check, X, FileText, ChevronDown, ChevronUp, Upload } from 'lucide-react'
+import { Plus, Edit2, Check, X, FileText, ChevronDown, ChevronUp, Upload, Trash2 } from 'lucide-react'
 import api from '../../lib/api'
 
 interface College {
@@ -281,6 +281,12 @@ export default function Colleges() {
     load()
   }
 
+  const handleDelete = async (c: College) => {
+    if (!window.confirm(`Delete "${c.name}"? This cannot be undone.`)) return
+    await api.delete(`/api/admin/colleges/${c.id}`)
+    load()
+  }
+
   const toggleDocs = (id: string) => {
     setExpandedDocs((prev) => {
       const next = new Set(prev)
@@ -344,6 +350,7 @@ export default function Colleges() {
                   <button onClick={() => toggleActive(c)} className={`text-xs px-3 py-1.5 border rounded-lg transition ${c.is_active ? 'border-gray-300 text-gray-500 hover:bg-gray-50' : 'border-green-300 text-green-600 hover:bg-green-50'}`}>
                     {c.is_active ? 'Deactivate' : 'Activate'}
                   </button>
+                  <button onClick={() => handleDelete(c)} className="p-1.5 text-gray-400 hover:text-red-600 transition"><Trash2 size={15} /></button>
                 </div>
               </div>
 

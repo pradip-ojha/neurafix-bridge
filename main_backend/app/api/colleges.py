@@ -79,6 +79,20 @@ async def list_colleges_admin(
     return [_serialize(c) for c in result.scalars().all()]
 
 
+@router.delete("/api/admin/colleges/{college_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_college(
+    college_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(_admin_only),
+):
+    result = await db.execute(select(College).where(College.id == college_id))
+    college = result.scalar_one_or_none()
+    if not college:
+        raise HTTPException(status_code=404, detail="College not found")
+    await db.delete(college)
+    await db.commit()
+
+
 @router.patch("/api/admin/colleges/{college_id}")
 async def update_college(
     college_id: str,

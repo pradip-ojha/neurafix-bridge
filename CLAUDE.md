@@ -239,7 +239,7 @@ Scheduled jobs include:
 - **Notes are level-based, not individually personalized** — 3 levels (Level 1: strong foundation, Level 2: average, Level 3: weak foundation). Whole note set for a level is rendered when a student's level is assigned. This avoids wasting tokens generating near-identical notes per student and allows rich PDF format with figures and diagrams.
 - **Questions are pre-generated and uploaded as JSON** — not generated on the fly by the AI. This ensures quality control and allows fast random selection from a large pool.
 - **RAG uses text-only notes, not original books** — higher retrieval quality, zero image processing cost, no ambiguity from subjective questions.
-- **Tutors exist only for the 4 main subjects** — Compulsory English, Compulsory Mathematics, Compulsory Science, Optional Mathematics. Extra subjects (GK, IQ, Computer Science) have practice/mock test questions only.
+- **Tutors exist only for the 4 main subjects** — `english`, `mathematics`, `science`, `optional_math`. Extra subjects (GK, IQ, Computer Science) have practice/mock test questions only.
 - **Daily capsule is generated after the day ends** — so it reflects actual confusion and weak points from that day's activity, not a pre-generated prediction.
 
 ---
@@ -613,7 +613,7 @@ Students who sign up with referral will get extra discount.
 
 ### 1. Tutor for Each Subject
 
-Tutors exist only for the **4 main subjects**: Compulsory English, Compulsory Mathematics, Compulsory Science, and Optional Mathematics. For science stream, all 4 subjects have tutors. For management stream, only Compulsory English and Compulsory Mathematics have tutors.
+Tutors exist only for the **4 main subjects**: `english`, `mathematics`, `science`, `optional_math`. For science stream, all 4 subjects have tutors. For management stream, only `english` and `mathematics` have tutors.
 
 Each subject's tutor section contains:
 
@@ -784,23 +784,35 @@ Settings will contain remaining control related features.
 
 In the tutor page, each subject with a tutor is shown like Google Classroom (each subject as a clickable box).
 
+### Subject Key Reference (internal keys used in code and database)
+
+| Internal Key | Display Name |
+|---|---|
+| `english` | Compulsory English |
+| `mathematics` | Compulsory Mathematics |
+| `science` | Compulsory Science |
+| `optional_math` | Optional Mathematics |
+
+Always use these internal keys in code, API payloads, and database queries. Never use the old names (`compulsory_math`, `compulsory_english`, `compulsory_science`, `optional_mathematics`).
+
 ### Science Stream — Subjects with Full Tutor
-- Compulsory English
-- Compulsory Mathematics
-- Compulsory Science
-- Optional Mathematics
+- `english` (Compulsory English)
+- `mathematics` (Compulsory Mathematics)
+- `science` (Compulsory Science)
+- `optional_math` (Optional Mathematics)
 
 ### Management & Humanities Stream — Subjects with Full Tutor
-- Compulsory English
-- Compulsory Mathematics
+- `english` (Compulsory English)
+- `mathematics` (Compulsory Mathematics)
 
 ### Extra Subjects (Practice & Mock Test Only — No Tutor)
-These subjects have MCQ question pools for mock tests but no tutor, notes, or daily capsule:
-- Computer Science
-- GK (social / current affairs)
-- IQ
+These subjects have MCQ question pools for mock tests but no tutor, notes, or daily capsule. They are stored in the `extra_subjects` table with two fields:
+- `subject_key` — the internal identifier used in code, API payloads, and database queries. This is whatever the admin enters when creating the subject.
+- `display_name` — the human-readable name shown in the UI.
 
-Admin can add more extra subjects from the admin panel and upload JSON question files for them. Extra subject questions are stored in a separate database table.
+Always use `subject_key` (not `display_name`) when referencing an extra subject in code or queries. The `subject_key` is not hardcoded — it comes from the database.
+
+Admin can add extra subjects from the admin panel and upload JSON question files for them.
 
 ---
 
