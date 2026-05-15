@@ -20,7 +20,7 @@ export default function Register() {
     setLoading(true)
     try {
       await register(fullName, email, password, referralCode)
-      navigate('/onboarding', { replace: true })
+      navigate(`/verify-email?email=${encodeURIComponent(email)}`, { replace: true })
     } catch (err: any) {
       setError(err?.response?.data?.detail || 'Registration failed. Please try again.')
     } finally {
@@ -98,10 +98,10 @@ export default function Register() {
                 <input
                   type="password"
                   required
-                  minLength={6}
+                  minLength={8}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 6 characters"
+                  placeholder="Min 8 characters, include a letter and a digit"
                   className="w-full bg-study-surface border border-white/[0.1] rounded-xl px-4 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition"
                 />
               </div>

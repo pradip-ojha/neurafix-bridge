@@ -5,6 +5,7 @@ import OfflineBanner from './components/OfflineBanner'
 import Landing from './pages/Landing'
 import Login from './auth/Login'
 import Register from './auth/Register'
+import VerifyEmail from './auth/VerifyEmail'
 import AdminLayout from './admin/layout/AdminLayout'
 import Dashboard from './admin/pages/Dashboard'
 import Users from './admin/pages/Users'
@@ -47,6 +48,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
 
           <Route
             path="/onboarding"

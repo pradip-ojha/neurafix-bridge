@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 
 
 class RegisterRequest(BaseModel):
@@ -8,6 +8,17 @@ class RegisterRequest(BaseModel):
     password: str
     full_name: str
     referral_code: str | None = None
+
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        if not any(c.isalpha() for c in v):
+            raise ValueError("Password must contain at least one letter")
+        if not any(c.isdigit() for c in v):
+            raise ValueError("Password must contain at least one digit")
+        return v
 
 
 class LoginRequest(BaseModel):
@@ -33,10 +44,20 @@ class UserOut(BaseModel):
     role: str
     is_active: bool
     onboarding_complete: bool
+    email_verified: bool
     referral_code: str
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class SendOtpRequest(BaseModel):
+    email: str
+
+
+class VerifyOtpRequest(BaseModel):
+    email: str
+    otp: str
 
 
 class RegisterResponse(BaseModel):

@@ -125,7 +125,8 @@
       "Bash(cd /d D:\\\\hamroguru\\\\hamroguru-platform\\\\frontend)",
       "Bash(dir /B)",
       "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
-      "Bash(xargs grep -l \"katex\\\\|markdown\\\\|rehype\\\\|remark\")"
+      "Bash(xargs grep -l \"katex\\\\|markdown\\\\|rehype\\\\|remark\")",
+      "Bash(find D:\\\\hamroguru\\\\hamroguru-platform\\\\main_backend *)"
     ]
   }
 }

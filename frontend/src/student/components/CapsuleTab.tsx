@@ -4,6 +4,7 @@ import AIThinkingState from './AIThinkingState'
 import MarkdownRenderer from './MarkdownRenderer'
 import DarkSkeleton from './DarkSkeleton'
 import { useMobileLayout } from '../../contexts/MobileLayoutContext'
+import api from '../../lib/api'
 
 interface CapsuleItem {
   id: string
@@ -144,38 +145,28 @@ export default function CapsuleTab({ subject }: Props) {
 
   const fetchHistory = async () => {
     try {
-      const res = await fetch(`/api/capsule/${subject}/history`, {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
-      })
-      if (res.ok) setHistory(await res.json())
+      const res = await api.get(`/api/capsule/${subject}/history`)
+      setHistory(res.data)
     } catch {}
   }
 
   const fetchTodayCapsule = async () => {
     setCapsuleStatus('loading')
     try {
-      const res = await fetch(`/api/capsule/${subject}`, {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        if (data.status === 'not_generated') { setCapsuleStatus('not_generated'); setCapsuleContent(null); setSelectedDate(null) }
-        else { setCapsuleStatus('ok'); setCapsuleContent(data.content); setSelectedDate(data.capsule_date) }
-      }
+      const res = await api.get(`/api/capsule/${subject}`)
+      const data = res.data
+      if (data.status === 'not_generated') { setCapsuleStatus('not_generated'); setCapsuleContent(null); setSelectedDate(null) }
+      else { setCapsuleStatus('ok'); setCapsuleContent(data.content); setSelectedDate(data.capsule_date) }
     } catch { setCapsuleStatus('not_generated') }
   }
 
   const fetchCapsuleByDate = async (dateStr: string) => {
     setCapsuleStatus('loading')
     try {
-      const res = await fetch(`/api/capsule/${subject}/${dateStr}`, {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setCapsuleStatus('ok'); setCapsuleContent(data.content); setSelectedDate(data.capsule_date)
-        setMessages([]); setActiveView('capsule')
-      }
+      const res = await api.get(`/api/capsule/${subject}/${dateStr}`)
+      const data = res.data
+      setCapsuleStatus('ok'); setCapsuleContent(data.content); setSelectedDate(data.capsule_date)
+      setMessages([]); setActiveView('capsule')
     } catch {}
   }
 
@@ -201,12 +192,29 @@ export default function CapsuleTab({ subject }: Props) {
     setInput(''); if (textareaRef.current) textareaRef.current.style.height = 'auto'
     setMessages((prev) => [...prev, { role: 'user', content: text }])
     setIsStreaming(true); setStreamingText('')
+
+    const doFetch = (t: string) => fetch(`/api/capsule/${subject}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },
+      body: JSON.stringify({ message: text, capsule_date: selectedDate }),
+    })
+
     try {
-      const response = await fetch(`/api/capsule/${subject}/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionStorage.getItem('token')}` },
-        body: JSON.stringify({ message: text, capsule_date: selectedDate }),
-      })
+      let response = await doFetch(localStorage.getItem('token') ?? '')
+
+      if (response.status === 401) {
+        try {
+          const r = await api.post('/api/auth/refresh', { refresh_token: localStorage.getItem('refresh_token') })
+          localStorage.setItem('token', r.data.access_token)
+          if (r.data.refresh_token) localStorage.setItem('refresh_token', r.data.refresh_token)
+          response = await doFetch(r.data.access_token)
+        } catch {
+          window.location.href = '/login'
+          setIsStreaming(false)
+          return
+        }
+      }
+
       if (response.status === 429) { setMessages((prev) => [...prev, { role: 'assistant', content: "You've reached today's limit for this feature. Upgrade to paid for more access: /student/payment" }]); setStreamingText(''); return }
       if (!response.ok || !response.body) { setMessages((prev) => [...prev, { role: 'assistant', content: 'Something went wrong. Please try again.' }]); setStreamingText(''); return }
       const reader = response.body.getReader(); const decoder = new TextDecoder()

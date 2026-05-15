@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     # Public-facing frontend URL (used for referral links)
     FRONTEND_URL: str = "https://bridge.neurafixai.com"
 
+    # Resend (transactional email for OTP verification)
+    RESEND_API_KEY: str = ""
+    RESEND_FROM_EMAIL: str = "noreply@hamroguru.com"
+
     @property
     def async_database_url(self) -> str:
         url = self.DATABASE_URL

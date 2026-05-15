@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import api from '../../lib/api'
 
 export interface Chapter {
   id: string
@@ -12,14 +13,11 @@ export function useSubjectChapters(subject: string) {
   useEffect(() => {
     if (!subject) return
     setLoading(true)
-    const token = sessionStorage.getItem('token')
-    fetch(`/api/subjects/${subject}/chapters`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => (r.ok ? r.json() : []))
-      .then((data: { chapter_id: string; display_name: string }[]) =>
+    api.get(`/api/subjects/${subject}/chapters`)
+      .then((res) => {
+        const data: { chapter_id: string; display_name: string }[] = res.data
         setChapters(data.map((c) => ({ id: c.chapter_id, display_name: c.display_name })))
-      )
+      })
       .catch(() => setChapters([]))
       .finally(() => setLoading(false))
   }, [subject])

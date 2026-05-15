@@ -26,8 +26,12 @@ export default function Login() {
       } else {
         navigate('/onboarding', { replace: true })
       }
-    } catch {
-      setError('Invalid email or password')
+    } catch (err: any) {
+      if (err?.response?.data?.detail === 'email_not_verified') {
+        navigate(`/verify-email?email=${encodeURIComponent(email)}`, { replace: true })
+      } else {
+        setError('Invalid email or password')
+      }
     } finally {
       setLoading(false)
     }

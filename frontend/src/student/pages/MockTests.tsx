@@ -123,7 +123,7 @@ function formatTime(seconds: number): string {
 }
 
 function authHeader(): string {
-  return `Bearer ${sessionStorage.getItem('token') ?? ''}`
+  return `Bearer ${localStorage.getItem('token') ?? ''}`
 }
 
 // ---------------------------------------------------------------------------

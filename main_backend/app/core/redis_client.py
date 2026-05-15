@@ -66,3 +66,15 @@ async def delete(key: str) -> int:
     resp = await _get_client().get(f"/del/{key}")
     resp.raise_for_status()
     return resp.json().get("result", 0)
+
+
+async def incr(key: str) -> int:
+    resp = await _get_client().get(f"/incr/{key}")
+    resp.raise_for_status()
+    return int(resp.json().get("result", 0))
+
+
+async def expire(key: str, seconds: int) -> bool:
+    resp = await _get_client().get(f"/expire/{key}/{seconds}")
+    resp.raise_for_status()
+    return resp.json().get("result") == 1

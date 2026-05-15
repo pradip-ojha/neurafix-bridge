@@ -5,6 +5,7 @@ import DarkSkeleton from './DarkSkeleton'
 import AIThinkingState from './AIThinkingState'
 import MarkdownRenderer from './MarkdownRenderer'
 import { useMobileLayout } from '../../contexts/MobileLayoutContext'
+import api from '../../lib/api'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -75,10 +76,8 @@ export default function TutorChat({ subject }: Props) {
   const fetchSessions = async () => {
     setLoadingSessions(true)
     try {
-      const res = await fetch(`/api/tutor/sessions?subject=${subject}`, {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
-      })
-      if (res.ok) setSessions(await res.json())
+      const res = await api.get(`/api/tutor/sessions?subject=${subject}`)
+      setSessions(res.data)
     } catch {} finally { setLoadingSessions(false) }
   }
 
@@ -92,13 +91,8 @@ export default function TutorChat({ subject }: Props) {
     setLoadingMessages(true)
     setActiveSessionId(sessionId)
     try {
-      const res = await fetch(`/api/tutor/sessions/${sessionId}/messages`, {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
-      })
-      if (res.ok) {
-        const data: { role: string; content: string }[] = await res.json()
-        setMessages(data.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })))
-      }
+      const res = await api.get<{ role: string; content: string }[]>(`/api/tutor/sessions/${sessionId}/messages`)
+      setMessages(res.data.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })))
     } catch {} finally { setLoadingMessages(false) }
   }
 
@@ -122,21 +116,27 @@ export default function TutorChat({ subject }: Props) {
     setIsStreaming(true)
     setStreamingText('')
 
+    const doFetch = (t: string) => fetch('/api/tutor/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },
+      body: JSON.stringify({ subject, message: msg, session_id: activeSessionId, chapter, mode }),
+    })
+
     try {
-      const response = await fetch('/api/tutor/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${sessionStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
-          subject,
-          message: msg,
-          session_id: activeSessionId,
-          chapter,
-          mode,
-        }),
-      })
+      let response = await doFetch(localStorage.getItem('token') ?? '')
+
+      if (response.status === 401) {
+        try {
+          const r = await api.post('/api/auth/refresh', { refresh_token: localStorage.getItem('refresh_token') })
+          localStorage.setItem('token', r.data.access_token)
+          if (r.data.refresh_token) localStorage.setItem('refresh_token', r.data.refresh_token)
+          response = await doFetch(r.data.access_token)
+        } catch {
+          window.location.href = '/login'
+          setIsStreaming(false)
+          return
+        }
+      }
 
       if (response.status === 429) {
         setMessages((prev) => [...prev, { role: 'assistant', content: "You've reached today's limit for this feature. Upgrade to paid for more access: /student/payment" }])

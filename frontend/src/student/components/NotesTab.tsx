@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { FileText, Download, BookOpen, PanelLeftOpen, PanelLeftClose } from 'lucide-react'
 import DarkSkeleton from './DarkSkeleton'
 import { useMobileLayout } from '../../contexts/MobileLayoutContext'
+import api from '../../lib/api'
 
 interface ChapterNote {
   chapter_id: string
@@ -30,11 +31,9 @@ export default function NotesTab({ subject }: { subject: string }) {
   }, [mainSidebarOpen])
 
   useEffect(() => {
-    const token = sessionStorage.getItem('token')
-    fetch(`/api/notes/${subject}`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(async (r) => {
-        if (!r.ok) return
-        const d: NotesResponse = await r.json()
+    api.get<NotesResponse>(`/api/notes/${subject}`)
+      .then((res) => {
+        const d = res.data
         if (!d || !Array.isArray(d.chapters)) return
         setData(d)
         const first = d.chapters.find((c) => c.has_note)

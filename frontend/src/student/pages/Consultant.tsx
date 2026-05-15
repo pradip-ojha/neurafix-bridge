@@ -4,6 +4,7 @@ import AIThinkingState from '../components/AIThinkingState'
 import MarkdownRenderer from '../components/MarkdownRenderer'
 import DarkSkeleton from '../components/DarkSkeleton'
 import { useMobileLayout } from '../../contexts/MobileLayoutContext'
+import api from '../../lib/api'
 
 interface Message { role: 'user' | 'assistant'; content: string }
 interface Session { id: string; title: string; session_date: string; agent_type: string; subject: string | null }
@@ -58,19 +59,15 @@ export default function Consultant() {
 
   const fetchSessions = async () => {
     try {
-      const res = await fetch('/api/consultant/sessions', {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
-      })
-      if (res.ok) setSessions(await res.json())
+      const res = await api.get('/api/consultant/sessions')
+      setSessions(res.data)
     } catch {}
   }
 
   const fetchTimeline = async () => {
     try {
-      const res = await fetch('/api/consultant/timeline', {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
-      })
-      if (res.ok) setTimeline(await res.json())
+      const res = await api.get('/api/consultant/timeline')
+      setTimeline(res.data)
     } catch {}
   }
 
@@ -86,13 +83,8 @@ export default function Consultant() {
   const loadSession = async (sessionId: string) => {
     setLoadingMessages(true); setActiveSessionId(sessionId); setMessages([]); setStreamingText('')
     try {
-      const res = await fetch(`/api/consultant/sessions/${sessionId}/messages`, {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
-      })
-      if (res.ok) {
-        const data: { role: string; content: string }[] = await res.json()
-        setMessages(data.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })))
-      }
+      const res = await api.get<{ role: string; content: string }[]>(`/api/consultant/sessions/${sessionId}/messages`)
+      setMessages(res.data.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })))
     } catch {} finally { setLoadingMessages(false) }
   }
 
@@ -104,12 +96,28 @@ export default function Consultant() {
     setInput(''); if (textareaRef.current) textareaRef.current.style.height = 'auto'
     setMessages((prev) => [...prev, { role: 'user', content: msg }])
     setIsStreaming(true); setStreamingText('')
+    const doFetch = (t: string) => fetch('/api/consultant/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },
+      body: JSON.stringify({ message: msg, session_id: activeSessionId, mode }),
+    })
+
     try {
-      const response = await fetch('/api/consultant/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionStorage.getItem('token')}` },
-        body: JSON.stringify({ message: msg, session_id: activeSessionId, mode }),
-      })
+      let response = await doFetch(localStorage.getItem('token') ?? '')
+
+      if (response.status === 401) {
+        try {
+          const r = await api.post('/api/auth/refresh', { refresh_token: localStorage.getItem('refresh_token') })
+          localStorage.setItem('token', r.data.access_token)
+          if (r.data.refresh_token) localStorage.setItem('refresh_token', r.data.refresh_token)
+          response = await doFetch(r.data.access_token)
+        } catch {
+          window.location.href = '/login'
+          setIsStreaming(false)
+          return
+        }
+      }
+
       if (response.status === 429) { setMessages((prev) => [...prev, { role: 'assistant', content: "You've reached today's limit for this feature. Upgrade to paid for more access: /student/payment" }]); setStreamingText(''); return }
       if (!response.ok || !response.body) { setMessages((prev) => [...prev, { role: 'assistant', content: 'Something went wrong. Please try again.' }]); setStreamingText(''); return }
       const reader = response.body.getReader(); const decoder = new TextDecoder()

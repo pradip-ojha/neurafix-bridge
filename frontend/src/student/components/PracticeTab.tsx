@@ -6,6 +6,7 @@ import AIThinkingState from './AIThinkingState'
 import MarkdownRenderer from './MarkdownRenderer'
 import DarkSkeleton from './DarkSkeleton'
 import { useMobileLayout } from '../../contexts/MobileLayoutContext'
+import api from '../../lib/api'
 
 interface Question {
   question_id: string
@@ -56,7 +57,7 @@ const WHOLE_SUBJECT = '__all__'
 
 interface Props { subject: string }
 
-const authHeader = () => ({ Authorization: `Bearer ${sessionStorage.getItem('token')}` })
+const authHeader = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` })
 
 function chapterLabel(chapter: string, chapters: { id: string; display_name: string }[]) {
   if (chapter === WHOLE_SUBJECT) return 'Whole Subject'
@@ -107,9 +108,9 @@ export default function PracticeTab({ subject }: Props) {
   }, [mainSidebarOpen])
 
   useEffect(() => {
-    fetch(`/api/config/subject-timing?subject=${subject}`, { headers: authHeader() })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
+    api.get(`/api/config/subject-timing?subject=${subject}`)
+      .then((res) => {
+        const data = res.data
         if (data?.timing) {
           const map: Record<string, number> = {}
           for (const t of data.timing) map[t.difficulty] = t.seconds_per_question
@@ -124,9 +125,9 @@ export default function PracticeTab({ subject }: Props) {
     const params = new URLSearchParams({ subject })
     if (mode === 'chapter' && selectedChapter) params.set('chapter', selectedChapter)
     else if (mode === 'subject') params.set('chapter', WHOLE_SUBJECT)
-    fetch(`/api/practice/history?${params}`, { headers: authHeader() })
-      .then((r) => (r.ok ? r.json() : []))
-      .then(setHistory).catch(() => setHistory([]))
+    api.get(`/api/practice/history?${params}`)
+      .then((res) => setHistory(res.data))
+      .catch(() => setHistory([]))
       .finally(() => setHistoryLoading(false))
   }, [mode, selectedChapter, subject, canStart])
 
@@ -173,17 +174,12 @@ export default function PracticeTab({ subject }: Props) {
     if (!canStart) return
     setStarting(true); setError(null)
     try {
-      const res = await fetch('/api/practice/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeader() },
-        body: JSON.stringify({ subject, chapter: apiChapter, count, timer_enabled: timerEnabled, optional_message: optionalMessage || null }),
-      })
-      const data = await res.json()
-      if (res.status === 429) throw new Error("You've reached today's practice limit. Upgrade to paid for more access: /student/payment")
-      if (!res.ok) throw new Error(data.detail || 'Failed to start practice')
+      const res = await api.post('/api/practice/start', { subject, chapter: apiChapter, count, timer_enabled: timerEnabled, optional_message: optionalMessage || null })
+      const data = res.data
       setSessionId(data.session_id); setQuestions(data.questions); setCurrentIdx(0); setAnswers({}); setView('session')
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Something went wrong')
+    } catch (e: any) {
+      if (e?.response?.status === 429) setError("You've reached today's practice limit. Upgrade to paid for more access: /student/payment")
+      else setError(e?.response?.data?.detail || 'Something went wrong')
     } finally { setStarting(false) }
   }
 
@@ -192,16 +188,10 @@ export default function PracticeTab({ subject }: Props) {
     setSubmitting(true); setError(null)
     if (timerRef.current) clearInterval(timerRef.current)
     try {
-      const res = await fetch('/api/practice/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeader() },
-        body: JSON.stringify({ session_id: sessionId, answers }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.detail || 'Failed to submit')
-      setScoreData(data); setView('results')
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Submit failed')
+      const res = await api.post('/api/practice/submit', { session_id: sessionId, answers })
+      setScoreData(res.data); setView('results')
+    } catch (e: any) {
+      setError(e?.response?.data?.detail || 'Submit failed')
     } finally { setSubmitting(false) }
   }
 
@@ -209,16 +199,11 @@ export default function PracticeTab({ subject }: Props) {
     if (!sessionId) return resetToSetup()
     setClosing(true)
     try {
-      await fetch('/api/practice/close', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeader() },
-        body: JSON.stringify({ session_id: sessionId }),
-      })
+      await api.post('/api/practice/close', { session_id: sessionId })
       const params = new URLSearchParams({ subject })
       if (mode === 'chapter' && selectedChapter) params.set('chapter', selectedChapter)
       else if (mode === 'subject') params.set('chapter', WHOLE_SUBJECT)
-      fetch(`/api/practice/history?${params}`, { headers: authHeader() })
-        .then((r) => (r.ok ? r.json() : [])).then(setHistory).catch(() => {})
+      api.get(`/api/practice/history?${params}`).then((res) => setHistory(res.data)).catch(() => {})
     } catch {} finally { setClosing(false); resetToSetup() }
   }
 
@@ -228,12 +213,29 @@ export default function PracticeTab({ subject }: Props) {
     setFollowupInput('')
     setFollowupMessages((prev) => [...prev, { role: 'user', content: text }])
     setIsStreaming(true); setStreamingText('')
+
+    const doFetch = (t: string) => fetch('/api/practice/followup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },
+      body: JSON.stringify({ session_id: sessionId, message: text, session_history: followupMessages }),
+    })
+
     try {
-      const res = await fetch('/api/practice/followup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeader() },
-        body: JSON.stringify({ session_id: sessionId, message: text, session_history: followupMessages }),
-      })
+      let res = await doFetch(localStorage.getItem('token') ?? '')
+
+      if (res.status === 401) {
+        try {
+          const r = await api.post('/api/auth/refresh', { refresh_token: localStorage.getItem('refresh_token') })
+          localStorage.setItem('token', r.data.access_token)
+          if (r.data.refresh_token) localStorage.setItem('refresh_token', r.data.refresh_token)
+          res = await doFetch(r.data.access_token)
+        } catch {
+          window.location.href = '/login'
+          setIsStreaming(false)
+          return
+        }
+      }
+
       if (res.status === 429) {
         setFollowupMessages((prev) => [...prev, { role: 'assistant', content: "You've reached today's limit for this feature. Upgrade to paid for more access: /student/payment" }])
         setStreamingText(''); return
