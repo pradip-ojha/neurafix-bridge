@@ -1,10 +1,13 @@
 import { useState, FormEvent } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Register() {
   const { register } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const referralCode = searchParams.get('ref') ?? undefined
+
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -16,7 +19,7 @@ export default function Register() {
     setError('')
     setLoading(true)
     try {
-      await register(fullName, email, password)
+      await register(fullName, email, password, referralCode)
       navigate('/onboarding', { replace: true })
     } catch (err: any) {
       setError(err?.response?.data?.detail || 'Registration failed. Please try again.')

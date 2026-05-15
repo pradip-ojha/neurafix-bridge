@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     # Internal URL of the ai_service (for proxied calls)
     AI_SERVICE_URL: str = "http://127.0.0.1:8001"
 
+    # Public-facing frontend URL (used for referral links)
+    FRONTEND_URL: str = "https://bridge.neurafixai.com"
+
     @property
     def async_database_url(self) -> str:
         url = self.DATABASE_URL

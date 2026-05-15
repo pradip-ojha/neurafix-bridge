@@ -101,10 +101,9 @@ async def upload_marksheet(
 
 @router.get("/api/users/me/referral-code")
 async def get_referral_code(current_user: User = Depends(get_current_user)):
-    base_url = "https://hamroguru.app"
     return {
         "referral_code": current_user.referral_code,
-        "referral_link": f"{base_url}/register?ref={current_user.referral_code}",
+        "referral_link": f"{settings.FRONTEND_URL}/register?ref={current_user.referral_code}",
     }
 
 

@@ -48,11 +48,11 @@ export default function AffiliateDashboard() {
       {loading ? (
         <p className="text-sm text-gray-400">Loading...</p>
       ) : (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           {statCards.map((card) => (
-            <div key={card.label} className="bg-white rounded-xl border border-gray-200 p-5">
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{card.label}</p>
-              <p className="text-2xl font-bold text-indigo-600">{card.value}</p>
+            <div key={card.label} className="bg-white rounded-xl border border-gray-200 p-4">
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1 leading-tight">{card.label}</p>
+              <p className="text-xl font-bold text-indigo-600 break-words">{card.value}</p>
             </div>
           ))}
         </div>

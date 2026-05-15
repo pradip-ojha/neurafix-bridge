@@ -42,56 +42,42 @@ export default function Earnings() {
       ) : (
         <>
           {/* Summary */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-2 gap-3 mb-6">
             <div className="bg-yellow-50 rounded-xl border border-yellow-100 p-4">
-              <p className="text-xs text-yellow-700 font-medium uppercase tracking-wide mb-1">Pending Payout</p>
-              <p className="text-2xl font-bold text-yellow-800">Rs {data.total_pending.toFixed(2)}</p>
+              <p className="text-xs text-yellow-700 font-medium uppercase tracking-wide mb-1 leading-tight">Pending Payout</p>
+              <p className="text-xl font-bold text-yellow-800 break-words">Rs {data.total_pending.toFixed(2)}</p>
             </div>
             <div className="bg-green-50 rounded-xl border border-green-100 p-4">
-              <p className="text-xs text-green-700 font-medium uppercase tracking-wide mb-1">Paid Out</p>
-              <p className="text-2xl font-bold text-green-800">Rs {data.total_paid.toFixed(2)}</p>
+              <p className="text-xs text-green-700 font-medium uppercase tracking-wide mb-1 leading-tight">Paid Out</p>
+              <p className="text-xl font-bold text-green-800 break-words">Rs {data.total_paid.toFixed(2)}</p>
             </div>
           </div>
 
-          {/* Table */}
+          {/* Earnings list */}
           {data.earnings.length === 0 ? (
             <p className="text-sm text-gray-400">No earnings yet. Start sharing your referral link!</p>
           ) : (
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50">
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Referred</th>
-                    <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Commission</th>
-                    <th className="text-center px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
-                    <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.earnings.map((e) => (
-                    <tr key={e.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 text-gray-700">{e.referred_user_name}</td>
-                      <td className="px-4 py-3 text-right font-medium text-gray-900">
-                        Rs {e.commission_amount.toFixed(2)}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span
-                          className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium ${
-                            e.status === 'paid'
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-yellow-100 text-yellow-700'
-                          }`}
-                        >
-                          {e.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right text-gray-500 text-xs">
-                        {formatDate(e.created_at)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-2">
+              {data.earnings.map((e) => (
+                <div key={e.id} className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{e.referred_user_name}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{formatDate(e.created_at)}</p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        e.status === 'paid'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-yellow-100 text-yellow-700'
+                      }`}
+                    >
+                      {e.status}
+                    </span>
+                    <span className="text-sm font-semibold text-gray-900">Rs {e.commission_amount.toFixed(2)}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </>

@@ -14,6 +14,7 @@ from app.core.security import (
     verify_password,
 )
 from app.database import get_db
+from app.models.affiliation_profile import AffiliationProfile
 from app.models.subscription import Subscription, SubscriptionStatus
 from app.models.user import User
 from app.schemas.auth import (
@@ -66,6 +67,18 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     db.add(user)
     await db.flush()
     db.add(Subscription(user_id=user.id, status=SubscriptionStatus.free, trial_ends_at=None))
+
+    # Increment referrer's total_referrals counter
+    if referred_by_id:
+        aff_result = await db.execute(
+            select(AffiliationProfile).where(AffiliationProfile.user_id == referred_by_id)
+        )
+        aff_profile = aff_result.scalar_one_or_none()
+        if aff_profile:
+            aff_profile.total_referrals += 1
+        else:
+            db.add(AffiliationProfile(user_id=referred_by_id, total_referrals=1))
+
     await db.commit()
     await db.refresh(user)
 

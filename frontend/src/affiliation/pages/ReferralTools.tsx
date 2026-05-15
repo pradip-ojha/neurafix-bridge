@@ -6,7 +6,7 @@ export default function ReferralTools() {
   const [referralLink, setReferralLink] = useState('')
   const [copied, setCopied] = useState(false)
 
-  const [platformUrl, setPlatformUrl] = useState('https://hamroguru.app')
+  const [platformUrl, setPlatformUrl] = useState('https://bridge.neurafixai.com')
   const [userMessage, setUserMessage] = useState('')
   const [generatedPost, setGeneratedPost] = useState('')
   const [postCopied, setPostCopied] = useState(false)

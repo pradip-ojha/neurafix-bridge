@@ -29,7 +29,7 @@ async def proxy_generate_post(
     except Exception:
         body = {}
 
-    referral_link = f"https://hamroguru.app/register?ref={current_user.referral_code}"
+    referral_link = f"{settings.FRONTEND_URL}/register?ref={current_user.referral_code}"
     body["referral_link"] = referral_link
 
     auth_header = request.headers.get("Authorization", "")
