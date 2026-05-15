@@ -2,11 +2,13 @@ import { useState, useEffect, FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Mail, ShieldCheck } from 'lucide-react'
 import api from '../lib/api'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams()
   const email = searchParams.get('email') ?? ''
   const navigate = useNavigate()
+  const { refreshUser } = useAuth()
 
   const [otp, setOtp] = useState('')
   const [error, setError] = useState('')
@@ -29,6 +31,7 @@ export default function VerifyEmail() {
     setLoading(true)
     try {
       await api.post('/api/auth/verify-otp', { email, otp })
+      await refreshUser()
       navigate('/onboarding', { replace: true })
     } catch (err: any) {
       setError(err?.response?.data?.detail || 'Verification failed. Please try again.')
