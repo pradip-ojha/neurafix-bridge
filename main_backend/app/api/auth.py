@@ -199,6 +199,9 @@ async def verify_otp(body: VerifyOtpRequest, db: AsyncSession = Depends(get_db))
     if not user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired code")
 
+    if user.email_verified:
+        return {"detail": "Email verified successfully"}
+
     attempts_raw = await redis_client.get(f"otp_attempts:{body.email}")
     attempts = int(attempts_raw) if attempts_raw else 0
     if attempts >= OTP_MAX_ATTEMPTS:

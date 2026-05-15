@@ -33,19 +33,23 @@ async def close() -> None:
         _client = None
 
 
-async def get(key: str) -> str | None:
-    resp = await _get_client().get(f"/get/{key}")
+async def _cmd(*args: Any) -> Any:
+    """Send a Redis command via the Upstash REST pipeline (POST /)."""
+    resp = await _get_client().post("/", json=list(args))
     resp.raise_for_status()
     return resp.json().get("result")
 
 
+async def get(key: str) -> str | None:
+    return await _cmd("GET", key)
+
+
 async def set(key: str, value: str, ex: int | None = None) -> bool:
-    parts = ["SET", key, value]
     if ex is not None:
-        parts += ["EX", str(ex)]
-    resp = await _get_client().post("/", json=parts)
-    resp.raise_for_status()
-    return resp.json().get("result") == "OK"
+        result = await _cmd("SET", key, value, "EX", str(ex))
+    else:
+        result = await _cmd("SET", key, value)
+    return result == "OK"
 
 
 async def set_json(key: str, value: Any, ex: int | None = None) -> bool:
@@ -63,18 +67,15 @@ async def get_json(key: str) -> Any | None:
 
 
 async def delete(key: str) -> int:
-    resp = await _get_client().get(f"/del/{key}")
-    resp.raise_for_status()
-    return resp.json().get("result", 0)
+    result = await _cmd("DEL", key)
+    return int(result or 0)
 
 
 async def incr(key: str) -> int:
-    resp = await _get_client().get(f"/incr/{key}")
-    resp.raise_for_status()
-    return int(resp.json().get("result", 0))
+    result = await _cmd("INCR", key)
+    return int(result or 0)
 
 
 async def expire(key: str, seconds: int) -> bool:
-    resp = await _get_client().get(f"/expire/{key}/{seconds}")
-    resp.raise_for_status()
-    return resp.json().get("result") == 1
+    result = await _cmd("EXPIRE", key, str(seconds))
+    return result == 1
