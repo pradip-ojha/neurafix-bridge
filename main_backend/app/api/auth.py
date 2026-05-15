@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -61,7 +60,7 @@ async def _store_and_send_otp(email: str) -> None:
     count = await redis_client.incr(f"otp_send_count:{email}")
     if count == 1:
         await redis_client.expire(f"otp_send_count:{email}", OTP_SEND_WINDOW)
-    asyncio.create_task(send_otp_email(email, otp))
+    await send_otp_email(email, otp)
 
 
 @router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
