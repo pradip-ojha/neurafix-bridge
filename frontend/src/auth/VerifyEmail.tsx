@@ -8,7 +8,7 @@ export default function VerifyEmail() {
   const [searchParams] = useSearchParams()
   const email = searchParams.get('email') ?? ''
   const navigate = useNavigate()
-  const { refreshUser } = useAuth()
+  const { markEmailVerified } = useAuth()
 
   const [otp, setOtp] = useState('')
   const [error, setError] = useState('')
@@ -31,7 +31,7 @@ export default function VerifyEmail() {
     setLoading(true)
     try {
       await api.post('/api/auth/verify-otp', { email, otp })
-      await refreshUser()
+      markEmailVerified()
       navigate('/onboarding', { replace: true })
     } catch (err: any) {
       setError(err?.response?.data?.detail || 'Verification failed. Please try again.')

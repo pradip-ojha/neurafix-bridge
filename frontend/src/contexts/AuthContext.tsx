@@ -18,6 +18,7 @@ interface AuthContextType {
   register: (full_name: string, email: string, password: string, referral_code?: string) => Promise<AuthUser>
   logout: () => void
   refreshUser: () => Promise<void>
+  markEmailVerified: () => void
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -77,8 +78,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(res.data)
   }
 
+  const markEmailVerified = () => {
+    setUser(prev => prev ? { ...prev, email_verified: true } : null)
+  }
+
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout, refreshUser, markEmailVerified }}>
       {children}
     </AuthContext.Provider>
   )
