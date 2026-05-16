@@ -67,7 +67,7 @@ function QuickReview({ question, options, explanation }: { question: string; opt
           else cls += 'border-transparent text-slate-600 cursor-default'
           return (
             <button key={opt.id} onClick={() => { if (!selected) setSelected(opt.id) }} disabled={!!selected} className={cls}>
-              <span className="font-semibold mr-1.5">{opt.id}.</span>{opt.text}
+              <span className="font-semibold mr-1.5">{opt.id}.</span><MarkdownRenderer content={opt.text} compact />
               {selected && opt.correct && <span className="ml-1">✓</span>}
             </button>
           )

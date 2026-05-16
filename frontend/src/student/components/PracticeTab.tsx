@@ -554,7 +554,9 @@ function SessionView({
           {q.topic && <span className="text-xs text-slate-500">{q.topic}</span>}
         </div>
 
-        <p className="text-sm text-slate-200 font-medium leading-relaxed mb-5">{q.question_text}</p>
+        <div className="text-sm text-slate-200 font-medium leading-relaxed mb-5">
+          <MarkdownRenderer content={q.question_text} compact />
+        </div>
 
         <div className="space-y-2.5">
           {q.options.map((opt) => {
@@ -572,7 +574,7 @@ function SessionView({
                 <span className={`w-6 h-6 flex-shrink-0 rounded-full border text-xs font-semibold flex items-center justify-center ${
                   selected ? 'border-indigo-500 bg-indigo-600 text-white' : 'border-white/20 text-slate-500'
                 }`}>{opt.id}</span>
-                {opt.text}
+                <MarkdownRenderer content={opt.text} compact />
               </button>
             )
           })}
@@ -709,6 +711,9 @@ function ResultsView({
 
               {expanded && (
                 <div className="px-4 pb-4 space-y-3 border-t border-white/[0.05] pt-3">
+                  <div className="text-sm text-slate-200 font-medium leading-relaxed">
+                    <MarkdownRenderer content={q.question_text} compact />
+                  </div>
                   <div className="space-y-1.5">
                     {q.options.map((opt) => {
                       const isCorrect  = r.correct_option_ids.includes(opt.id)
@@ -720,7 +725,7 @@ function ResultsView({
                           : 'border-transparent text-slate-500'
                         }`}>
                           <span className="font-medium w-5">{opt.id}.</span>
-                          <span className="flex-1">{opt.text}</span>
+                          <span className="flex-1"><MarkdownRenderer content={opt.text} compact /></span>
                           {isCorrect  && <span className="text-xs font-medium text-green-400">Correct</span>}
                           {isStudent && !isCorrect && <span className="text-xs font-medium text-red-400">Your answer</span>}
                         </div>
@@ -731,14 +736,14 @@ function ResultsView({
                   {r.explanation && (
                     <div className="bg-indigo-600/10 border border-indigo-500/20 rounded-xl p-3">
                       <p className="text-xs font-semibold text-indigo-400 mb-1">Explanation</p>
-                      <p className="text-xs text-slate-300">{r.explanation}</p>
+                      <div className="text-xs text-slate-300"><MarkdownRenderer content={r.explanation} compact /></div>
                     </div>
                   )}
 
                   {!r.correct && r.student_answer && r.common_mistakes[r.student_answer] && (
                     <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
                       <p className="text-xs font-semibold text-amber-400 mb-1">Why students pick this</p>
-                      <p className="text-xs text-slate-300">{r.common_mistakes[r.student_answer]}</p>
+                      <div className="text-xs text-slate-300"><MarkdownRenderer content={r.common_mistakes[r.student_answer]} compact /></div>
                     </div>
                   )}
                 </div>

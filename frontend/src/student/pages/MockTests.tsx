@@ -9,6 +9,7 @@ import {
   XCircle,
 } from 'lucide-react'
 import DarkSkeleton from '../components/DarkSkeleton'
+import MarkdownRenderer from '../components/MarkdownRenderer'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -413,7 +414,9 @@ export default function MockTests() {
             return (
               <div key={q.question_id} className="bg-study-card border border-white/[0.07] rounded-2xl p-5">
                 <p className="text-xs text-slate-600 mb-1.5">Q{idx + 1} · <span className="capitalize">{q.difficulty}</span></p>
-                <p className="text-slate-200 font-medium mb-4 leading-relaxed text-sm">{q.question_text}</p>
+                <div className="text-slate-200 font-medium mb-4 leading-relaxed text-sm">
+                  <MarkdownRenderer content={q.question_text} compact />
+                </div>
                 <div className="space-y-2">
                   {q.options.map(opt => {
                     const isSelected = selected === opt.id
@@ -428,7 +431,7 @@ export default function MockTests() {
                         }`}
                       >
                         <span className="font-semibold mr-2 text-slate-500">{opt.id}.</span>
-                        {opt.text}
+                        <MarkdownRenderer content={opt.text} compact />
                       </button>
                     )
                   })}
@@ -550,9 +553,9 @@ export default function MockTests() {
                           )}
                           <div className="flex-1 min-w-0">
                             <p className="text-xs text-slate-600 mb-1">Q{idx + 1} · <span className="capitalize">{qr.difficulty}</span></p>
-                            <p className="text-sm text-slate-300 leading-relaxed mb-3">
-                              {qr.question_data.question_text}
-                            </p>
+                            <div className="text-sm text-slate-300 leading-relaxed mb-3">
+                              <MarkdownRenderer content={qr.question_data.question_text} compact />
+                            </div>
                             <div className="space-y-1.5 mb-3">
                               {qr.question_data.options.map(opt => {
                                 const isCorrect = qr.correct_option_ids.includes(opt.id)
@@ -564,7 +567,7 @@ export default function MockTests() {
                                 return (
                                   <div key={opt.id} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${cls}`}>
                                     <span className="font-semibold">{opt.id}.</span>
-                                    <span>{opt.text}</span>
+                                    <span><MarkdownRenderer content={opt.text} compact /></span>
                                   </div>
                                 )
                               })}
@@ -579,13 +582,13 @@ export default function MockTests() {
                             </button>
                             {expandedQuestion === qr.question_id && (
                               <div className="mt-2 p-3 bg-indigo-600/10 border border-indigo-500/20 rounded-xl text-xs text-slate-300 leading-relaxed">
-                                {qr.explanation || 'No explanation available.'}
+                                <MarkdownRenderer content={qr.explanation || 'No explanation available.'} compact />
                                 {qr.student_answer &&
                                   !qr.correct &&
                                   qr.common_mistakes[qr.student_answer] && (
                                     <p className="mt-2 text-amber-400">
                                       <strong>Why {qr.student_answer} is wrong:</strong>{' '}
-                                      {qr.common_mistakes[qr.student_answer]}
+                                      <MarkdownRenderer content={qr.common_mistakes[qr.student_answer]} compact />
                                     </p>
                                   )}
                               </div>
