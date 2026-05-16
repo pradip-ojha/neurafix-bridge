@@ -45,6 +45,21 @@ async def _get_college(college_id: str) -> dict:
     raise HTTPException(status_code=404, detail="College not found.")
 
 
+async def _get_student_stream(user_id: str) -> str | None:
+    url = f"{settings.MAIN_BACKEND_URL}/api/internal/profile/{user_id}"
+    headers = {"X-Internal-Secret": settings.MAIN_BACKEND_INTERNAL_SECRET}
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(url, headers=headers)
+            if resp.status_code == 200:
+                data = resp.json()
+                sp = data.get("student_profile") or {}
+                return sp.get("stream")
+    except Exception:
+        pass
+    return None
+
+
 async def _resolve_names(user_ids: list[str]) -> dict[str, str]:
     async def fetch_one(uid: str) -> tuple[str, str]:
         url = f"{settings.MAIN_BACKEND_URL}/api/internal/profile/{uid}"
@@ -200,14 +215,32 @@ async def start_mock(
     class_level_distribution: dict[str, int] | None = None
 
     if req.college_id:
-        college = await _get_college(req.college_id)
-        distribution: dict[str, int] = college.get("question_distribution") or {}
-        time_limit = college.get("total_time_minutes", 60)
-        class_level_distribution = college.get("class_level_distribution") or None
+        college, student_stream = await asyncio.gather(
+            _get_college(req.college_id),
+            _get_student_stream(user_id),
+        )
+
+        if not student_stream:
+            raise HTTPException(
+                status_code=400,
+                detail="Complete your profile (select a stream) before taking a college format mock test.",
+            )
+
+        stream_cfg: dict | None = college.get(f"{student_stream}_config")
+        if not stream_cfg:
+            raise HTTPException(
+                status_code=400,
+                detail=f"This college has no entrance exam format configured for the {student_stream} stream.",
+            )
+
+        distribution: dict[str, int] = stream_cfg.get("question_distribution") or {}
+        time_limit = stream_cfg.get("total_time_minutes", 60)
+        class_level_distribution = stream_cfg.get("class_level_distribution") or None
+
         if not distribution:
             raise HTTPException(
                 status_code=400,
-                detail="This college has no question distribution configured.",
+                detail="This college has no question distribution configured for your stream.",
             )
     else:
         distribution = req.custom_distribution or {}

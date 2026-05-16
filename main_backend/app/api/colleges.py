@@ -15,22 +15,25 @@ router = APIRouter(tags=["colleges"])
 _admin_only = require_role("admin")
 
 
-class CollegeIn(BaseModel):
-    name: str
-    location: str | None = None
+class StreamConfig(BaseModel):
     total_questions: int
     total_time_minutes: int
     question_distribution: dict[str, int] = {}
     class_level_distribution: dict[str, int] | None = None
 
 
+class CollegeIn(BaseModel):
+    name: str
+    location: str | None = None
+    science_config: StreamConfig | None = None
+    management_config: StreamConfig | None = None
+
+
 class CollegeUpdate(BaseModel):
     name: str | None = None
     location: str | None = None
-    total_questions: int | None = None
-    total_time_minutes: int | None = None
-    question_distribution: dict[str, int] | None = None
-    class_level_distribution: dict[str, int] | None = None
+    science_config: StreamConfig | None = None
+    management_config: StreamConfig | None = None
     is_active: bool | None = None
 
 
@@ -39,10 +42,8 @@ def _serialize(c: College) -> dict:
         "id": c.id,
         "name": c.name,
         "location": c.location,
-        "total_questions": c.total_questions,
-        "total_time_minutes": c.total_time_minutes,
-        "question_distribution": c.question_distribution,
-        "class_level_distribution": c.class_level_distribution,
+        "science_config": c.science_config,
+        "management_config": c.management_config,
         "is_active": c.is_active,
         "created_at": c.created_at,
     }
@@ -63,7 +64,12 @@ async def create_college(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(_admin_only),
 ):
-    college = College(**body.model_dump())
+    college = College(
+        name=body.name,
+        location=body.location,
+        science_config=body.science_config.model_dump() if body.science_config else None,
+        management_config=body.management_config.model_dump() if body.management_config else None,
+    )
     db.add(college)
     await db.commit()
     await db.refresh(college)
@@ -105,7 +111,7 @@ async def update_college(
     if not college:
         raise HTTPException(status_code=404, detail="College not found")
 
-    for field, value in body.model_dump(exclude_none=True).items():
+    for field, value in body.model_dump(exclude_unset=True).items():
         setattr(college, field, value)
 
     await db.commit()

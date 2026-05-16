@@ -54,13 +54,18 @@ interface ScoreData {
   per_subject: Record<string, SubjectScore>
 }
 
+interface StreamConfig {
+  total_questions: number
+  total_time_minutes: number
+  question_distribution: Record<string, number>
+}
+
 interface College {
   id: string
   name: string
   location: string | null
-  total_questions: number
-  total_time_minutes: number
-  question_distribution: Record<string, number>
+  science_config: StreamConfig | null
+  management_config: StreamConfig | null
   is_active: boolean
 }
 
@@ -672,25 +677,35 @@ export default function MockTests() {
                       {col.location && (
                         <p className="text-xs text-slate-500 mb-3">{col.location}</p>
                       )}
-                      <div className="flex gap-4 text-xs text-slate-400">
-                        <span>📝 {col.total_questions} questions</span>
-                        <span>⏱ {col.total_time_minutes} min</span>
-                      </div>
+                      {(() => {
+                        const cfg = stream === 'science' ? col.science_config : stream === 'management' ? col.management_config : (col.science_config ?? col.management_config)
+                        if (!cfg) return <p className="text-xs text-slate-600">No format configured for your stream.</p>
+                        return (
+                          <div className="flex gap-4 text-xs text-slate-400">
+                            <span>📝 {cfg.total_questions} questions</span>
+                            <span>⏱ {cfg.total_time_minutes} min</span>
+                          </div>
+                        )
+                      })()}
                     </div>
-                    {Object.keys(col.question_distribution).length > 0 && (
-                      <div className="border-t border-white/[0.05] bg-study-elevated px-5 py-3">
-                        <div className="flex flex-wrap gap-1.5">
-                          {Object.entries(col.question_distribution).map(([s, n]) => (
-                            <span
-                              key={s}
-                              className="text-[10px] bg-study-card border border-white/[0.07] rounded-full px-2.5 py-1 text-slate-500"
-                            >
-                              {subjectLabel(s)}: {n}
-                            </span>
-                          ))}
+                    {(() => {
+                      const cfg = stream === 'science' ? col.science_config : stream === 'management' ? col.management_config : (col.science_config ?? col.management_config)
+                      if (!cfg || Object.keys(cfg.question_distribution).length === 0) return null
+                      return (
+                        <div className="border-t border-white/[0.05] bg-study-elevated px-5 py-3">
+                          <div className="flex flex-wrap gap-1.5">
+                            {Object.entries(cfg.question_distribution).map(([s, n]) => (
+                              <span
+                                key={s}
+                                className="text-[10px] bg-study-card border border-white/[0.07] rounded-full px-2.5 py-1 text-slate-500"
+                              >
+                                {subjectLabel(s)}: {n}
+                              </span>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )
+                    })()}
                   </div>
                 ))}
               </div>
@@ -704,41 +719,58 @@ export default function MockTests() {
                   {selectedCollege.location && (
                     <p className="text-xs text-slate-500 mb-4">{selectedCollege.location}</p>
                   )}
-                  <div className="space-y-2 mb-4">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">Total questions</span>
-                      <span className="font-medium text-slate-300">{selectedCollege.total_questions}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">Time limit</span>
-                      <span className="font-medium text-slate-300">{selectedCollege.total_time_minutes} min</span>
-                    </div>
-                  </div>
-                  {Object.keys(selectedCollege.question_distribution).length > 0 && (
-                    <div className="bg-study-elevated rounded-xl p-3 mb-4 space-y-1.5">
-                      {Object.entries(selectedCollege.question_distribution).map(([s, n]) => (
-                        <div key={s} className="flex justify-between text-xs">
-                          <span className="text-slate-500">{subjectLabel(s)}</span>
-                          <span className="font-medium text-slate-300">{n} questions</span>
+                  {(() => {
+                    const cfg = stream === 'science' ? selectedCollege.science_config : stream === 'management' ? selectedCollege.management_config : null
+                    if (!cfg) return (
+                      <p className="text-amber-400 text-xs bg-amber-600/10 border border-amber-500/20 rounded-xl p-3 mb-4">
+                        This college has not configured an entrance exam format for your stream.
+                      </p>
+                    )
+                    return (
+                      <>
+                        <div className="space-y-2 mb-4">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-slate-500">Total questions</span>
+                            <span className="font-medium text-slate-300">{cfg.total_questions}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-slate-500">Time limit</span>
+                            <span className="font-medium text-slate-300">{cfg.total_time_minutes} min</span>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => setShowStartModal(false)}
-                      className="flex-1 border border-white/[0.1] text-slate-400 hover:text-slate-200 py-2.5 rounded-xl text-sm hover:bg-study-elevated transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={() => startCollegeExam(selectedCollege)}
-                      disabled={examLoading}
-                      className="flex-1 bg-indigo-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-500 disabled:opacity-50 transition-colors"
-                    >
-                      {examLoading ? 'Starting...' : 'Start Exam'}
-                    </button>
-                  </div>
+                        {Object.keys(cfg.question_distribution).length > 0 && (
+                          <div className="bg-study-elevated rounded-xl p-3 mb-4 space-y-1.5">
+                            {Object.entries(cfg.question_distribution).map(([s, n]) => (
+                              <div key={s} className="flex justify-between text-xs">
+                                <span className="text-slate-500">{subjectLabel(s)}</span>
+                                <span className="font-medium text-slate-300">{n} questions</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )
+                  })()}
+                  {(() => {
+                    const hasConfig = stream === 'science' ? !!selectedCollege.science_config : stream === 'management' ? !!selectedCollege.management_config : false
+                    return (
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => setShowStartModal(false)}
+                          className="flex-1 border border-white/[0.1] text-slate-400 hover:text-slate-200 py-2.5 rounded-xl text-sm hover:bg-study-elevated transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => startCollegeExam(selectedCollege)}
+                          disabled={examLoading || !hasConfig}
+                          className="flex-1 bg-indigo-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-500 disabled:opacity-50 transition-colors"
+                        >
+                          {examLoading ? 'Starting...' : 'Start Exam'}
+                        </button>
+                      </div>
+                    )
+                  })()}
                 </div>
               </div>
             )}
