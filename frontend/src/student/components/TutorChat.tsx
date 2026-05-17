@@ -139,7 +139,7 @@ export default function TutorChat({ subject }: Props) {
       }
 
       if (response.status === 429) {
-        setMessages((prev) => [...prev, { role: 'assistant', content: "You've reached today's limit for this feature. Upgrade to paid for more access: /student/payment" }])
+        setMessages((prev) => [...prev, { role: 'assistant', content: "You've reached today's limit for this feature. More credits will unlock tomorrow." }])
         setStreamingText('')
         return
       }

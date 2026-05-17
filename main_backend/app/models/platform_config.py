@@ -35,4 +35,11 @@ class PlatformConfig(Base):
     payment_qr_url: Mapped[str | None] = mapped_column(nullable=True)
     payment_instructions: Mapped[str | None] = mapped_column(nullable=True)
     demo_video_url: Mapped[str | None] = mapped_column(nullable=True)
+    # Public stats overrides — if set, shown instead of real computed values
+    stat_students_registered: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    stat_mock_tests_attempted: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    stat_questions_practiced: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    stat_ai_tutor_messages: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    stat_career_guidance_sessions: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    stat_practice_sessions_completed: Mapped[int | None] = mapped_column(Integer, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))

@@ -13,7 +13,7 @@ interface FAQ {
 const emptyForm = { question: '', answer: '', display_order: 0, is_active: true }
 
 export default function HomepageConfig() {
-  const [tab, setTab] = useState<'faqs' | 'demo'>('faqs')
+  const [tab, setTab] = useState<'faqs' | 'demo' | 'stats'>('faqs')
 
   // ── FAQs ──────────────────────────────────────────────────────────────────
   const [faqs, setFaqs] = useState<FAQ[]>([])
@@ -30,9 +30,26 @@ export default function HomepageConfig() {
   const [demoSaving, setDemoSaving] = useState(false)
   const [demoMsg, setDemoMsg] = useState('')
 
+  // ── Stats overrides ───────────────────────────────────────────────────────
+  const STAT_FIELDS: { key: string; label: string }[] = [
+    { key: 'stat_students_registered',       label: 'Students Registered' },
+    { key: 'stat_mock_tests_attempted',      label: 'Mock Tests Attempted' },
+    { key: 'stat_questions_practiced',       label: 'Questions Practiced' },
+    { key: 'stat_ai_tutor_messages',         label: 'AI Tutor Messages Sent' },
+    { key: 'stat_career_guidance_sessions',  label: 'Career Guidance Sessions' },
+    { key: 'stat_practice_sessions_completed', label: 'Practice Sessions Completed' },
+  ]
+  const [statValues, setStatValues] = useState<Record<string, string>>(
+    Object.fromEntries(STAT_FIELDS.map(({ key }) => [key, '']))
+  )
+  const [statsLoading, setStatsLoading] = useState(true)
+  const [statsSaving, setStatsSaving] = useState(false)
+  const [statsMsg, setStatsMsg] = useState('')
+
   useEffect(() => {
     loadFaqs()
     loadDemo()
+    loadStats()
   }, [])
 
   async function loadFaqs() {
@@ -42,6 +59,38 @@ export default function HomepageConfig() {
       setFaqs(data)
     } finally {
       setFaqsLoading(false)
+    }
+  }
+
+  async function loadStats() {
+    setStatsLoading(true)
+    try {
+      const { data } = await api.get<Record<string, unknown>>('/api/config/platform')
+      setStatValues(
+        Object.fromEntries(
+          STAT_FIELDS.map(({ key }) => [key, data[key] != null ? String(data[key]) : ''])
+        )
+      )
+    } catch {}
+    finally { setStatsLoading(false) }
+  }
+
+  async function saveStats(e: FormEvent) {
+    e.preventDefault()
+    setStatsSaving(true)
+    setStatsMsg('')
+    try {
+      const payload: Record<string, number | null> = {}
+      for (const { key } of STAT_FIELDS) {
+        const raw = statValues[key].trim()
+        payload[key] = raw === '' ? null : parseInt(raw, 10)
+      }
+      await api.patch('/api/admin/config/platform', payload)
+      setStatsMsg('Saved.')
+    } catch {
+      setStatsMsg('Failed to save.')
+    } finally {
+      setStatsSaving(false)
     }
   }
 
@@ -129,15 +178,15 @@ export default function HomepageConfig() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-slate-700/60">
-        {(['faqs', 'demo'] as const).map((t) => (
+        {(['faqs', 'demo', 'stats'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px capitalize ${
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
               tab === t ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
-            {t === 'faqs' ? 'FAQs' : 'Demo Video'}
+            {t === 'faqs' ? 'FAQs' : t === 'demo' ? 'Demo Video' : 'Stats'}
           </button>
         ))}
       </div>
@@ -244,6 +293,46 @@ export default function HomepageConfig() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Stats tab */}
+      {tab === 'stats' && (
+        <div className="max-w-xl space-y-4">
+          <p className="text-sm text-slate-400">
+            Override the statistics shown on the public landing page. Leave a field blank to display real platform data instead.
+          </p>
+          <form onSubmit={saveStats} className="space-y-3">
+            {statsLoading ? (
+              <div className="space-y-2">
+                {STAT_FIELDS.map(({ key }) => <div key={key} className="h-10 rounded-lg bg-slate-800 animate-pulse" />)}
+              </div>
+            ) : (
+              STAT_FIELDS.map(({ key, label }) => (
+                <div key={key}>
+                  <label className="text-xs text-slate-400 block mb-1">{label}</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={statValues[key]}
+                    onChange={(e) => setStatValues((v) => ({ ...v, [key]: e.target.value }))}
+                    placeholder="Leave blank for real data"
+                    className="w-full rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-sm px-3 py-2 focus:outline-none focus:border-indigo-500 placeholder:text-slate-600"
+                  />
+                </div>
+              ))
+            )}
+            {statsMsg && (
+              <p className={`text-xs ${statsMsg === 'Saved.' ? 'text-green-400' : 'text-red-400'}`}>{statsMsg}</p>
+            )}
+            <button
+              type="submit"
+              disabled={statsSaving || statsLoading}
+              className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+            >
+              <Save size={13} /> {statsSaving ? 'Saving…' : 'Save Stats'}
+            </button>
+          </form>
         </div>
       )}
 

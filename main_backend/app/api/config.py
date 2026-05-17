@@ -47,6 +47,12 @@ class PlatformConfigUpdate(BaseModel):
     paid_capsule_followup_limit: int | None = None
     payment_qr_url: str | None = None
     payment_instructions: str | None = None
+    stat_students_registered: int | None = None
+    stat_mock_tests_attempted: int | None = None
+    stat_questions_practiced: int | None = None
+    stat_ai_tutor_messages: int | None = None
+    stat_career_guidance_sessions: int | None = None
+    stat_practice_sessions_completed: int | None = None
 
 _DEFAULT_SECONDS = 72
 _DIFFICULTIES = ["easy", "medium", "hard"]
@@ -71,6 +77,16 @@ _DEFAULT_LIMITS = {
 }
 
 
+_STAT_OVERRIDES = [
+    "stat_students_registered",
+    "stat_mock_tests_attempted",
+    "stat_questions_practiced",
+    "stat_ai_tutor_messages",
+    "stat_career_guidance_sessions",
+    "stat_practice_sessions_completed",
+]
+
+
 def _serialize_platform_config(config: PlatformConfig) -> dict:
     data = {
         "subscription_price": float(config.subscription_price),
@@ -81,6 +97,8 @@ def _serialize_platform_config(config: PlatformConfig) -> dict:
     }
     for field in _DEFAULT_LIMITS:
         data[field] = getattr(config, field)
+    for field in _STAT_OVERRIDES:
+        data[field] = getattr(config, field, None)
     return data
 
 

@@ -279,7 +279,7 @@ export default function MockTests() {
         body: JSON.stringify({ college_id: college.id }),
       })
       const data = await resp.json()
-      if (resp.status === 429) { alert("You've reached today's mock test limit. Upgrade to paid for more access."); return }
+      if (resp.status === 429) { alert("You've reached today's mock test limit. More credits will unlock tomorrow."); return }
       if (!resp.ok) { alert(data.detail ?? 'Failed to start exam.'); return }
       initExam(data, college.id)
     } catch {
@@ -307,7 +307,7 @@ export default function MockTests() {
         body: JSON.stringify({ custom_distribution: distribution, time_limit_minutes: customTime }),
       })
       const data = await resp.json()
-      if (resp.status === 429) { alert("You've reached today's mock test limit. Upgrade to paid for more access."); return }
+      if (resp.status === 429) { alert("You've reached today's mock test limit. More credits will unlock tomorrow."); return }
       if (!resp.ok) { alert(data.detail ?? 'Failed to start exam.'); return }
       initExam(data, null)
     } catch {

@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { X, Bot, BookOpen, ClipboardList, MessageSquare, Users, TrendingUp, Settings, Library, CreditCard, LogOut, Sun, Moon } from 'lucide-react'
+import { X, Bot, BookOpen, ClipboardList, MessageSquare, Users, TrendingUp, Settings, Library, LogOut, Sun, Moon } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTheme } from '../../contexts/ThemeContext'
 
@@ -12,7 +12,7 @@ const NAV_ITEMS = [
   { to: '/student/community',  icon: Users,         label: 'Community'    },
   { to: '/student/progress',   icon: TrendingUp,    label: 'Progress'     },
   { to: '/student/syllabus',   icon: Library,       label: 'Syllabus'     },
-  { to: '/student/payment',    icon: CreditCard,    label: 'Subscription' },
+  // { to: '/student/payment', icon: CreditCard, label: 'Subscription' }, // hidden until paid tier is re-enabled
   { to: '/student/settings',   icon: Settings,      label: 'Settings'     },
 ]
 

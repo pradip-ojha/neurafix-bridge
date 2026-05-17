@@ -32,7 +32,7 @@ import Consultant from './student/pages/Consultant'
 import Community from './student/pages/Community'
 import Progress from './student/pages/Progress'
 import Settings from './student/pages/Settings'
-import Payment from './student/pages/Payment'
+// import Payment from './student/pages/Payment' // hidden until paid tier is re-enabled
 import Syllabus from './student/pages/Syllabus'
 import AffiliationLayout from './affiliation/layout/AffiliationLayout'
 import AffiliateDashboard from './affiliation/pages/Dashboard'
@@ -101,7 +101,7 @@ export default function App() {
             <Route path="community" element={<Community />} />
             <Route path="progress" element={<Progress />} />
             <Route path="syllabus" element={<Syllabus />} />
-            <Route path="payment" element={<Payment />} />
+            {/* <Route path="payment" element={<Payment />} /> */}{/* hidden until paid tier is re-enabled */}
             <Route path="settings" element={<Settings />} />
           </Route>
 

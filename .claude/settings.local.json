@@ -127,7 +127,8 @@
       "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
       "Bash(xargs grep -l \"katex\\\\|markdown\\\\|rehype\\\\|remark\")",
       "Bash(find D:\\\\hamroguru\\\\hamroguru-platform\\\\main_backend *)",
-      "Bash(grep -E \"\\\\.\\(py|ts\\)$\")"
+      "Bash(grep -E \"\\\\.\\(py|ts\\)$\")",
+      "Bash(findstr *)"
     ]
   }
 }

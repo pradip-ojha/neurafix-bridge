@@ -215,7 +215,7 @@ export default function CapsuleTab({ subject }: Props) {
         }
       }
 
-      if (response.status === 429) { setMessages((prev) => [...prev, { role: 'assistant', content: "You've reached today's limit for this feature. Upgrade to paid for more access: /student/payment" }]); setStreamingText(''); return }
+      if (response.status === 429) { setMessages((prev) => [...prev, { role: 'assistant', content: "You've reached today's limit for this feature. More credits will unlock tomorrow." }]); setStreamingText(''); return }
       if (!response.ok || !response.body) { setMessages((prev) => [...prev, { role: 'assistant', content: 'Something went wrong. Please try again.' }]); setStreamingText(''); return }
       const reader = response.body.getReader(); const decoder = new TextDecoder()
       let accumulated = ''; let buffer = ''

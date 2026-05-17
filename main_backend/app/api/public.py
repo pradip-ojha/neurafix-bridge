@@ -23,6 +23,8 @@ router = APIRouter(prefix="/api/public", tags=["public"])
 
 @router.get("/stats")
 async def public_stats(db: AsyncSession = Depends(get_db)):
+    config = (await db.execute(select(PlatformConfig).where(PlatformConfig.id == 1))).scalar_one_or_none()
+
     students_registered = (
         await db.execute(
             select(func.count()).select_from(User).where(User.role == UserRole.student)
@@ -41,7 +43,7 @@ async def public_stats(db: AsyncSession = Depends(get_db)):
     except Exception:
         pass
 
-    return {
+    result = {
         "students_registered": students_registered,
         "mock_tests_attempted": ai_stats.get("mock_tests_attempted", 0),
         "questions_practiced": ai_stats.get("questions_practiced", 0),
@@ -49,6 +51,14 @@ async def public_stats(db: AsyncSession = Depends(get_db)):
         "career_guidance_sessions": ai_stats.get("career_guidance_sessions", 0),
         "practice_sessions_completed": ai_stats.get("practice_sessions_completed", 0),
     }
+
+    if config:
+        for key in result:
+            override = getattr(config, f"stat_{key}", None)
+            if override is not None:
+                result[key] = override
+
+    return result
 
 
 @router.get("/faqs")

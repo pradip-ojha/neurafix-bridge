@@ -178,7 +178,7 @@ export default function PracticeTab({ subject }: Props) {
       const data = res.data
       setSessionId(data.session_id); setQuestions(data.questions); setCurrentIdx(0); setAnswers({}); setView('session')
     } catch (e: any) {
-      if (e?.response?.status === 429) setError("You've reached today's practice limit. Upgrade to paid for more access: /student/payment")
+      if (e?.response?.status === 429) setError("You've reached today's practice limit. More credits will unlock tomorrow.")
       else setError(e?.response?.data?.detail || 'Something went wrong')
     } finally { setStarting(false) }
   }
@@ -237,7 +237,7 @@ export default function PracticeTab({ subject }: Props) {
       }
 
       if (res.status === 429) {
-        setFollowupMessages((prev) => [...prev, { role: 'assistant', content: "You've reached today's limit for this feature. Upgrade to paid for more access: /student/payment" }])
+        setFollowupMessages((prev) => [...prev, { role: 'assistant', content: "You've reached today's limit for this feature. More credits will unlock tomorrow." }])
         setStreamingText(''); return
       }
       if (!res.ok || !res.body) {
