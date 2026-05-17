@@ -95,7 +95,9 @@ function useCountUp(target: number, ratePerDay = 0, duration = 1800) {
 
   useEffect(() => {
     const el = ref.current
-    if (!el || started.current) return
+    if (!el) return
+    started.current = false
+    if (ticker.current) { clearInterval(ticker.current); ticker.current = null }
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!entry.isIntersecting || started.current) return
