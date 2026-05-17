@@ -42,4 +42,13 @@ class PlatformConfig(Base):
     stat_ai_tutor_messages: Mapped[int | None] = mapped_column(Integer, nullable=True)
     stat_career_guidance_sessions: Mapped[int | None] = mapped_column(Integer, nullable=True)
     stat_practice_sessions_completed: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Recorded when admin saves stat base values — used to compute elapsed-time growth
+    stat_base_timestamp: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Per-day auto-increment rates for each stat (float, e.g. 1.5 = 1.5 new per day)
+    stat_students_registered_rate: Mapped[float | None] = mapped_column(nullable=True)
+    stat_mock_tests_attempted_rate: Mapped[float | None] = mapped_column(nullable=True)
+    stat_questions_practiced_rate: Mapped[float | None] = mapped_column(nullable=True)
+    stat_ai_tutor_messages_rate: Mapped[float | None] = mapped_column(nullable=True)
+    stat_career_guidance_sessions_rate: Mapped[float | None] = mapped_column(nullable=True)
+    stat_practice_sessions_completed_rate: Mapped[float | None] = mapped_column(nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))

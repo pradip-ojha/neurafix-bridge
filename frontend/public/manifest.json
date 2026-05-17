@@ -1,11 +1,15 @@
 {
   "name": "NeuraFix Bridge",
-  "short_name": "NeuraFix",
-  "description": "AI-powered entrance exam preparation and personalised tutoring by NeuraFix AI",
+  "short_name": "NeuraFix Bridge",
+  "description": "AI-powered Class 11 entrance exam preparation for Nepal's SEE students. Personal tutor, mock tests, and career guidance — all in one place.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#0b1120",
   "theme_color": "#6366f1",
+  "lang": "en",
+  "categories": ["education", "productivity"],
   "icons": [
     {
       "src": "/icon-192.png",

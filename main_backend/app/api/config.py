@@ -53,6 +53,12 @@ class PlatformConfigUpdate(BaseModel):
     stat_ai_tutor_messages: int | None = None
     stat_career_guidance_sessions: int | None = None
     stat_practice_sessions_completed: int | None = None
+    stat_students_registered_rate: float | None = None
+    stat_mock_tests_attempted_rate: float | None = None
+    stat_questions_practiced_rate: float | None = None
+    stat_ai_tutor_messages_rate: float | None = None
+    stat_career_guidance_sessions_rate: float | None = None
+    stat_practice_sessions_completed_rate: float | None = None
 
 _DEFAULT_SECONDS = 72
 _DIFFICULTIES = ["easy", "medium", "hard"]
@@ -77,13 +83,13 @@ _DEFAULT_LIMITS = {
 }
 
 
-_STAT_OVERRIDES = [
-    "stat_students_registered",
-    "stat_mock_tests_attempted",
-    "stat_questions_practiced",
-    "stat_ai_tutor_messages",
-    "stat_career_guidance_sessions",
-    "stat_practice_sessions_completed",
+_STAT_KEYS = [
+    "students_registered",
+    "mock_tests_attempted",
+    "questions_practiced",
+    "ai_tutor_messages",
+    "career_guidance_sessions",
+    "practice_sessions_completed",
 ]
 
 
@@ -97,8 +103,9 @@ def _serialize_platform_config(config: PlatformConfig) -> dict:
     }
     for field in _DEFAULT_LIMITS:
         data[field] = getattr(config, field)
-    for field in _STAT_OVERRIDES:
-        data[field] = getattr(config, field, None)
+    for key in _STAT_KEYS:
+        data[f"stat_{key}"] = getattr(config, f"stat_{key}", None)
+        data[f"stat_{key}_rate"] = getattr(config, f"stat_{key}_rate", None)
     return data
 
 
@@ -129,7 +136,12 @@ async def update_platform_config(
     if not config:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Config not found")
 
-    for field, value in body.model_dump(exclude_unset=True).items():
+    updated = body.model_dump(exclude_unset=True)
+    stat_base_fields = {f"stat_{k}" for k in _STAT_KEYS}
+    if any(f in updated for f in stat_base_fields):
+        updated["stat_base_timestamp"] = datetime.now(UTC)
+
+    for field, value in updated.items():
         setattr(config, field, value)
     config.updated_at = datetime.now(UTC)
 

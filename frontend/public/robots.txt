@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Allow: /register
+Allow: /login
+
+# Keep student/admin/affiliation dashboards private
+Disallow: /student/
+Disallow: /admin/
+Disallow: /affiliation/
+Disallow: /onboarding
+Disallow: /verify-email
+
+Sitemap: https://bridge.neurafixai.com/sitemap.xml

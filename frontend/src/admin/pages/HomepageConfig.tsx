@@ -32,15 +32,19 @@ export default function HomepageConfig() {
 
   // ── Stats overrides ───────────────────────────────────────────────────────
   const STAT_FIELDS: { key: string; label: string }[] = [
-    { key: 'stat_students_registered',       label: 'Students Registered' },
-    { key: 'stat_mock_tests_attempted',      label: 'Mock Tests Attempted' },
-    { key: 'stat_questions_practiced',       label: 'Questions Practiced' },
-    { key: 'stat_ai_tutor_messages',         label: 'AI Tutor Messages Sent' },
-    { key: 'stat_career_guidance_sessions',  label: 'Career Guidance Sessions' },
+    { key: 'stat_students_registered',         label: 'Students Registered' },
+    { key: 'stat_mock_tests_attempted',        label: 'Mock Tests Attempted' },
+    { key: 'stat_questions_practiced',         label: 'Questions Practiced' },
+    { key: 'stat_ai_tutor_messages',           label: 'AI Tutor Messages Sent' },
+    { key: 'stat_career_guidance_sessions',    label: 'Career Guidance Sessions' },
     { key: 'stat_practice_sessions_completed', label: 'Practice Sessions Completed' },
   ]
+  const allStatKeys = [
+    ...STAT_FIELDS.map(({ key }) => key),
+    ...STAT_FIELDS.map(({ key }) => `${key}_rate`),
+  ]
   const [statValues, setStatValues] = useState<Record<string, string>>(
-    Object.fromEntries(STAT_FIELDS.map(({ key }) => [key, '']))
+    Object.fromEntries(allStatKeys.map((key) => [key, '']))
   )
   const [statsLoading, setStatsLoading] = useState(true)
   const [statsSaving, setStatsSaving] = useState(false)
@@ -67,9 +71,7 @@ export default function HomepageConfig() {
     try {
       const { data } = await api.get<Record<string, unknown>>('/api/config/platform')
       setStatValues(
-        Object.fromEntries(
-          STAT_FIELDS.map(({ key }) => [key, data[key] != null ? String(data[key]) : ''])
-        )
+        Object.fromEntries(allStatKeys.map((key) => [key, data[key] != null ? String(data[key]) : '']))
       )
     } catch {}
     finally { setStatsLoading(false) }
@@ -82,10 +84,12 @@ export default function HomepageConfig() {
     try {
       const payload: Record<string, number | null> = {}
       for (const { key } of STAT_FIELDS) {
-        const raw = statValues[key].trim()
-        payload[key] = raw === '' ? null : parseInt(raw, 10)
+        const rawBase = statValues[key].trim()
+        const rawRate = statValues[`${key}_rate`].trim()
+        payload[key] = rawBase === '' ? null : parseInt(rawBase, 10)
+        payload[`${key}_rate`] = rawRate === '' ? null : parseFloat(rawRate)
       }
-      await api.patch('/api/admin/config/platform', payload)
+      await api.patch('/api/config/admin/platform', payload)
       setStatsMsg('Saved.')
     } catch {
       setStatsMsg('Failed to save.')
@@ -304,23 +308,45 @@ export default function HomepageConfig() {
           </p>
           <form onSubmit={saveStats} className="space-y-3">
             {statsLoading ? (
-              <div className="space-y-2">
-                {STAT_FIELDS.map(({ key }) => <div key={key} className="h-10 rounded-lg bg-slate-800 animate-pulse" />)}
+              <div className="space-y-3">
+                {STAT_FIELDS.map(({ key }) => <div key={key} className="h-14 rounded-lg bg-slate-800 animate-pulse" />)}
               </div>
             ) : (
-              STAT_FIELDS.map(({ key, label }) => (
-                <div key={key}>
-                  <label className="text-xs text-slate-400 block mb-1">{label}</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={statValues[key]}
-                    onChange={(e) => setStatValues((v) => ({ ...v, [key]: e.target.value }))}
-                    placeholder="Leave blank for real data"
-                    className="w-full rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-sm px-3 py-2 focus:outline-none focus:border-indigo-500 placeholder:text-slate-600"
-                  />
+              <>
+                <div className="grid grid-cols-2 gap-x-3 mb-1">
+                  <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Current value</p>
+                  <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Auto-increase per day</p>
                 </div>
-              ))
+                {STAT_FIELDS.map(({ key, label }) => (
+                  <div key={key} className="grid grid-cols-2 gap-x-3 items-end">
+                    <div>
+                      <label className="text-xs text-slate-400 block mb-1">{label}</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={statValues[key]}
+                        onChange={(e) => setStatValues((v) => ({ ...v, [key]: e.target.value }))}
+                        placeholder="Blank = real data"
+                        className="w-full rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-sm px-3 py-2 focus:outline-none focus:border-indigo-500 placeholder:text-slate-600"
+                      />
+                    </div>
+                    <div>
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.1"
+                        value={statValues[`${key}_rate`]}
+                        onChange={(e) => setStatValues((v) => ({ ...v, [`${key}_rate`]: e.target.value }))}
+                        placeholder="0 = no increase"
+                        className="w-full rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-sm px-3 py-2 focus:outline-none focus:border-indigo-500 placeholder:text-slate-600"
+                      />
+                    </div>
+                  </div>
+                ))}
+                <p className="text-xs text-slate-600 pt-1">
+                  Rate applies continuously from when you last saved. E.g. rate&nbsp;=&nbsp;1440 means +1 per minute on the live page.
+                </p>
+              </>
             )}
             {statsMsg && (
               <p className={`text-xs ${statsMsg === 'Saved.' ? 'text-green-400' : 'text-red-400'}`}>{statsMsg}</p>

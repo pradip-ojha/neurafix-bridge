@@ -23,6 +23,12 @@ interface Stats {
   ai_tutor_messages: number
   career_guidance_sessions: number
   practice_sessions_completed: number
+  students_registered_rate: number
+  mock_tests_attempted_rate: number
+  questions_practiced_rate: number
+  ai_tutor_messages_rate: number
+  career_guidance_sessions_rate: number
+  practice_sessions_completed_rate: number
 }
 
 // ─── Default FAQs (fallback if no admin FAQs) ─────────────────────────────────
@@ -76,12 +82,16 @@ const DEFAULT_FAQS: FAQ[] = [
   },
 ]
 
-// ─── Animated counter ────────────────────────────────────────────────────────
+// ─── Animated counter (count-up on enter, then live-ticking) ─────────────────
 
-function useCountUp(target: number, duration = 1800) {
+function useCountUp(target: number, ratePerDay = 0, duration = 1800) {
   const [count, setCount] = useState(0)
   const started = useRef(false)
+  const liveValue = useRef(target)
+  const ticker = useRef<ReturnType<typeof setInterval> | null>(null)
   const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => { liveValue.current = target }, [target])
 
   useEffect(() => {
     const el = ref.current
@@ -94,21 +104,36 @@ function useCountUp(target: number, duration = 1800) {
         const step = (now: number) => {
           const p = Math.min((now - start) / duration, 1)
           setCount(Math.round(p * target))
-          if (p < 1) requestAnimationFrame(step)
+          if (p < 1) {
+            requestAnimationFrame(step)
+          } else {
+            liveValue.current = target
+            if (ratePerDay > 0) {
+              // convert per-day rate → per-second, tick every second
+              const perSecond = ratePerDay / 86400
+              ticker.current = setInterval(() => {
+                liveValue.current += perSecond
+                setCount(Math.round(liveValue.current))
+              }, 1000)
+            }
+          }
         }
         requestAnimationFrame(step)
       },
       { threshold: 0.3 },
     )
     observer.observe(el)
-    return () => observer.disconnect()
-  }, [target, duration])
+    return () => {
+      observer.disconnect()
+      if (ticker.current) clearInterval(ticker.current)
+    }
+  }, [target, duration, ratePerDay])
 
   return { count, ref }
 }
 
-function StatCard({ value, label, icon: Icon }: { value: number; label: string; icon: React.ElementType }) {
-  const { count, ref } = useCountUp(value)
+function StatCard({ value, label, icon: Icon, ratePerDay = 0 }: { value: number; label: string; icon: React.ElementType; ratePerDay?: number }) {
+  const { count, ref } = useCountUp(value, ratePerDay)
   const display = count >= 1000 ? `${(count / 1000).toFixed(1)}k+` : count.toString()
   return (
     <div ref={ref} className="flex flex-col items-center gap-2 p-6 rounded-2xl bg-white/5 border border-white/10">
@@ -422,6 +447,12 @@ export default function Landing() {
     ai_tutor_messages: 0,
     career_guidance_sessions: 0,
     practice_sessions_completed: 0,
+    students_registered_rate: 0,
+    mock_tests_attempted_rate: 0,
+    questions_practiced_rate: 0,
+    ai_tutor_messages_rate: 0,
+    career_guidance_sessions_rate: 0,
+    practice_sessions_completed_rate: 0,
   })
   const [faqs, setFaqs] = useState<FAQ[]>([])
   const [demoUrl, setDemoUrl] = useState<string | null>(null)
@@ -547,12 +578,12 @@ export default function Landing() {
           <p className="text-xs text-slate-500 mt-1">Platform activity overview</p>
         </div>
         <div className="max-w-5xl mx-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          <StatCard value={stats.students_registered} label="Students Registered" icon={Users} />
-          <StatCard value={stats.mock_tests_attempted} label="Mock Tests Attempted" icon={Trophy} />
-          <StatCard value={stats.questions_practiced} label="Questions Practiced" icon={Target} />
-          <StatCard value={stats.ai_tutor_messages} label="AI Tutor Messages Sent" icon={MessageSquare} />
-          <StatCard value={stats.career_guidance_sessions} label="Career Guidance Sessions" icon={Compass} />
-          <StatCard value={stats.practice_sessions_completed} label="Practice Sessions Completed" icon={CheckCircle} />
+          <StatCard value={stats.students_registered} ratePerDay={stats.students_registered_rate} label="Students Registered" icon={Users} />
+          <StatCard value={stats.mock_tests_attempted} ratePerDay={stats.mock_tests_attempted_rate} label="Mock Tests Attempted" icon={Trophy} />
+          <StatCard value={stats.questions_practiced} ratePerDay={stats.questions_practiced_rate} label="Questions Practiced" icon={Target} />
+          <StatCard value={stats.ai_tutor_messages} ratePerDay={stats.ai_tutor_messages_rate} label="AI Tutor Messages Sent" icon={MessageSquare} />
+          <StatCard value={stats.career_guidance_sessions} ratePerDay={stats.career_guidance_sessions_rate} label="Career Guidance Sessions" icon={Compass} />
+          <StatCard value={stats.practice_sessions_completed} ratePerDay={stats.practice_sessions_completed_rate} label="Practice Sessions Completed" icon={CheckCircle} />
         </div>
       </section>
 

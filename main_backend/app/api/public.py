@@ -8,6 +8,7 @@ GET /api/public/homepage  → homepage config (demo video URL)
 from __future__ import annotations
 
 import httpx
+from datetime import datetime, UTC
 from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,7 +44,8 @@ async def public_stats(db: AsyncSession = Depends(get_db)):
     except Exception:
         pass
 
-    result = {
+    # Base computed values from real data
+    result: dict[str, int | float] = {
         "students_registered": students_registered,
         "mock_tests_attempted": ai_stats.get("mock_tests_attempted", 0),
         "questions_practiced": ai_stats.get("questions_practiced", 0),
@@ -51,14 +53,25 @@ async def public_stats(db: AsyncSession = Depends(get_db)):
         "career_guidance_sessions": ai_stats.get("career_guidance_sessions", 0),
         "practice_sessions_completed": ai_stats.get("practice_sessions_completed", 0),
     }
+    # Rate defaults (per day) — 0 means no auto-increment
+    rates: dict[str, float] = {key: 0.0 for key in result}
 
     if config:
-        for key in result:
-            override = getattr(config, f"stat_{key}", None)
-            if override is not None:
-                result[key] = override
+        days_elapsed = 0.0
+        if config.stat_base_timestamp is not None:
+            days_elapsed = (datetime.now(UTC) - config.stat_base_timestamp).total_seconds() / 86400
 
-    return result
+        for key in list(result.keys()):
+            base = getattr(config, f"stat_{key}", None)
+            rate = float(getattr(config, f"stat_{key}_rate", None) or 0)
+            if base is not None:
+                result[key] = int(base + rate * days_elapsed)
+            rates[key] = rate
+
+    return {
+        **{k: result[k] for k in result},
+        **{f"{k}_rate": rates[k] for k in rates},
+    }
 
 
 @router.get("/faqs")
