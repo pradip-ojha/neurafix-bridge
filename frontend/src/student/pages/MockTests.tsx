@@ -431,7 +431,7 @@ export default function MockTests() {
                         }`}
                       >
                         <span className="font-semibold mr-2 text-slate-500">{opt.id}.</span>
-                        <MarkdownRenderer content={opt.text} compact />
+                        <MarkdownRenderer content={opt.text} inline />
                       </button>
                     )
                   })}
@@ -567,7 +567,7 @@ export default function MockTests() {
                                 return (
                                   <div key={opt.id} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${cls}`}>
                                     <span className="font-semibold">{opt.id}.</span>
-                                    <span><MarkdownRenderer content={opt.text} compact /></span>
+                                    <span><MarkdownRenderer content={opt.text} inline /></span>
                                   </div>
                                 )
                               })}
@@ -582,14 +582,14 @@ export default function MockTests() {
                             </button>
                             {expandedQuestion === qr.question_id && (
                               <div className="mt-2 p-3 bg-indigo-600/10 border border-indigo-500/20 rounded-xl text-xs text-slate-300 leading-relaxed">
-                                <MarkdownRenderer content={qr.explanation || 'No explanation available.'} compact />
+                                <MarkdownRenderer content={qr.explanation || 'No explanation available.'} />
                                 {qr.student_answer &&
                                   !qr.correct &&
                                   qr.common_mistakes[qr.student_answer] && (
-                                    <p className="mt-2 text-amber-400">
-                                      <strong>Why {qr.student_answer} is wrong:</strong>{' '}
-                                      <MarkdownRenderer content={qr.common_mistakes[qr.student_answer]} compact />
-                                    </p>
+                                    <div className="mt-2">
+                                      <p className="text-amber-400 font-semibold mb-1">Why {qr.student_answer} is wrong:</p>
+                                      <MarkdownRenderer content={qr.common_mistakes[qr.student_answer]} />
+                                    </div>
                                   )}
                               </div>
                             )}

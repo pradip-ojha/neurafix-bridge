@@ -574,7 +574,7 @@ function SessionView({
                 <span className={`w-6 h-6 flex-shrink-0 rounded-full border text-xs font-semibold flex items-center justify-center ${
                   selected ? 'border-indigo-500 bg-indigo-600 text-white' : 'border-white/20 text-slate-500'
                 }`}>{opt.id}</span>
-                <MarkdownRenderer content={opt.text} compact />
+                <MarkdownRenderer content={opt.text} inline />
               </button>
             )
           })}
@@ -725,7 +725,7 @@ function ResultsView({
                           : 'border-transparent text-slate-500'
                         }`}>
                           <span className="font-medium w-5">{opt.id}.</span>
-                          <span className="flex-1"><MarkdownRenderer content={opt.text} compact /></span>
+                          <span className="flex-1"><MarkdownRenderer content={opt.text} inline /></span>
                           {isCorrect  && <span className="text-xs font-medium text-green-400">Correct</span>}
                           {isStudent && !isCorrect && <span className="text-xs font-medium text-red-400">Your answer</span>}
                         </div>
@@ -736,14 +736,14 @@ function ResultsView({
                   {r.explanation && (
                     <div className="bg-indigo-600/10 border border-indigo-500/20 rounded-xl p-3">
                       <p className="text-xs font-semibold text-indigo-400 mb-1">Explanation</p>
-                      <div className="text-xs text-slate-300"><MarkdownRenderer content={r.explanation} compact /></div>
+                      <div className="text-xs text-slate-300"><MarkdownRenderer content={r.explanation} /></div>
                     </div>
                   )}
 
                   {!r.correct && r.student_answer && r.common_mistakes[r.student_answer] && (
                     <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
                       <p className="text-xs font-semibold text-amber-400 mb-1">Why students pick this</p>
-                      <div className="text-xs text-slate-300"><MarkdownRenderer content={r.common_mistakes[r.student_answer]} compact /></div>
+                      <div className="text-xs text-slate-300"><MarkdownRenderer content={r.common_mistakes[r.student_answer]} /></div>
                     </div>
                   )}
                 </div>

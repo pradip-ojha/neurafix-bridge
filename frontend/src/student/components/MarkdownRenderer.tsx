@@ -11,11 +11,14 @@ interface Props {
   content: string
   className?: string
   compact?: boolean
+  /** Use a <span> wrapper instead of <div> — required when rendering inside <button> or <span> */
+  inline?: boolean
 }
 
-export default function MarkdownRenderer({ content, className = '', compact = false }: Props) {
+export default function MarkdownRenderer({ content, className = '', compact = false, inline = false }: Props) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
+  const slim = compact || inline
 
   const components: Components = {
     h1: ({ children }) => (
@@ -28,7 +31,7 @@ export default function MarkdownRenderer({ content, className = '', compact = fa
       <h3 className="text-sm font-semibold text-slate-200 mt-3 mb-1.5 first:mt-0">{children}</h3>
     ),
     p: ({ children }) =>
-      compact
+      slim
         ? <>{children}</>
         : <p className="text-slate-300 text-sm leading-relaxed mb-2 last:mb-0">{children}</p>,
     ul: ({ children }) => (
@@ -124,15 +127,17 @@ export default function MarkdownRenderer({ content, className = '', compact = fa
     },
   }
 
-  return (
-    <div className={`prose-dark ${className}`}>
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeKatex]}
-        components={components}
-      >
-        {content}
-      </ReactMarkdown>
-    </div>
+  const inner = (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm, remarkMath]}
+      rehypePlugins={[[rehypeKatex, { throwOnError: false, output: 'html' }]]}
+      components={components}
+    >
+      {content}
+    </ReactMarkdown>
   )
+
+  return inline
+    ? <span className={`prose-dark ${className}`}>{inner}</span>
+    : <div className={`prose-dark ${className}`}>{inner}</div>
 }

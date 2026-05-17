@@ -41,8 +41,8 @@ function ItemList({ items, sectionId }: { items: SectionItem[]; sectionId: strin
         <li key={i} className="flex gap-2.5">
           <span className={`mt-1.5 flex-shrink-0 w-1.5 h-1.5 rounded-full ${dotColor}`} />
           <div className="flex-1 min-w-0">
-            <p className="text-sm leading-relaxed text-slate-300"><MarkdownRenderer content={item.text} compact /></p>
-            {item.sub && <p className="text-xs text-slate-500 mt-0.5 leading-relaxed"><MarkdownRenderer content={item.sub} compact /></p>}
+            <div className="text-sm leading-relaxed text-slate-300"><MarkdownRenderer content={item.text} compact /></div>
+            {item.sub && <div className="text-xs text-slate-500 mt-0.5 leading-relaxed"><MarkdownRenderer content={item.sub} compact /></div>}
             {item.type === 'mnemonic' && (
               <span className="inline-block mt-1 text-xs font-medium text-teal-400 bg-teal-600/10 border border-teal-500/20 rounded px-1.5 py-0.5">MNEMONIC</span>
             )}
@@ -57,7 +57,7 @@ function QuickReview({ question, options, explanation }: { question: string; opt
   const [selected, setSelected] = useState<string | null>(null)
   return (
     <div className="space-y-3">
-      <p className="text-sm font-medium text-slate-300 leading-relaxed"><MarkdownRenderer content={question} compact /></p>
+      <div className="text-sm font-medium text-slate-300 leading-relaxed"><MarkdownRenderer content={question} compact /></div>
       <div className="grid grid-cols-2 gap-2">
         {options.map((opt) => {
           let cls = 'text-left px-3 py-2 rounded-xl border text-xs transition-colors '
@@ -67,13 +67,13 @@ function QuickReview({ question, options, explanation }: { question: string; opt
           else cls += 'border-transparent text-slate-600 cursor-default'
           return (
             <button key={opt.id} onClick={() => { if (!selected) setSelected(opt.id) }} disabled={!!selected} className={cls}>
-              <span className="font-semibold mr-1.5">{opt.id}.</span><MarkdownRenderer content={opt.text} compact />
+              <span className="font-semibold mr-1.5">{opt.id}.</span><MarkdownRenderer content={opt.text} inline />
               {selected && opt.correct && <span className="ml-1">✓</span>}
             </button>
           )
         })}
       </div>
-      {selected && <p className="text-xs text-slate-400 bg-study-elevated border border-white/[0.07] rounded-xl px-3 py-2 leading-relaxed"><span className="font-semibold text-amber-400">Explanation: </span><MarkdownRenderer content={explanation} compact /></p>}
+      {selected && <div className="text-xs text-slate-400 bg-study-elevated border border-white/[0.07] rounded-xl px-3 py-2 leading-relaxed"><span className="font-semibold text-amber-400">Explanation: </span><MarkdownRenderer content={explanation} /></div>}
       {!selected && <p className="text-xs text-slate-600">Click an option to reveal the answer.</p>}
     </div>
   )
